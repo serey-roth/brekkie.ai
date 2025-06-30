@@ -1,0 +1,102 @@
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&family=Nunito:wght@300;400;500;600;700;800&display=swap');
+
+@import 'tailwindcss';
+
+@theme {
+    /* 🍉 Primary – Watermelon */
+    --color-primary: #f86673; /* watermelon flesh */
+    --color-primary-dark: #e0455f; /* deeper watermelon red */
+    --color-primary-light: #ffd5dc; /* watermelon popsicle */
+
+    /* 🍈 Secondary – Melon rind / soft herb */
+    --color-secondary: #b9e3c6; /* fresh melon rind */
+    --color-secondary-dark: #8dbf9d; /* sage/herb skin */
+    --color-secondary-light: #eaf7f0; /* minty foam */
+
+    /* 🌿 Accent – Mint & cucumber */
+    --color-accent: #a8d5ba; /* mint/cucumber */
+    --color-accent-dark: #7bb491; /* basil/mint leaves */
+    --color-accent-light: #ddeedd; /* mojito foam */
+
+    /* 🧀 Background – Feta + melon base */
+    --color-background: #f4ece5; /* soft toasted almond / feta beige */
+    --color-background-light: #fffcf9; /* lightest background for bubbles */
+
+    /* ☕ Text and contrast */
+    --color-contrast: #3f2e28; /* espresso / fig skin */
+    --color-contrast-subtle: #7c6461; /* warm taupe / nutmeg */
+    --color-border: #edeae5; /* rice paper / crust edge */
+
+    /* 🍋 Warning – Honeyed yellow */
+    --color-warning: #f6d77a; /* soft honey / golden chamomile */
+    --color-warning-dark: #e8b940; /* deeper saffron/mustard */
+    --color-warning-light: #fff8e5; /* pale chamomile foam */
+
+    /* ✅ Success – Soft herb green */
+    --color-success: #bce3b2;
+    --color-success-dark: #7ca675;
+    --color-success-light: #eff9ec;
+
+    /* ❌ Error – Melon red (more vivid) */
+    --color-error: #f26a74;
+    --color-error-dark: #d53f49;
+    --color-error-light: #ffe2e4;
+}
+
+:root[data-theme='dark'] {
+    /* 🍉 Primary – Watermelon */
+    --color-primary: #ff8291; /* brighter watermelon flesh for dark bg */
+    --color-primary-dark: #d94a5d; /* bold juicy red */
+    --color-primary-light: #ffaab6; /* softened candy pink */
+
+    /* 🍈 Secondary – Melon rind / soft herb */
+    --color-secondary: #9ad7b0; /* mellow mint */
+    --color-secondary-dark: #6da887; /* darker sage green */
+    --color-secondary-light: #c3f2da; /* brighter foam green */
+
+    /* 🌿 Accent – Mint & cucumber */
+    --color-accent: #8ac6a0; /* soothing mint */
+    --color-accent-dark: #5d9e7b; /* deeper cucumber skin */
+    --color-accent-light: #beebd0; /* light herbal wash */
+
+    /* 🌑 Background – Charcoal & shadows */
+    --color-background: #1e1b1a; /* near-black espresso */
+    --color-background-light: #2c2827; /* soft charcoal */
+
+    /* ☕ Text and contrast */
+    --color-contrast: #f5f0ed; /* creamy white */
+    --color-contrast-subtle: #c8b9b4; /* gentle beige-taupe */
+    --color-border: #3c3431; /* subtle outline on dark bg */
+}
+
+/* Custom scrollbar that only appears on hover */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  background: transparent;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.custom-scrollbar:hover::-webkit-scrollbar {
+  opacity: 1;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-primary-light);
+  border-radius: 9999px;
+  transition: background 0.2s;
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+}
+
+html, body {
+  font-family: 'Nunito', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Fredoka', sans-serif;
+}

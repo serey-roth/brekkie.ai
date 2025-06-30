@@ -1,0 +1,86 @@
+[tool.poetry]
+name = "brekkie.ai"
+version = "0.1.0"
+description = "AI-powered food and recipe assistant"
+authors = ["Serey Roth <rserey34@gmail.com>"]
+readme = "README.md"
+packages = [
+    { include = "src" },
+    { include = "api", from = "src" },
+    { include = "services", from = "src" },
+    { include = "database", from = "src" },
+    { include = "repositories", from = "src" },
+    { include = "schemas", from = "src" },
+    { include = "ai", from = "src" },
+    { include = "utils", from = "src" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+fastapi = "^0.110.0"
+uvicorn = { extras = ["standard"], version = "^0.27.0" }
+langchain = "^0.3.25"
+langgraph = "^0.4.1"
+langchain-google-genai = "^2.1.4"
+google-genai = "^1.13.0"
+langmem = "^0.0.26"
+lxml = "^5.4.0"
+aiosqlite = "^0.21.0"
+langgraph-checkpoint-postgres = "^2.0.21"
+sqlalchemy = "^2.0.41"
+alembic = "^1.16.1"
+redis = {extras = ["asyncio"], version = "^6.2.0"}
+pydantic-settings = "^2.9.1"
+bcrypt = "^4.3.0"
+pydantic = {extras = ["email"], version = "^2.11.5"}
+pytest-timeout = "^2.4.0"
+fakeredis = "^2.30.1"
+langchain-tavily = "^0.2.4"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+mypy = "^1.9"
+ruff = "^0.3"
+ipython = "^8.20"
+pytest-asyncio = "^0.26.0"
+pytest-cov = "^6.2.1"
+
+[tool.pytest.ini_options]
+addopts = "--cov=src --cov-report=term-missing --cov-report=html --cov-report=xml"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/migrations/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+    "*/.venv/*",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["tests", "migrations"]
+lint.select = ["E", "F", "I", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_unused_ignores = true
+exclude = "tests/"
+plugins = ["pydantic.mypy"]
+
+[build-system]
+requires = ["poetry-core>=1.7.0"]
+build-backend = "poetry.core.masonry.api"
+

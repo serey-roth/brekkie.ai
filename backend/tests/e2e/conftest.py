@@ -1,0 +1,335 @@
+from contextlib import asynccontextmanager
+import pytest
+import pytest_asyncio
+from httpx import AsyncClient, ASGITransport
+from fastapi.testclient import TestClient
+from datetime import datetime, timezone
+from uuid import uuid4
+import tempfile
+import os
+
+from fakeredis.aioredis import FakeRedis
+
+from services.chat_services.chat_session_handlers import ChatSessionHandlers
+from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
+from services.websocket_event_sender import WebSocketEventSender
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+from sqlalchemy.sql import text
+
+from langgraph.checkpoint.memory import InMemorySaver
+
+from dotenv import load_dotenv
+
+load_dotenv()  
+os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY") or "mock-google-api-key"
+os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL") or "mock-checkpoint-db-url"
+os.environ["TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY") or "mock-tavily-api-key"
+
+
+from api.main import app
+from api.deps import get_service_container
+
+from database.schema import Base
+
+from repositories.thread_repository import ThreadRepository
+from repositories.message_repository import MessageRepository
+from repositories.recipe_repository import RecipeRepository
+from repositories.user_repository import UserRepository
+
+from services.service_container import ServiceContainer
+from services.data_services.user_service import UserService
+from services.data_services.user_access_cache_service import UserAccessCacheService
+from services.data_services.thread_service import ThreadService
+from services.data_services.message_service import MessageService
+from services.data_services.recipe_service import RecipeService
+from services.data_services.thread_cache_service import ThreadCacheService
+from services.data_services.message_cache_service import MessageCacheService
+from services.data_services.recipe_cache_service import RecipeCacheService
+from services.chat_services.chat_session_store import ChatSessionStore
+from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
+
+from schemas.users import User
+from schemas.user_access import UserAccessData
+from schemas.threads import Thread
+from schemas.messages import Message
+from schemas.recipes import Recipe
+
+from utils.date_utils import to_utc_isostring
+
+VALID_TOKEN = "VALID-TOKEN"
+INVALID_TOKEN = "INVALID-TOKEN"
+EXPIRED_TOKEN = "EXPIRED-TOKEN"
+ 
+
+@pytest.fixture(scope="session")
+def test_db_url():
+    # Create a temporary file for the database
+    temp_db = tempfile.NamedTemporaryFile(delete=False, suffix='.db')
+    temp_db.close()
+    
+    # Use the temporary file path
+    db_url = f"sqlite+aiosqlite:///{temp_db.name}"
+    
+    yield db_url
+    
+    # Clean up the temporary file
+    try:
+        os.unlink(temp_db.name)
+    except OSError:
+        pass
+
+
+@pytest.fixture(scope="session")
+def test_redis_url():
+    return "redis://localhost:6379/1"
+
+
+@pytest_asyncio.fixture(scope="session")
+async def test_engine(test_db_url):
+    engine = create_async_engine(
+        test_db_url,
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False}
+    )
+    
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
+    yield engine
+    
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def test_session_factory(test_engine):
+    async_session_factory = sessionmaker(
+        test_engine, class_=AsyncSession, expire_on_commit=False
+    )
+    return async_session_factory
+
+
+@pytest_asyncio.fixture
+async def db_transaction_maker(test_session_factory):
+    @asynccontextmanager
+    async def db_transaction_maker():
+        async with test_session_factory() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception as e:
+                print(f"Error in database transaction: {e}")
+                await session.rollback()
+                raise
+    
+    return db_transaction_maker
+
+@pytest_asyncio.fixture(scope="function")
+async def redis_client() -> FakeRedis:
+    redis = await FakeRedis()
+    return redis
+
+
+@pytest.fixture
+def sample_user():
+    now = datetime.now(timezone.utc)
+    return User(
+        id=str(uuid4()),
+        email="test@example.com",
+        name="Test User",
+        created_at=to_utc_isostring(now),
+        updated_at=to_utc_isostring(now)
+    )
+
+
+@pytest.fixture
+def sample_existing_user_access_data(sample_user):
+    return UserAccessData(
+        user_id=sample_user.id,
+        access_token=VALID_TOKEN,
+        email=sample_user.email,
+        name=sample_user.name,
+        is_authenticated=True,
+        user_message_count=0
+    )
+
+
+@pytest.fixture
+def sample_anonymous_user_access_data():
+    return UserAccessData(
+        user_id='anon123',
+        access_token="new-anonymous-token",
+        email=None,
+        name=None,
+        is_authenticated=False,
+        user_message_count=0
+    )
+
+
+@pytest.fixture
+def sample_thread(sample_user):
+    now = datetime.now(timezone.utc)
+    return Thread(
+        id=str(uuid4()),
+        user_id=sample_user.id,
+        created_at=to_utc_isostring(now),
+        updated_at=to_utc_isostring(now),
+        resumed_at=to_utc_isostring(now),
+        is_empty=False,
+        title="Test Thread",
+        summary="Test summary",
+        error_message=None
+    )
+
+
+@pytest.fixture
+def sample_message(sample_thread):
+    now = datetime.now(timezone.utc)
+    return Message(
+        id=str(uuid4()),
+        thread_id=sample_thread.id,
+        role="user",
+        content_type="text",
+        text_content="Hello, world!",
+        created_at=to_utc_isostring(now),
+        updated_at=to_utc_isostring(now),
+        model_name="gpt-4",
+        input_tokens=10,
+        output_tokens=20,
+        tool_name=None,
+        tool_input=None,
+        tool_output=None,
+        recipe_id=None,
+        is_recipe_generation_started=False,
+        is_recipe_generation_completed=False
+    )
+
+
+@pytest.fixture
+def sample_recipe(sample_user, sample_thread):
+    now = datetime.now(timezone.utc)
+    return Recipe(
+        id=str(uuid4()),
+        user_id=sample_user.id,
+        thread_id=sample_thread.id,
+        created_at=to_utc_isostring(now),
+        updated_at=to_utc_isostring(now),
+        name="Test Recipe",
+        description="A test recipe",
+        ingredients=["ingredient 1", "ingredient 2"],
+        instructions=["step 1", "step 2"],
+        categories=["main dish"],
+        prep_time_minutes=15,
+        cook_time_minutes=30,
+        servings=4,
+        chef_notes="Test notes",
+        substitutions={},
+        equipment_alternatives={},
+        scaling_guidance="Test guidance",
+        storage_notes="Test storage",
+        serving_suggestions="Test serving",
+        make_ahead_tips="Test tips",
+        coordination_timeline="Test timeline"
+    )
+
+
+@pytest_asyncio.fixture
+async def service_container(db_transaction_maker, redis_client):
+    user_service = UserService(UserRepository())
+    thread_service = ThreadService(ThreadRepository())
+    message_service = MessageService(MessageRepository())
+    recipe_service = RecipeService(RecipeRepository())
+    user_access_cache_service = UserAccessCacheService(redis_client, ttl=60 * 30)
+    thread_cache_service = ThreadCacheService(redis_client, ttl=60 * 30)
+    message_cache_service = MessageCacheService(redis_client, ttl=60 * 30)
+    recipe_cache_service = RecipeCacheService(redis_client, ttl=60 * 30)
+    websocket_event_sender = WebSocketEventSender()
+
+    ai_food_agent = GoogleAIFoodAgent(checkpointer=InMemorySaver())
+
+    chat_session_store = ChatSessionStore(
+        thread_service=thread_service,
+        message_service=message_service,
+        recipe_service=recipe_service,
+        thread_cache_service=thread_cache_service,
+        message_cache_service=message_cache_service,
+        recipe_cache_service=recipe_cache_service,
+        user_access_cache_service=user_access_cache_service,
+    )
+
+    chat_session_limit_checker = ChatSessionLimitChecker(
+        user_access_cache_service=user_access_cache_service,
+        authenticated_user_message_limit=100,
+        unauthenticated_user_message_limit=20
+    )
+    chat_session_handlers = ChatSessionHandlers(
+        db_transaction_maker=db_transaction_maker,
+        chat_session_store=chat_session_store
+    )
+    chat_session_orchestrator = ChatSessionOrchestrator(
+        session_ttl=60 * 30,
+        db_transaction_maker=db_transaction_maker,
+        user_access_cache_service=user_access_cache_service,
+        ai_food_agent=ai_food_agent,
+        websocket_event_sender=websocket_event_sender,  
+        chat_session_store=chat_session_store,
+        chat_session_handlers=chat_session_handlers,
+        chat_session_limit_checker=chat_session_limit_checker
+    )
+    container = ServiceContainer(
+        db_transaction_maker=db_transaction_maker,
+        user_service=user_service,
+        user_access_cache_service=user_access_cache_service,
+        thread_service=thread_service,
+        message_service=message_service,
+        recipe_service=recipe_service,
+        thread_cache_service=thread_cache_service,
+        message_cache_service=message_cache_service,
+        recipe_cache_service=recipe_cache_service,
+        websocket_event_sender=websocket_event_sender,
+        ai_food_agent=ai_food_agent,
+        chat_session_store=chat_session_store,
+        chat_session_limit_checker=chat_session_limit_checker,
+        chat_session_orchestrator=chat_session_orchestrator
+    )
+    
+    app.state.service_container = container
+    app.dependency_overrides[get_service_container] = lambda: container
+    
+    yield container
+    
+    app.dependency_overrides = {}
+    app.state.service_container = None
+
+
+@pytest_asyncio.fixture
+async def async_client():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
+
+
+@pytest.fixture
+def test_client():
+    return TestClient(app)
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def clean_redis(redis_client):
+    await redis_client.flushall()
+    yield
+    await redis_client.flushall()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def clean_database(test_session_factory):
+    """Clean all database tables between tests"""
+    async with test_session_factory() as session:
+        # Delete all data from all tables in reverse dependency order
+        await session.execute(text("DELETE FROM messages"))
+        await session.execute(text("DELETE FROM recipes"))
+        await session.execute(text("DELETE FROM threads"))
+        await session.execute(text("DELETE FROM users"))
+        await session.commit()
+    yield 

@@ -1,0 +1,24 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build output
+dist
+build
+
+# Cache
+.cache
+.eslintcache
+
+# Logs
+*.log
+
+# Package files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Misc
+.DS_Store
+.env*
+!.env.example 

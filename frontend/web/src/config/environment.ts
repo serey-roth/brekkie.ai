@@ -28,8 +28,8 @@ const developmentConfig: EnvironmentConfig = {
 };
 
 const productionConfig: EnvironmentConfig = {
-    apiBaseUrl: 'https://api.foodagent.com/api',
-    wsBaseUrl: 'wss://api.foodagent.com/ws',
+    apiBaseUrl: 'https://brekkie-ai.fly.dev/api',
+    wsBaseUrl: 'wss://brekkie-ai.fly.dev/ws',
     isDevelopment: false,
     isProduction: true,
     isTest: false,

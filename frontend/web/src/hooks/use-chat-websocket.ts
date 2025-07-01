@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useWebSocket from 'react-use-websocket';
+import { useAppConfig } from '@/context/app-context';
 import { ChatEventSchema } from '@/data/schemas/chat-events';
 import { type ChatSessionError, ChatSessionErrorTypesThatDontRequireReconnect } from '@/data/schemas/errors';
 import { type UserMessagePayload } from '@/data/schemas/messages';
@@ -7,21 +8,19 @@ import { ChatStateManager } from '@/managers/chat-state-manager';
 import { ConnectionStateManager, MAX_RECONNECT_ATTEMPTS } from '@/managers/connection-state-manager';
 import { UserAccessManager } from '@/managers/user-access-manager';
 
-const WS_URL = 'ws://localhost:8000/ws/chat';
-
 type ChatWebSocketArgs = {
     userAccessManager: UserAccessManager;
     chatStateManager: ChatStateManager;
     connectionStateManager: ConnectionStateManager;
 };
 
-const getWebsocketUrl = (accessToken: string | null, threadId: string | null) => {
+const getWebsocketUrl = (baseWsUrl: string, accessToken: string | null, threadId: string | null) => {
     if (accessToken === null) {
         return null;
     }
     return threadId
-        ? `${WS_URL}/${threadId}?access_token=${accessToken}`
-        : `${WS_URL}?access_token=${accessToken}`;
+        ? `${baseWsUrl}/chat/${threadId}?access_token=${accessToken}`
+        : `${baseWsUrl}/chat?access_token=${accessToken}`;
 }
 
 const CLOSE_CODES_TO_NOT_RECONNECT = [
@@ -123,19 +122,21 @@ const useWebsocketUrl = (args: {
 }) => {
     const { userAccessManager, chatStateManager, connectionStateManager } = args;
 
-    const [websocketUrl, setWebsocketUrl] = useState<string | null>(getWebsocketUrl(userAccessManager.getAccessToken(), chatStateManager.getCurrentThreadId()));
+    const config = useAppConfig();
+
+    const [websocketUrl, setWebsocketUrl] = useState<string | null>(getWebsocketUrl(config.wsBaseUrl, userAccessManager.getAccessToken(), chatStateManager.getCurrentThreadId()));
     const hasTriedReconnectingToCurrentThreadRef = useRef(false);
 
     useEffect(() => {
         const accessEnsuredListener = () => {
             const accessToken = userAccessManager.getAccessToken();
             const threadId = chatStateManager.getCurrentThreadId();
-            setWebsocketUrl(getWebsocketUrl(accessToken, threadId));
+            setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, accessToken, threadId));
         };
 
         const currentThreadChangedListener = (data: { thread_id: string } | null) => {
             const accessToken = userAccessManager.getAccessToken();
-            setWebsocketUrl(getWebsocketUrl(accessToken, data?.thread_id ?? null));
+            setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, accessToken, data?.thread_id ?? null));
             // Reset the reconnection flag when thread changes
             hasTriedReconnectingToCurrentThreadRef.current = false;
         };
@@ -155,10 +156,10 @@ const useWebsocketUrl = (args: {
             if (hasTriedReconnectingToCurrentThreadRef.current) {
                 // First attempt to reconnect to the same thread failed due to thread not found/thread expired
                 // Start a new thread instead
-                setWebsocketUrl(getWebsocketUrl(accessToken, null));
+                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, accessToken, null));
             } else {
                 hasTriedReconnectingToCurrentThreadRef.current = true;
-                setWebsocketUrl(getWebsocketUrl(accessToken, currentThreadId));
+                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, accessToken, currentThreadId));
             }
         };
 
@@ -170,7 +171,7 @@ const useWebsocketUrl = (args: {
 
         const chatSessionErrorListener = (error: ChatSessionError) => {
             if (error.type === 'thread_not_found') {
-                setWebsocketUrl(getWebsocketUrl(userAccessManager.getAccessToken(), null));
+                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, userAccessManager.getAccessToken(), null));
             }
         };
 
@@ -186,7 +187,7 @@ const useWebsocketUrl = (args: {
             chatStateManager.unsubscribe('currentThreadChanged', currentThreadChangedListener);
             chatStateManager.unsubscribe('chatSessionErrorOccurred', chatSessionErrorListener);
         };
-    }, [chatStateManager, connectionStateManager, userAccessManager]);
+    }, [chatStateManager, connectionStateManager, userAccessManager, config.wsBaseUrl]);
 
     return websocketUrl;
 }

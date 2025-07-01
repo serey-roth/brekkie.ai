@@ -54,9 +54,4 @@ primary_region = "iad"
     type = "connections"
     hard_limit = 25
     soft_limit = 20
-
-  [[services.tcp_checks]]
-    grace_period = "30s"
-    interval = "15s"
-    restart_limit = 0
-    timeout = "5s" 
+    

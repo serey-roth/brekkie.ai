@@ -25,15 +25,15 @@ class UserAccessCacheService:
         return data
     
     
-    async def create_user_access(self, access_token: str, user_id: str, *, name: str | None = None, email: str | None = None, is_authenticated: bool = False, ttl: int | None = None) -> UserAccessData:
+    async def create_user_access(self, access_token: str, user_id: str, *, name: str | None = None, email: str | None = None, is_authenticated: bool = False, user_message_count: int = 0, ttl: int | None = None) -> UserAccessData:
         set_ttl = ttl if ttl is not None else self.ttl
         return await self.set_user_access(access_token, UserAccessData(
             access_token=access_token,
             user_id=user_id,
             name=name,
             email=email,
-            is_authenticated=False,
-            user_message_count=0,
+            is_authenticated=is_authenticated,
+            user_message_count=user_message_count,
         ), ttl=set_ttl)
     
     
@@ -44,12 +44,12 @@ class UserAccessCacheService:
         return await self.create_user_access(access_token, user_id, is_authenticated=False, ttl=set_ttl)
     
     
-    async def promote_to_authenticated(self, access_token: str, user_id: str, email: str, name: str, ttl: int | None = None) -> UserAccessData:
+    async def promote_to_authenticated(self, access_token: str, user_id: str, email: str, name: str, user_message_count: int = 0, ttl: int | None = None) -> UserAccessData:
         user_access = await self.get_user_access(access_token)
         if user_access is None:
             raise ValueError(f"User access {access_token} not found")
         
-        user_access = user_access.model_copy(update={"user_id": user_id, "email": email, "name": name, "is_authenticated": True}, deep=True)
+        user_access = user_access.model_copy(update={"user_id": user_id, "email": email, "name": name, "is_authenticated": True, "user_message_count": user_message_count}, deep=True)
         set_ttl = ttl if ttl is not None else self.ttl  
         user_access = await self.set_user_access(access_token, user_access, ttl=set_ttl)
         return user_access

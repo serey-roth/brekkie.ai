@@ -81,7 +81,7 @@ class TestUserAccessCacheService:
             user_id=sample_user_id,
             email="test@test.com",
             name="test",
-            is_authenticated=False,
+            is_authenticated=True,
             user_message_count=0,
         ))
         
@@ -94,7 +94,7 @@ class TestUserAccessCacheService:
             user_id=sample_user_id,
             email="test@test.com",
             name="test",
-            is_authenticated=False,
+            is_authenticated=True,
             user_message_count=0,
         ))
         

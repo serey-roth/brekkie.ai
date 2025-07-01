@@ -73,20 +73,6 @@ class UserLogin(BaseModel):
     
 
 
-class BaseUserParams(BaseModel):
-    """Base parameters for user operations."""
-    email: str | None = Field(default=None, description="User's email address, must be unique")
-    name: str | None = Field(default=None, description="User's display name or full name")
-    
-    
-class BaseUserParamsWithRawPassword(BaseUserParams):
-    password: str | None = Field(default=None, description="User's password")
-    
-    
-class BaseUserParamsWithHashedPassword(BaseUserParams):
-    password_hash: str | None = Field(default=None, description="Bcrypt-hashed password")
-    
-    
 class BaseCreateUserParams(BaseModel):
     """Parameters for creating a new user account."""
     id: str = Field(description="Unique identifier for the user account")
@@ -94,12 +80,16 @@ class BaseCreateUserParams(BaseModel):
     updated_at: datetime = Field(description="When the user account was last modified")
     
     
-class CreateUserParams(BaseCreateUserParams, BaseUserParamsWithRawPassword):
-    pass
+class CreateUserParams(BaseCreateUserParams):
+    email: EmailStr = Field(description="User's email address, must be unique")
+    name: str = Field(description="User's display name or full name")
+    password: str = Field(description="User's password")
 
 
-class CreateDbUserParams(BaseCreateUserParams, BaseUserParamsWithHashedPassword):
-    pass
+class CreateDbUserParams(BaseCreateUserParams):
+    email: str = Field(description="User's email address, must be unique")
+    name: str = Field(description="User's display name or full name")
+    password_hash: str = Field(description="Bcrypt-hashed password")
     
     
 class BaseUpdateUserParams(BaseModel):
@@ -108,9 +98,13 @@ class BaseUpdateUserParams(BaseModel):
     updated_at: datetime = Field(description="When the user account was last modified")
     
 
-class UpdateUserParams(BaseUpdateUserParams, BaseUserParamsWithRawPassword):
-    pass
+class UpdateUserParams(BaseUpdateUserParams):
+    email: EmailStr | None = Field(default=None, description="User's email address, must be unique")
+    name: str | None = Field(default=None, description="User's display name or full name")
+    password: str | None = Field(default=None, description="User's password")
 
 
-class UpdateDbUserParams(BaseUpdateUserParams, BaseUserParamsWithHashedPassword):
-    pass
+class UpdateDbUserParams(BaseUpdateUserParams):
+    email: EmailStr | None = Field(default=None, description="User's email address, must be unique")
+    name: str | None = Field(default=None, description="User's display name or full name")
+    password_hash: str | None = Field(default=None, description="Bcrypt-hashed password")

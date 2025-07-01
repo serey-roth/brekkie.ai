@@ -36,8 +36,6 @@ async def _validate_access_token(access_token: str, service_container: ServiceCo
     return user_access_data   
 
 
-# TODO: Add email verification
-
 async def _migrate_user_data(old_user_id: str, new_user_id: str, service_container: ServiceContainer):
     logger.info(f"Starting migration from old_user_id={old_user_id} to new_user_id={new_user_id}")
     try:
@@ -102,6 +100,7 @@ async def _migrate_user_data(old_user_id: str, new_user_id: str, service_contain
                 message_params = [
                     CreateMessageParams(
                         id=message.id,
+                        user_id=new_user_id,
                         thread_id=message.thread_id,
                         role=message.role,
                         content_type=message.content_type,
@@ -132,25 +131,17 @@ async def _migrate_user_data(old_user_id: str, new_user_id: str, service_contain
 
 router = APIRouter()
 
+# TODO: Add email verification
+
 @router.post("/login", response_model=UserAccessData)
 async def login(
     payload: UserLogin, 
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
-    background_tasks: BackgroundTasks,
     authorization: Annotated[str | None, Header()] = None,
-) -> User:
+) -> UserAccessData:
+    logger.debug(f"Login attempt for email: {payload.email}")
+    
     try:
-        access_token = _extract_access_token(authorization)
-        if access_token is None:
-            raise HTTPException(status_code=401, detail={"message": "Missing access token"})
-
-        user_access_data = await _validate_access_token(access_token, service_container)
-        if user_access_data is None:
-            raise HTTPException(status_code=401, detail={"message": "Access token is invalid or expired"})
-
-        if user_access_data.is_authenticated:
-            return user_access_data
-        
         user_service = service_container.user_service
         async with service_container.db_transaction_maker() as db:
             user = await user_service.get_user_by_email(db, payload.email)
@@ -161,14 +152,19 @@ async def login(
             if not await user_service.verify_password(db, user.id, payload.password):
                 logger.error(f"Invalid password for user {payload.email}")
                 raise HTTPException(status_code=401, detail={"message": "Invalid credentials"})
+        
+            user_message_count = await service_container.message_service.count_total_messages_sent_by_user(db, user.id)
             
-            new_access_data = await service_container.user_access_cache_service.promote_to_authenticated(
-                access_token=access_token,
+            new_access_data = await service_container.user_access_cache_service.create_user_access(
+                access_token=str(uuid4()),
                 user_id=user.id,
                 email=user.email,
                 name=user.name,
+                is_authenticated=True,
+                user_message_count=user_message_count,
             )
 
+            logger.info(f"User {user.id} ({user.email}) logged in successfully")
             return new_access_data
     
     except HTTPException:
@@ -185,7 +181,9 @@ async def signup(
     service_container: Annotated[ServiceContainer, Depends(get_service_container)], 
     background_tasks: BackgroundTasks,
     authorization: Annotated[str | None, Header()] = None,
-) -> User:
+) -> UserAccessData:
+    logger.debug(f"Signup attempt for email: {payload.email}")
+    
     try:
         access_token = _extract_access_token(authorization)
         if not access_token:
@@ -215,17 +213,21 @@ async def signup(
                     updated_at=datetime.now(timezone.utc),
                     email=payload.email,
                     name=payload.name,
-                    password_hash=payload.password
+                    password=payload.password
                 )
             )
-                    
+            
+            
+        old_user_message_count = await service_container.message_cache_service.count_total_messages_sent_by_user(old_user_id)
+        
         new_access_data = await service_container.user_access_cache_service.promote_to_authenticated(
             access_token=access_token,
             user_id=user.id,
             email=user.email,
-            name=user.name,
+            name=user.name
         )
-
+        
+        logger.info(f"User {user.id} ({user.email}) signed up successfully")
         background_tasks.add_task(_migrate_user_data, old_user_id, user.id, service_container)
 
         return new_access_data

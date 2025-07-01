@@ -222,6 +222,8 @@ class GoogleAIFoodAgent(AIFoodAgent):
         *,
         on_event: Callable[[ConversationStreamEvent], Awaitable[None]],
     ):
+        logger.info(f"Starting conversation stream for user {user_id}, thread {thread_id}")
+        
         config = self.get_agent_config(user_id, thread_id)
 
         agent = AgentFactory(
@@ -270,4 +272,3 @@ class GoogleAIFoodAgent(AIFoodAgent):
         except Exception as e:
             await self._handle_error(e, state, on_event)
             
-        

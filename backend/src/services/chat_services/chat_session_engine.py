@@ -224,7 +224,7 @@ class ChatSessionEngine:
             return UserMessagePayload.model_validate(raw_data)
         
         except WebSocketDisconnect:
-            logger.info(f"WebSocket disconnected for access token {self.access_token}")
+            logger.debug(f"WebSocket disconnected for access token {self.access_token}")
             raise WebSocketDisconnect
         
         except ValidationError as e:

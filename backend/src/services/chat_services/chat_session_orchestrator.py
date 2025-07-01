@@ -95,6 +95,8 @@ class ChatSessionOrchestrator:
     
 
     async def start_session(self, access_token: str, websocket: WebSocket):
+        logger.info(f"Starting session for access token: {access_token}")
+        
         try:
             user_access_data = await self.user_access_cache_service.get_user_access(access_token)
             if user_access_data is None:
@@ -111,12 +113,14 @@ class ChatSessionOrchestrator:
             })
             
             if sent and websocket.client_state == WebSocketState.CONNECTED:
+                logger.info(f"WebSocket connection established for access token: {access_token}")
+        
                 engine = await self._create_chat_session_engine(access_token, thread.id, websocket)   
                 async with engine:
                     await engine.run()
                 
             else:
-                logger.debug(f"Websocket disconnected for access token: {access_token}")
+                logger.info(f"WebSocket disconnected for access token: {access_token}")
                     
     
         except AccessTokenNotFoundError as e:
@@ -138,7 +142,7 @@ class ChatSessionOrchestrator:
             
             timestamp = datetime.now(timezone.utc)
             thread = await self.chat_session_store.update_thread(db, user_access_data, UpdateThreadParams(id=thread_id, updated_at=timestamp, resumed_at=timestamp))
-            pagianted_messages = await self.chat_session_store.get_paginated_messages(db, user_access_data, GetMessagesParams(thread_id=thread_id, limit=10, sort_by='created_at', sort_order='desc'))
+            pagianted_messages = await self.chat_session_store.get_paginated_messages(db, user_access_data, GetMessagesParams(user_id=user_access_data.user_id, thread_id=thread_id, limit=10, sort_by='created_at', sort_order='desc'))
             message_ids = [msg.id for msg in pagianted_messages.messages]
             recipes = await self.chat_session_store.get_recipes_by_message_id(db, user_access_data, thread_id, message_ids)
             
@@ -150,6 +154,8 @@ class ChatSessionOrchestrator:
 
 
     async def resume_session(self, access_token: str, thread_id: str, websocket: WebSocket):
+        logger.info(f"Resuming session for access token: {access_token}, thread: {thread_id}")
+        
         try:
             user_access_data = await self.user_access_cache_service.get_user_access(access_token)
             if user_access_data is None:
@@ -166,12 +172,14 @@ class ChatSessionOrchestrator:
             })
             
             if sent and websocket.client_state == WebSocketState.CONNECTED:
+                logger.info(f"WebSocket connection established for access token: {access_token}, thread: {thread_id}")
+                
                 engine = await self._create_chat_session_engine(access_token, thread_id, websocket)
                 async with engine:
                     await engine.run()      
             
             else:
-                logger.debug(f"Websocket disconnected for access token: {access_token}")
+                logger.info(f"WebSocket disconnected for access token: {access_token}")
             
         except ThreadNotFoundError as e:
             await self._handle_chat_session_error(websocket, e)

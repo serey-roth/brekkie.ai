@@ -15,17 +15,13 @@ export class HttpAuthClient implements IAuthClient {
         this._baseUrl = baseUrl;
     }
 
-    async signin(payload: UserSigninPayload, accessToken: string | null): Promise<UserAccessData> {
+    async signin(payload: UserSigninPayload): Promise<UserAccessData> {
         const headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
         } as Record<string, string>;
 
-        if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-        }
-
-        // TODO: Change API to /signin
+        // Login no longer requires access token - it creates a new authenticated session
         const response = await fetch(`${this._baseUrl}/auth/login`, {
             method: 'POST',
             headers,

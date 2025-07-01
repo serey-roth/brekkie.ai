@@ -17,7 +17,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsSubmitting(true);
         setError(null);
         try {
-            const accessData = await authClient.signin(payload, userAccessManager.getAccessToken());
+            const accessData = await authClient.signin(payload);
             userAccessManager.setUserAccessData(accessData);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to sign in');

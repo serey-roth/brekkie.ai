@@ -52,6 +52,8 @@ export class UserAccessManager {
 
     setUserAccessData(accessData: UserAccessData) {
         this._accessData = accessData;
+        this._accessToken = accessData.access_token;
+        this.saveAccessToken(accessData.access_token);
         this._eventManager.publish('accessChanged', accessData);
     }
 
@@ -90,7 +92,7 @@ export class UserAccessManager {
         const accessData = await this._accessTokenClient.ensureUserAccess(accessToken);
         this._accessData = accessData;
         
-        await this.saveAccessToken(accessData.access_token);  
+        this.saveAccessToken(accessData.access_token);  
 
         this._eventManager.publish('accessEnsured', accessData);
 
@@ -99,7 +101,7 @@ export class UserAccessManager {
         }       
     }
 
-    async saveAccessToken(accessToken: string) {
+    saveAccessToken(accessToken: string) {
         this._accessToken = accessToken;
         localStorage.setItem('brekkie-access-token', accessToken);
     }

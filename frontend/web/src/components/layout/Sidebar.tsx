@@ -65,7 +65,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     const { signout } = useAuth();
 
     const userAccessData = useUserAccessData();
-    const { currentThreadId, startThread, resumeThread } = useCurrentThread();
+    const { currentThreadId, startThread, resumeThread, resetCurrentThread } = useCurrentThread();
     const { threadGroups, isFetching, error, fetchMoreObserverTarget } = useFetchThreads(isOpen, userAccessData);
 
     return (
@@ -282,7 +282,10 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                                 width: isOpen ? '100%' : '2.5rem',
                             }}
                             transition={TRANSITIONS.fast}
-                            onClick={signout}
+                            onClick={async () => {
+                                await signout();
+                                resetCurrentThread();
+                            }}
                             className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent hover:border-primary/20 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
                             style={{ minWidth: '2.5rem', maxWidth: '100%' }}
                             tabIndex={0}
@@ -342,7 +345,12 @@ function useCurrentThread() {
         setCurrentThreadId(threadId);
     }, [chatStateManager]);
 
-    return { currentThreadId, startThread, resumeThread };
+    const resetCurrentThread = useCallback(() => {
+        chatStateManager.resetState();
+        setCurrentThreadId(null);
+    }, [chatStateManager]);
+
+    return { currentThreadId, startThread, resumeThread, resetCurrentThread };
 }
 
 function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null) {

@@ -46,7 +46,7 @@ export default function App() {
 
 
     // TODO: Auto scroll to bottom should happens once at the beginning and message change when no manual scroll happens
-    const { currentChatState, chatSessionErrorMessage, threadTitle } = useChatState({ onThreadResumed: scrollToBottom });
+    const { currentChatState, chatSessionErrorMessage, threadTitle, resetChatState } = useChatState({ onThreadResumed: scrollToBottom });
     const { chatLimitMessage } = useChatLimit();
 
     useScrollHandler({
@@ -135,8 +135,14 @@ export default function App() {
             <AuthScreen
                 isOpen={isAuthModalOpen}
                 onClose={closeAuthModal}
-                onSignIn={signin}
-                onSignUp={signup}
+                onSignIn={async (payload) => {
+                    await signin(payload);
+                    resetChatState();
+                }}
+                onSignUp={async (payload) => {
+                    await signup(payload);
+                    resetChatState();
+                }}
             />
         </div>
     );
@@ -221,7 +227,11 @@ function useChatState({ onThreadResumed }: {
         };
     }, [chatStateManager, onThreadResumed]);
 
-    return { currentChatState, chatSessionErrorMessage, threadTitle };
+    const resetChatState = useCallback(() => {
+        chatStateManager.resetState();
+    }, [chatStateManager]);
+
+    return { currentChatState, chatSessionErrorMessage, threadTitle, resetChatState };
 }   
 
 function useChatMessages({ onMessageChange }: {

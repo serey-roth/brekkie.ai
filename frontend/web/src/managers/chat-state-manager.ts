@@ -269,6 +269,14 @@ export class ChatStateManager {
     hasMoreMessages(): boolean {
         return this._state.hasMoreMessages;
     }
+
+    resetState() {
+        this._state = getInitialChatState();
+        this._messageManager.resetState();
+        this._recipeManager.resetState();
+        this._eventManager.publish('currentThreadChanged', null);
+        this._eventManager.publish('chatStateChanged', this._state);
+    }
 }
 
 

@@ -63,6 +63,8 @@ SESSION_TTL = 60 * 30 # 30 minutes
 AUTHENTICATED_USER_MESSAGE_LIMIT = 50
 UNAUTHENTICATED_USER_MESSAGE_LIMIT = 10
 
+print("🚀 FastAPI app starting...")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up...")

@@ -5,11 +5,8 @@ from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTempla
 from langchain_core.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_tavily import TavilySearch
-from langmem import create_manage_memory_tool, create_search_memory_tool
 
 from ai.workflow.prompts import search_prompt, create_recipe_prompt
-from ai.memory.contextual_memory import ContextualMemory, contextual_memory_namespace
-
 
 # TODO: Use web search instead of Gemini, and maybe real time/geolocation search
 @tool(name_or_callable="search")
@@ -84,30 +81,30 @@ async def create_recipe(
     return {"content": result.content.strip(), "response_metadata": result.response_metadata, "usage_metadata": result.usage_metadata}
 
 
-manage_contextual_memory = create_manage_memory_tool(
-    name="manage_contextual_memory",
-    namespace=contextual_memory_namespace,
-    instructions="Proactively call this tool when you:\n\n"
-    "1. Identify a new USER preference or behavior pattern.\n"
-    "2. Receive an explicit USER request to remember something or otherwise alter your behavior.\n"
-    "3. Are working and want to record important context or observations.\n"
-    "4. Identify that an existing MEMORY is incorrect or outdated.\n"
-    "5. Learn about USER's constraints, requirements, or limitations.\n"
-    "6. Discover USER's schedule, timing preferences, or practical needs.\n"
-    "7. Note USER's feedback, including likes, dislikes, and modifications made.\n",
-    schema=ContextualMemory,
-    actions_permitted=("create", "update", "delete")
-)
+# manage_contextual_memory = create_manage_memory_tool(
+#     name="manage_contextual_memory",
+#     namespace=contextual_memory_namespace,
+#     instructions="Proactively call this tool when you:\n\n"
+#     "1. Identify a new USER preference or behavior pattern.\n"
+#     "2. Receive an explicit USER request to remember something or otherwise alter your behavior.\n"
+#     "3. Are working and want to record important context or observations.\n"
+#     "4. Identify that an existing MEMORY is incorrect or outdated.\n"
+#     "5. Learn about USER's constraints, requirements, or limitations.\n"
+#     "6. Discover USER's schedule, timing preferences, or practical needs.\n"
+#     "7. Note USER's feedback, including likes, dislikes, and modifications made.\n",
+#     schema=ContextualMemory,
+#     actions_permitted=("create", "update", "delete")
+# )
 
-search_contextual_memory = create_search_memory_tool(
-    name="search_contextual_memory",
-    namespace=contextual_memory_namespace,
-    instructions="Use this tool when you:\n"
-    "1. Need to search for prior preferences or behavior before suggesting something.\n"
-    "2. Want to confirm if a MEMORY exists before creating or updating one.\n"
-    "3. Personalize your responses based on the user's preferences and behavior patterns.\n"
-    "4. Need to check for constraints, likes, dislikes, or other preferences mentioned before."
-)
+# search_contextual_memory = create_search_memory_tool(
+#     name="search_contextual_memory",
+#     namespace=contextual_memory_namespace,
+#     instructions="Use this tool when you:\n"
+#     "1. Need to search for prior preferences or behavior before suggesting something.\n"
+#     "2. Want to confirm if a MEMORY exists before creating or updating one.\n"
+#     "3. Personalize your responses based on the user's preferences and behavior patterns.\n"
+#     "4. Need to check for constraints, likes, dislikes, or other preferences mentioned before."
+# )
 
 
 TOOLS = [create_recipe, tavily_search] 

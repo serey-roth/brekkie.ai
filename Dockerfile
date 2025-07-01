@@ -72,5 +72,8 @@ COPY --from=frontend-builder /app/frontend/dist /app/backend/src/frontend/dist
 WORKDIR /app/backend/src
 ENV PYTHONPATH=/app/backend/src
 
+# Make the startup script executable
+RUN chmod +x /app/backend/start.sh
+
 EXPOSE 8080
-CMD ["sh", "-c", "uvicorn api.main:app --host 0.0.0.0 --port $PORT"]
+CMD ["/app/backend/start.sh"]

@@ -5,6 +5,7 @@ import { isAssistantMessage, isUserMessage } from "@/utils/message-utils";
 
 type MessageEvents = {
     messageAdded: Message;
+    messageUpdated: Message;
     messagesUpdated: Message[];
 }
 
@@ -51,6 +52,7 @@ export class MessageManager {
                 updater(lastMessage);
             }
         });
+        this._eventManager.publish('messageUpdated', this._messages[this._messages.length - 1]);
         this._eventManager.publish('messagesUpdated', this._messages);
     }
 
@@ -67,6 +69,7 @@ export class MessageManager {
         this._messages = produce(this._messages, draft => {
             draft[index] = newMessage;
         });
+        this._eventManager.publish('messageUpdated', newMessage);
         this._eventManager.publish('messagesUpdated', this._messages);
     }
 

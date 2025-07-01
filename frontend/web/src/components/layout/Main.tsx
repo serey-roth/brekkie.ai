@@ -244,13 +244,18 @@ function useChatMessages({ onMessageChange }: {
         const messageAddedListener = () => {
             onMessageChange();
         }
+        const messageUpdatedListener = () => {
+            onMessageChange();
+        }
         const messagesUpdatedListener = (messages: Message[]) => {
             setMessageGroups(groupChatMessages(messages));
         }
         messageManager.subscribe('messageAdded', messageAddedListener);
+        messageManager.subscribe('messageUpdated', messageUpdatedListener);
         messageManager.subscribe('messagesUpdated', messagesUpdatedListener);
         return () => {
             messageManager.unsubscribe('messageAdded', messageAddedListener);
+            messageManager.unsubscribe('messageUpdated', messageUpdatedListener);
             messageManager.unsubscribe('messagesUpdated', messagesUpdatedListener);
         };
     }, [messageManager, onMessageChange]);

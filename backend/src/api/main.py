@@ -1,9 +1,15 @@
 import os
+import sys
 from dotenv import load_dotenv
+
+# Add the src directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
@@ -11,6 +17,7 @@ from api.routes.chats import router as chats_router
 from api.routes.auth import router as auth_router
 from api.routes.access_token import router as access_token_router
 from api.routes.threads import router as threads_router
+from api.routes.health import router as health_router
 
 from database.index import db_transaction_maker
 
@@ -36,16 +43,16 @@ from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from services.websocket_event_sender import WebSocketEventSender
 from services.redis.redis_client import get_redis_client
 
-from utils.logger import Logger
-
-
-logger = Logger("api.index")
-
 load_dotenv()
+os.environ["ENVIRONMENT"] = os.getenv("ENVIRONMENT")
 os.environ["DB_URL"] = os.getenv("DB_URL")
 os.environ["REDIS_URL"] = os.getenv("REDIS_URL")
 os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL")
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
+
+from utils.logger import Logger
+
+logger = Logger("api.index")
 
 THREAD_CACHE_TTL = 60 * 60 * 24 # 1 day
 MESSAGE_CACHE_TTL = 60 * 60 * 24 # 1 day
@@ -145,13 +152,25 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Or "*" for all
+    allow_origins=["*"],  # Allow all origins for unified deployment
     allow_credentials=True,
-    allow_methods=["*"],  # Or just ["GET", "POST"] etc.
-    allow_headers=["*"],  # Or ["Authorization", "Content-Type"]
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
+# API routes
+app.include_router(health_router, prefix="/api")
 app.include_router(chats_router, prefix="/ws")
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(access_token_router, prefix="/api/access-token")
 app.include_router(threads_router, prefix="/api")
+
+# Mount static files - this will serve the frontend
+# Only mount if the directory exists to prevent startup failures
+if os.path.exists("frontend/dist"):
+    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+else:
+    # Fallback route for when frontend is not built
+    @app.get("/")
+    async def fallback():
+        return {"message": "Frontend not built. Please build the frontend first."}

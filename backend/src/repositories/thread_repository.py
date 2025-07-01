@@ -121,22 +121,21 @@ class ThreadRepository:
             ValueError: If the thread doesn't exist
         """
         thread_id = params.id
-        updated_at = params.updated_at
         
         thread = await db.get(DBThread, thread_id)
         if thread is None:
             raise ValueError(f"Thread {thread_id} not found")
         
-        items_to_update = params.model_dump(exclude={"id", "updated_at"}, exclude_none=True, exclude_unset=True)
+        items_to_update = params.model_dump(exclude={"id"}, exclude_none=True, exclude_unset=True)
         for field, value in items_to_update.items():
             if value is not None:
                 if field == "resumed_at":
                     thread.resumed_at = strip_timezone(value)
+                elif field == "updated_at":
+                    thread.updated_at = strip_timezone(value)
                 else:
                     setattr(thread, field, value)
-                
-        thread.updated_at = strip_timezone(updated_at)
-        
+                        
         db.add(thread)
         await db.flush()    
         return thread

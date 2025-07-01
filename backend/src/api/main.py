@@ -44,7 +44,7 @@ from services.websocket_event_sender import WebSocketEventSender
 from services.redis.redis_client import get_redis_client
 
 load_dotenv()
-os.environ["ENVIRONMENT"] = os.getenv("ENVIRONMENT")
+os.environ["ENVIRONMENT"] = os.getenv("ENVIRONMENT", "production")
 os.environ["DB_URL"] = os.getenv("DB_URL")
 os.environ["REDIS_URL"] = os.getenv("REDIS_URL")
 os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL")

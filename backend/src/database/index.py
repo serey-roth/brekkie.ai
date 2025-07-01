@@ -9,7 +9,7 @@ logger = Logger("database.index")
 
 load_dotenv()
 DATABASE_URL = os.getenv("DB_URL")
-is_development = os.getenv("ENVIRONMENT") == "development"
+is_development = os.getenv("ENVIRONMENT", "production") == "development"
 
 # Don't create the engine at module import time
 db_engine = None

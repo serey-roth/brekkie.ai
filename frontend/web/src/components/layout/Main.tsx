@@ -17,7 +17,7 @@ import type { UserAccessData } from '@/data/schemas/user-access';
 import { groupChatMessages } from '@/utils/message-utils';
 import { Sidebar } from './Sidebar';
 
-export default function App() {
+export function Main() {
     const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [scrollToBottomMessage, setScrollToBottomMessage] = useState<string | null>(null);
@@ -80,7 +80,7 @@ export default function App() {
         <div className="bg-background min-h-screen">
             <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
             <div
-                className={`bg-background grid min-h-screen overflow-hidden transition-all duration-300 ${
+                className={`bg-background grid min-h-screen overflow-hidden transition-all duration-300 px-safe pb-safe pt-safe ${
                     selectedRecipeId ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
                 } ${isSidebarOpen ? 'md:ml-16 lg:ml-[20rem]' : 'md:ml-16'}`}
             >

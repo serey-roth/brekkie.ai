@@ -9,10 +9,8 @@ from fastapi.websockets import WebSocketState
 
 from services.service_container import ServiceContainer
 
-from schemas.threads import GetUserThreadsParams
 from schemas.messages import GetMessagesParams
 from schemas.users import CreateUserParams
-from utils.date_utils import to_utc_isostring
 
 
 class TestSessionTimeoutAndResume:
@@ -202,7 +200,7 @@ class TestSessionTimeoutAndResume:
                         id="test-user-resume",
                         email="resume@example.com",
                         name="Resume Test User",
-                        password_hash="hashed_password",
+                        password="password123",
                         created_at=datetime.now(timezone.utc),
                         updated_at=datetime.now(timezone.utc)
                     )
@@ -324,7 +322,7 @@ class TestSessionTimeoutAndResume:
                     assert db_thread.user_id == authenticated_access.user_id
                     
                     db_messages = await service_container.message_service.get_paginated_messages(
-                        db, GetMessagesParams(thread_id=thread_id)
+                        db, GetMessagesParams(user_id=authenticated_access.user_id, thread_id=thread_id)
                     )
                     assert len(db_messages.messages) == 4  # 2 user messages + 2 AI responses
             
@@ -367,7 +365,7 @@ class TestSessionTimeoutAndResume:
             async def check_final_database():
                 async with service_container.db_transaction_maker() as db:
                     final_messages = await service_container.message_service.get_paginated_messages(
-                        db, GetMessagesParams(thread_id=thread_id)
+                        db, GetMessagesParams(user_id=authenticated_access.user_id, thread_id=thread_id)
                     )
                     assert len(final_messages.messages) == 6  # 3 user messages + 3 AI responses
                     print(f"💬 Total messages after resumption: {len(final_messages.messages)}")

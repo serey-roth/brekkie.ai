@@ -55,6 +55,7 @@ class TestBasicMessageOperations:
         updated_at = datetime.now(timezone.utc)
         message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -70,6 +71,7 @@ class TestBasicMessageOperations:
     async def test_get_and_set_message_with_ttl(self, message_cache_service: MessageCacheService):
         message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -88,6 +90,7 @@ class TestBasicMessageOperations:
         messages = [
             Message(
                 id="message_id_1",
+                user_id="user_id",
                 thread_id="thread_id",
                 role=MessageRole.user,
                 content_type=MessageContentType.text,
@@ -97,6 +100,7 @@ class TestBasicMessageOperations:
             ),
             Message(
                 id="message_id_2",
+                user_id="user_id",
                 thread_id="thread_id",
                 role=MessageRole.assistant,
                 content_type=MessageContentType.text,
@@ -115,6 +119,7 @@ class TestBasicMessageOperations:
         messages = [
             Message(
                 id="message_id_1",
+                user_id="user_id",
                 thread_id="thread_id",
                 role=MessageRole.user,
                 content_type=MessageContentType.text,
@@ -124,6 +129,7 @@ class TestBasicMessageOperations:
             ),
             Message(
                 id="message_id_2",
+                user_id="user_id",
                 thread_id="thread_id",
                 role=MessageRole.assistant,
                 content_type=MessageContentType.text,
@@ -142,6 +148,7 @@ class TestBasicMessageOperations:
     async def test_count_thread_user_messages(self, message_cache_service: MessageCacheService):
         await message_cache_service.set_message("user_id", Message(
             id="message_id_1",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -155,6 +162,7 @@ class TestBasicMessageOperations:
         
         await message_cache_service.set_message("user_id", Message(
             id="message_id_2",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.assistant,
             content_type=MessageContentType.text,
@@ -173,6 +181,7 @@ class TestBasicMessageOperations:
         
         message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -215,6 +224,7 @@ class TestBasicMessageOperations:
         messages = [
             Message(
                 id="message_id_1",
+                user_id="user_id",
                 thread_id="thread_id_1",
                 role=MessageRole.user,
                 content_type=MessageContentType.text,
@@ -224,6 +234,7 @@ class TestBasicMessageOperations:
             ),
             Message(
                 id="message_id_3",
+                user_id="user_id",
                 thread_id="thread_id_3",
                 role=MessageRole.assistant,
                 content_type=MessageContentType.text,
@@ -244,6 +255,7 @@ class TestBasicMessageOperations:
         messages = [
             Message(
                 id="message_id_1",
+                user_id="user_id",
                 thread_id="thread_id_1",
                 role=MessageRole.user,
                 content_type=MessageContentType.text,
@@ -253,6 +265,7 @@ class TestBasicMessageOperations:
             ),
             Message(
                 id="message_id_2",
+                user_id="user_id",
                 thread_id="thread_id_2",
                 role=MessageRole.assistant,
                 content_type=MessageContentType.text,
@@ -262,6 +275,7 @@ class TestBasicMessageOperations:
             ),
             Message(
                 id="message_id_3",
+                user_id="user_id",
                 thread_id="thread_id_3",
                 role=MessageRole.user,
                 content_type=MessageContentType.text,
@@ -288,6 +302,7 @@ class TestCreateMessage:
         
         expected_message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -297,6 +312,7 @@ class TestCreateMessage:
         )
 
         params = CreateMessageParams(
+            user_id="user_id",
             id="message_id",
             thread_id="thread_id",
             role=MessageRole.user,
@@ -317,6 +333,7 @@ class TestCreateMessage:
         
         expected_message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -326,6 +343,7 @@ class TestCreateMessage:
         )
         
         params = CreateMessageParams(
+            user_id="user_id",
             id="message_id",
             thread_id="thread_id",
             role=MessageRole.user,
@@ -351,6 +369,7 @@ class TestCreateMessage:
         
         expected_message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -360,6 +379,7 @@ class TestCreateMessage:
         )
         
         params = CreateUserMessageParams(
+            user_id="user_id",
             id="message_id",
             thread_id="thread_id",
             text_content="text_content",
@@ -379,6 +399,7 @@ class TestCreateMessage:
         
         expected_message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.assistant,
             content_type=MessageContentType.text,
@@ -388,6 +409,7 @@ class TestCreateMessage:
         )
         
         params = CreateAssistantTextMessageParams(
+            user_id="user_id",
             id="message_id",    
             thread_id="thread_id",
             text_content="text_content",
@@ -407,6 +429,7 @@ class TestCreateMessage:
         
         expected_message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.assistant,
             content_type=MessageContentType.recipe,
@@ -418,6 +441,7 @@ class TestCreateMessage:
         )
         
         params = CreateAssistantRecipeMessageParams(
+            user_id="user_id",
             id="message_id",
             thread_id="thread_id",
             recipe_id="recipe_id",
@@ -439,26 +463,28 @@ class TestCreateMessage:
         
         expected_message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.assistant,
             content_type=MessageContentType.text,
             text_content="text_content",
             created_at=to_utc_isostring(created_at),
             updated_at=to_utc_isostring(updated_at),
-            model_used="gpt-4o",
-            token_count=1000,
-            response_time_ms=1000,
+            model_name="gpt-4o",
+            input_tokens=1000,
+            output_tokens=500,
         )
         
         params = CreateAssistantTextMessageParams(
+            user_id="user_id",
             id="message_id",
             thread_id="thread_id",
             text_content="text_content",
             created_at=created_at,
             updated_at=updated_at,
-            model_used="gpt-4o",
-            token_count=1000,
-            response_time_ms=1000,
+            model_name="gpt-4o",
+            input_tokens=1000,
+            output_tokens=500,
         )
         
         await message_cache_service.create_assistant_text_message("user_id", params)
@@ -473,6 +499,7 @@ class TestCreateMessage:
         
         expected_message = Message(
             id="message_id",
+            user_id="user_id",
             thread_id="thread_id",
             role=MessageRole.assistant,
             content_type=MessageContentType.tool,
@@ -481,12 +508,13 @@ class TestCreateMessage:
             tool_output={"key": "value"},
             created_at=to_utc_isostring(created_at),
             updated_at=to_utc_isostring(updated_at),
-            model_used="gpt-4o",
-            token_count=1000,
-            response_time_ms=1000,
+            model_name="gpt-4o",
+            input_tokens=1000,
+            output_tokens=500,
         )
         
         params = CreateAssistantToolMessageParams(
+            user_id="user_id",
             id="message_id",
             thread_id="thread_id",
             tool_name="tool_name",
@@ -494,9 +522,9 @@ class TestCreateMessage:
             tool_output={"key": "value"},
             created_at=created_at,
             updated_at=updated_at,
-            model_used="gpt-4o",
-            token_count=1000,
-            response_time_ms=1000,
+            model_name="gpt-4o",
+            input_tokens=1000,
+            output_tokens=500,
         )
         
         await message_cache_service.create_assistant_tool_message("user_id", params)
@@ -519,6 +547,7 @@ class TestGetPaginatedMessages:
         return [
             Message(
                 id=f"message_id_{i}",
+                user_id="user_id",
                 thread_id=thread_id,
                 role=MessageRole.user if i % 2 == 0 else MessageRole.assistant,
                 content_type=MessageContentType.text,
@@ -538,7 +567,8 @@ class TestGetPaginatedMessages:
 
     @pytest.mark.asyncio
     async def test_no_messages(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id="non_existent_thread_id",
             limit=10,
         )) 
@@ -554,7 +584,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_sort_by_created_at_asc(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=10,
             sort_by="created_at",
@@ -574,7 +605,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_sort_by_created_at_desc(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=10,
             sort_by="created_at",
@@ -594,7 +626,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_sort_by_updated_at_asc(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=10,
             sort_by="updated_at",
@@ -614,7 +647,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_sort_by_updated_at_desc(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=10,
             sort_by="updated_at",
@@ -634,7 +668,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_large_limit(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=30,
             sort_by="created_at",
@@ -654,7 +689,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_no_more_messages(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=100,
             sort_by="created_at",
@@ -671,7 +707,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_from_timestamp_and_sort_by_created_at_asc(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=10,
             from_timestamp=sample_messages[9].created_at,
@@ -692,7 +729,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_from_timestamp_and_sort_by_created_at_desc(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=10,
             from_timestamp=sample_messages[40].created_at,
@@ -713,7 +751,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_from_timestamp_and_sort_by_updated_at_asc(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=10,
             from_timestamp=sample_messages[9].updated_at,
@@ -734,7 +773,8 @@ class TestGetPaginatedMessages:
         
     @pytest.mark.asyncio
     async def test_from_timestamp_and_sort_by_updated_at_desc(self, message_cache_service: MessageCacheService, create_messages: list[Message], user_id: str, thread_id: str, sample_messages: list[Message]):
-        result = await message_cache_service.get_paginated_messages(user_id=user_id, params=GetMessagesParams(
+        result = await message_cache_service.get_paginated_messages(params=GetMessagesParams(
+            user_id=user_id,
             thread_id=thread_id,
             limit=10,
             from_timestamp=sample_messages[40].updated_at,

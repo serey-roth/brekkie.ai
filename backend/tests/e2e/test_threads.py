@@ -221,6 +221,7 @@ class TestGetThreadMessages:
             
             await service_container.message_service.create_message(db, CreateMessageParams(
                 id=message_id,
+                user_id=user_access_data.user_id,
                 thread_id=thread.id,
                 role=MessageRole.user,
                 content_type=MessageContentType.text,
@@ -241,8 +242,9 @@ class TestGetThreadMessages:
             "paginated_messages": {
                 "messages": [{
                     "id": message_id,
+                    "user_id": user_access_data.user_id,
                     "thread_id": thread_id,
-                    "role": MessageRole.user.value, 
+                    "role": MessageRole.user.value,
                     "content_type": MessageContentType.text.value,
                     "text_content": "Hello, world!",
                     "created_at": to_utc_isostring(message_created_at),
@@ -318,6 +320,7 @@ class TestGetThreadMessages:
             
             await service_container.message_service.create_message(db, CreateMessageParams(
                 id=message_id,
+                user_id=user.id,
                 thread_id=thread.id,
                 role=MessageRole.assistant,
                 content_type=MessageContentType.recipe,
@@ -335,6 +338,7 @@ class TestGetThreadMessages:
                 "messages": [
                     {
                         "id": message_id,
+                        "user_id": user.id,
                         "thread_id": thread_id,
                         "role": MessageRole.assistant.value,     
                         "content_type": MessageContentType.recipe.value,
@@ -359,7 +363,7 @@ class TestGetThreadMessages:
             "recipes": [
                 {   
                     "id": recipe_id,
-                    "user_id": user_access_data.user_id,
+                    "user_id": user.id,
                     "thread_id": thread_id,
                     "created_at": to_utc_isostring(recipe_created_at),
                     "updated_at": to_utc_isostring(recipe_updated_at),

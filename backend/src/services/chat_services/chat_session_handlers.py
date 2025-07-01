@@ -109,6 +109,7 @@ class ChatSessionHandlers:
             ))
             message = await self.chat_session_store.create_assistant_text_message(db, user_access_data, CreateAssistantTextMessageParams(
                 id=assistant_message_id,
+                user_id=user_access_data.user_id,
                 thread_id=thread_id,
                 text_content="",
                 created_at=timestamp,
@@ -229,6 +230,7 @@ class ChatSessionHandlers:
             ))
             message = await self.chat_session_store.create_assistant_recipe_message(db, user_access_data, CreateAssistantRecipeMessageParams(
                 id=assistant_message_id,
+                user_id=user_access_data.user_id,
                 thread_id=thread_id,
                 recipe_id=recipe_id,
                 is_recipe_generation_started=True,
@@ -372,6 +374,7 @@ class ChatSessionHandlers:
             ))
             message = await self.chat_session_store.create_assistant_tool_message(db, user_access_data, CreateAssistantToolMessageParams(
                 id=assistant_message_id,
+                user_id=user_access_data.user_id,
                 thread_id=thread_id,
                 tool_name=search_tool_name,
                 tool_input=search_tool_input,

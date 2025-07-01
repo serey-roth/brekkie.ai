@@ -98,8 +98,7 @@ async def get_thread_messages(
         chat_session_store = service_container.chat_session_store
         
         async with db_transaction_maker() as db:
-            result = await chat_session_store.get_paginated_messages(db, user_access_data, GetMessagesParams(thread_id=thread_id, limit=limit, from_timestamp=from_timestamp, sort_by=sort_by, sort_order=sort_order))
-            logger.info(f"Result: {result}")
+            result = await chat_session_store.get_paginated_messages(db, user_access_data, GetMessagesParams(user_id=user_access_data.user_id, thread_id=thread_id, limit=limit, from_timestamp=from_timestamp, sort_by=sort_by, sort_order=sort_order))
             message_ids = [message.id for message in result.messages if message.recipe_id is not None]
             recipes = []
             if len(message_ids) > 0:

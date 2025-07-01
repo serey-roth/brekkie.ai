@@ -110,6 +110,7 @@ class TestAssistantStartedResponding:
         )
         expected_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             text_content="",
             created_at=to_utc_isostring(timestamp),
@@ -144,6 +145,7 @@ class TestAssistantStartedResponding:
             sample_user_access_data,
             CreateAssistantTextMessageParams(
                 id=assistant_message_id,
+                user_id=sample_user_access_data.user_id,
                 thread_id=thread_id,
                 text_content="",
                 created_at=timestamp,
@@ -214,6 +216,7 @@ class TestAssistantResponding:
         
         initial_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             text_content="",
             created_at=to_utc_isostring(timestamp),
@@ -225,6 +228,7 @@ class TestAssistantResponding:
         )
         expected_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             text_content="test content",
             created_at=to_utc_isostring(timestamp),
@@ -325,6 +329,7 @@ class TestAssistantFinishedResponding:
         )
         expected_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             text_content=full_message,
             created_at=to_utc_isostring(timestamp),
@@ -439,6 +444,7 @@ class TestRecipeGenerationStarted:
         )
         expected_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             recipe_id=expected_recipe.id,
             created_at=to_utc_isostring(timestamp),
@@ -483,6 +489,7 @@ class TestRecipeGenerationStarted:
                 sample_user_access_data,
                 CreateAssistantRecipeMessageParams(
                     id=assistant_message_id,
+                    user_id=sample_user_access_data.user_id,
                     thread_id=thread_id,
                     recipe_id=expected_recipe.id,
                     is_recipe_generation_started=True,
@@ -536,6 +543,7 @@ class TestRecipeFieldDetected:
         
         existing_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             recipe_id="recipe_123",
             created_at=to_utc_isostring(timestamp),
@@ -577,6 +585,7 @@ class TestRecipeFieldDetected:
         )
         expected_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             recipe_id=expected_recipe.id,
             created_at=to_utc_isostring(timestamp),
@@ -652,6 +661,7 @@ class TestRecipeFieldDetected:
         
         existing_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             recipe_id=None,
             created_at=to_utc_isostring(timestamp),
@@ -718,6 +728,7 @@ class TestRecipeGenerationCompleted:
         
         existing_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             recipe_id="recipe_123",
             created_at=to_utc_isostring(timestamp),
@@ -759,6 +770,7 @@ class TestRecipeGenerationCompleted:
         )
         expected_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             recipe_id=expected_recipe.id,
             created_at=to_utc_isostring(timestamp),
@@ -853,6 +865,7 @@ class TestRecipeGenerationCompleted:
         
         existing_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             recipe_id=None,
             created_at=to_utc_isostring(timestamp),
@@ -918,6 +931,7 @@ class TestSearchStarted:
         
         expected_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             tool_name=search_tool_name,
             tool_input=search_tool_input,
@@ -957,6 +971,7 @@ class TestSearchStarted:
             sample_user_access_data,
             CreateAssistantToolMessageParams(
                 id=assistant_message_id,
+                user_id=sample_user_access_data.user_id,
                 thread_id=thread_id,
                 tool_name=search_tool_name,
                 tool_input=search_tool_input,
@@ -1012,6 +1027,7 @@ class TestSearchCompleted:
         
         existing_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
@@ -1030,6 +1046,7 @@ class TestSearchCompleted:
         
         expected_message = Message(
             id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),

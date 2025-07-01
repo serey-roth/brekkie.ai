@@ -143,6 +143,7 @@ class ChatSessionStore:
                 
             return await self.message_service.create_user_message(db, CreateUserMessageParams(
                 id=message_id,
+                user_id=user_access_data.user_id,
                 thread_id=thread_id,
                 text_content=content,
                 created_at=timestamp,
@@ -152,6 +153,7 @@ class ChatSessionStore:
         async def unauthenticated_create():
             message = await self.message_cache_service.create_user_message(user_access_data.user_id, CreateUserMessageParams(
                 id=message_id,
+                user_id=user_access_data.user_id,
                 thread_id=thread_id,
                 text_content=content,
                 created_at=timestamp,
@@ -199,7 +201,15 @@ class ChatSessionStore:
         return await self._dispatch(
             user_access_data,
             lambda: self.message_service.get_paginated_messages(db, params),
-            lambda: self.message_cache_service.get_paginated_messages(user_access_data.user_id, params)
+            lambda: self.message_cache_service.get_paginated_messages(params)
+        )
+
+
+    async def count_total_messages_sent_by_user(self, db: AsyncSession, user_access_data: UserAccessData) -> int:
+        return await self._dispatch(
+            user_access_data,
+            lambda: self.message_service.count_total_messages_sent_by_user(db, user_access_data.user_id),
+            lambda: self.message_cache_service.count_total_messages_sent_by_user(user_access_data.user_id)
         )
 
         

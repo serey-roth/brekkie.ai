@@ -152,9 +152,10 @@ def sample_thread(sample_thread_id, sample_user_id):
     
 
 @pytest.fixture
-def sample_messages(sample_thread_id):
+def sample_messages(sample_thread_id, sample_user_id):
     return [Message(
         id="msg1", 
+        user_id=sample_user_id,
         thread_id=sample_thread_id, 
         role=MessageRole.user,
         content_type=MessageContentType.text,

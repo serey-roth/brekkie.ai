@@ -74,6 +74,7 @@ class MessageService:
         
         sort_by = params.sort_by
         new_params = GetDBMessagesParams(
+            user_id=params.user_id,
             thread_id=params.thread_id,
             limit=paginated_limit,
             from_timestamp=params.from_timestamp,
@@ -98,6 +99,11 @@ class MessageService:
             next_timestamp=next_timestamp
         )   
     
+    
+    async def count_total_messages_sent_by_user(self, db: AsyncSession, user_id: str) -> int:
+        logger.debug(f"Counting total messages sent by user {user_id}")
+        return await self.repository.count_total_messages_sent_by_user(db, user_id)
+    
 
     async def count_thread_messages(self, db: AsyncSession, thread_id: str) -> int:
         logger.debug(f"Counting thread messages for thread {thread_id}")
@@ -108,3 +114,4 @@ class MessageService:
         logger.debug(f"Creating messages with {params}")
         db_messages = await self.repository.create_messages(db, params)
         return [Message.from_db_message(message) for message in db_messages]
+    

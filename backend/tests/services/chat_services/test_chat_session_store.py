@@ -17,12 +17,11 @@ from schemas.message_content_type import MessageContentType
 from schemas.message_role import MessageRole
 from schemas.user_access import UserAccessData
 from schemas.threads import CreateThreadParams, UpdateThreadParams
-from schemas.messages import CreateUserMessageParams, Message, UpdateMessageParams
+from schemas.messages import CreateUserMessageParams, Message
 from schemas.recipes import UserRecipe, CreateRecipeParams
 
 from utils.date_utils import to_utc_isostring
 
-from tests.utils.assert_deep_equal import assert_deep_equal
 
 
 @pytest.fixture
@@ -133,6 +132,7 @@ class TestCreateUserMessage:
         
         expected_message = Message(
             id=message_id,
+            user_id=user_access_data.user_id,
             thread_id=thread_id,
             text_content="content_authenticated",
             role=MessageRole.user,
@@ -157,6 +157,7 @@ class TestCreateUserMessage:
         ))
         mock_message_service.create_user_message.assert_called_once_with(mock_db, CreateUserMessageParams(
             id=message_id,
+            user_id=user_access_data.user_id,
             thread_id=thread_id,
             text_content="content_authenticated",
             created_at=timestamp,
@@ -180,6 +181,7 @@ class TestCreateUserMessage:
         
         expected_message = Message(
             id=message_id,
+            user_id=user_access_data.user_id,
             thread_id=thread_id,
             text_content="content_unauthenticated",
             role=MessageRole.user,
@@ -197,6 +199,7 @@ class TestCreateUserMessage:
         mock_thread_cache_service.update_thread.assert_called_once_with(user_access_data.user_id, UpdateThreadParams(id=thread_id, updated_at=timestamp, is_empty=False))
         mock_message_cache_service.create_user_message.assert_called_once_with(user_access_data.user_id, CreateUserMessageParams(
             id=message_id,
+            user_id=user_access_data.user_id,
             thread_id=thread_id,
             text_content="content_unauthenticated",
             created_at=timestamp,
@@ -341,6 +344,7 @@ class TestGetRecipesByMessageId:
         mock_messages = [
             Message(
                 id="message_id_1",
+                user_id=user_access_data.user_id,
                 thread_id=thread_id,
                 text_content="content_1",
                 role=MessageRole.assistant,
@@ -351,6 +355,7 @@ class TestGetRecipesByMessageId:
             ),
             Message(
                 id="message_id_2",
+                user_id=user_access_data.user_id,
                 thread_id=thread_id,
                 text_content="content_2",
                 role=MessageRole.assistant,

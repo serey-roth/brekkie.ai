@@ -35,6 +35,7 @@ class TestSimpleMessageOperations:
     async def test_create_message(self, async_session: AsyncSession, message_service: MessageService):
         params = CreateMessageParams(
             id="test-message-id",
+            user_id="test-user-id",
             thread_id="test-thread-id",
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -59,6 +60,7 @@ class TestSimpleMessageOperations:
     async def test_create_user_message(self, async_session: AsyncSession, message_service: MessageService):
         params = CreateUserMessageParams(
             id="test-message-id",
+            user_id="test-user-id",
             thread_id="test-thread-id",
             text_content="test-text-content",
             created_at=datetime.now(timezone.utc),
@@ -70,6 +72,7 @@ class TestSimpleMessageOperations:
         assert isinstance(message, Message)
         
         assert message.id == params.id
+        assert message.user_id == params.user_id
         assert message.thread_id == params.thread_id
         assert message.role == MessageRole.user
         assert message.content_type == MessageContentType.text
@@ -81,6 +84,7 @@ class TestSimpleMessageOperations:
     async def test_create_assistant_text_message(self, async_session: AsyncSession, message_service: MessageService):
         params = CreateAssistantTextMessageParams(
             id="test-message-id",
+            user_id="test-user-id",
             thread_id="test-thread-id",
             text_content="test-text-content",
             created_at=datetime.now(timezone.utc),
@@ -92,6 +96,7 @@ class TestSimpleMessageOperations:
         assert isinstance(message, Message)
         
         assert message.id == params.id
+        assert message.user_id == params.user_id
         assert message.thread_id == params.thread_id
         assert message.role == MessageRole.assistant
         assert message.content_type == MessageContentType.text
@@ -103,6 +108,7 @@ class TestSimpleMessageOperations:
     async def test_create_assistant_recipe_message(self, async_session: AsyncSession, message_service: MessageService):
         params = CreateAssistantRecipeMessageParams(
             id="test-message-id",
+            user_id="test-user-id",
             thread_id="test-thread-id",
             recipe_id="test-recipe-id",
             is_recipe_generation_started=True,
@@ -116,6 +122,7 @@ class TestSimpleMessageOperations:
         assert isinstance(message, Message)
         
         assert message.id == params.id
+        assert message.user_id == params.user_id
         assert message.thread_id == params.thread_id
         assert message.role == MessageRole.assistant
         assert message.content_type == MessageContentType.recipe
@@ -129,6 +136,7 @@ class TestSimpleMessageOperations:
     async def test_update_message(self, async_session: AsyncSession, message_service: MessageService):
         message = await message_service.create_assistant_text_message(async_session, CreateAssistantTextMessageParams(
             id="test-message-id",
+            user_id="test-user-id",
             thread_id="test-thread-id",
             text_content="test-text-content",
             created_at=datetime.now(timezone.utc),
@@ -153,6 +161,7 @@ class TestSimpleMessageOperations:
     async def test_get_message(self, async_session: AsyncSession, message_service: MessageService):
         params = CreateAssistantTextMessageParams(
             id="test-message-id",
+            user_id="test-user-id",
             thread_id="test-thread-id",
             text_content="test-text-content",
             created_at=datetime.now(timezone.utc),
@@ -165,6 +174,7 @@ class TestSimpleMessageOperations:
         assert isinstance(message, Message)
         
         assert message.id == params.id
+        assert message.user_id == params.user_id
         assert message.thread_id == params.thread_id
         assert message.role == params.role
         assert message.content_type == params.content_type
@@ -176,6 +186,7 @@ class TestSimpleMessageOperations:
         for i in range(10):
             await message_service.create_assistant_text_message(async_session, CreateAssistantTextMessageParams(
                 id=f"test-message-id-{i}",
+                user_id="test-user-id",
                 thread_id="test-thread-id",
                 text_content=f"test-text-content-{i}",
                 created_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
@@ -190,6 +201,7 @@ class TestSimpleMessageOperations:
         params = [
             CreateAssistantTextMessageParams(
                 id=f"test-message-id-{i}",
+                user_id="test-user-id",
                 thread_id="test-thread-id",
                 text_content=f"test-text-content-{i}",
                 created_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
@@ -214,6 +226,7 @@ class TestPaginatedMessages:
         return [
             CreateAssistantTextMessageParams(
                 id=f"test-message-id-{i}",
+                user_id="test-user-id",
                 thread_id="test-thread-id",
                 text_content=f"test-text-content-{i}",
                 created_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
@@ -229,7 +242,7 @@ class TestPaginatedMessages:
         
         
     async def test_correct_return_type(self, async_session: AsyncSession, message_service: MessageService, create_assistant_text_messages_in_db, assistant_text_message_params: list[CreateAssistantTextMessageParams]):
-        get_params = GetMessagesParams(thread_id="test-thread-id")
+        get_params = GetMessagesParams(user_id="test-user-id", thread_id="test-thread-id")
         
         paginated_messages = await message_service.get_paginated_messages(async_session, get_params)
         
@@ -240,6 +253,7 @@ class TestPaginatedMessages:
         reversed_params = list(reversed(assistant_text_message_params))
         
         get_params = GetMessagesParams(
+            user_id="test-user-id",
             thread_id="test-thread-id",
             limit=10,
             sort_by="created_at",
@@ -258,6 +272,7 @@ class TestPaginatedMessages:
         reversed_params = list(reversed(assistant_text_message_params))
         
         get_params = GetMessagesParams(
+            user_id="test-user-id",
             thread_id="test-thread-id",
             sort_by="created_at",
             sort_order="desc",
@@ -273,6 +288,7 @@ class TestPaginatedMessages:
 
     async def test_get_paginated_messages_with_sorted_by_created_at_asc(self, async_session: AsyncSession, message_service: MessageService, create_assistant_text_messages_in_db, assistant_text_message_params: list[CreateAssistantTextMessageParams]):
         get_params = GetMessagesParams(
+            user_id="test-user-id",
             thread_id="test-thread-id",
             limit=10,
             sort_by="created_at",
@@ -291,6 +307,7 @@ class TestPaginatedMessages:
         reversed_params = list(reversed(assistant_text_message_params))
         
         get_params = GetMessagesParams(
+            user_id="test-user-id",
             thread_id="test-thread-id",
             limit=10,
         )
@@ -307,6 +324,7 @@ class TestPaginatedMessages:
         reversed_params = list(reversed(assistant_text_message_params))
         
         get_params = GetMessagesParams(
+            user_id="test-user-id",
             thread_id="test-thread-id",
             limit=10,
             sort_by="updated_at",
@@ -323,6 +341,7 @@ class TestPaginatedMessages:
         
     async def test_get_paginated_messages_with_sorted_by_updated_at_asc(self, async_session: AsyncSession, message_service: MessageService, create_assistant_text_messages_in_db, assistant_text_message_params: list[CreateAssistantTextMessageParams]):
         get_params = GetMessagesParams(
+            user_id="test-user-id",
             thread_id="test-thread-id",
             limit=10,
             sort_by="updated_at",
@@ -341,6 +360,7 @@ class TestPaginatedMessages:
         reversed_params = list(reversed(assistant_text_message_params))
         
         get_params = GetMessagesParams(
+            user_id="test-user-id",
             thread_id="test-thread-id",
             limit=10,
             sort_by="created_at",
@@ -360,6 +380,7 @@ class TestPaginatedMessages:
         reversed_params = list(reversed(assistant_text_message_params))
         
         get_params = GetMessagesParams(
+            user_id="test-user-id",
             thread_id="test-thread-id",
             limit=20,
             sort_by="created_at",
@@ -379,6 +400,7 @@ class TestPaginatedMessages:
         reversed_params = list(reversed(assistant_text_message_params))
         
         get_params = GetMessagesParams(
+            user_id="test-user-id",
             thread_id="test-thread-id",
             limit=60,
             sort_by="created_at",
@@ -398,7 +420,8 @@ class TestPaginatedMessages:
         reversed_params = list(reversed(assistant_text_message_params))
         
         with pytest.raises(ValueError) as e:
-            get_params = GetMessagesParams(
+            params = GetMessagesParams(
+                user_id="test-user-id",
                 thread_id="test-thread-id",
                 limit=1000,
                 sort_by="created_at",
@@ -408,7 +431,8 @@ class TestPaginatedMessages:
             
             
         with pytest.raises(ValueError) as e:
-            get_params = GetMessagesParams(
+            params = GetMessagesParams(
+                user_id="test-user-id",
                 thread_id="test-thread-id",
                 limit=0,
                 sort_by="created_at",

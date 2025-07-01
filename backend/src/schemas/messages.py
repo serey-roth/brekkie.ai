@@ -22,6 +22,7 @@ class UserMessagePayload(BaseModel):
 class Message(BaseModel):
     """A message in a thread."""
     id: str = Field(description="The message's id")
+    user_id: str = Field(description="The associated user's id")
     thread_id: str = Field(description="The associated thread's id")
     role: MessageRole = Field(description="Who created the message")
     content_type: MessageContentType = Field(description="The message's content type")
@@ -43,6 +44,7 @@ class Message(BaseModel):
         """Create a Message object from a DBMessage object."""
         return Message(
             id=message.id,
+            user_id=message.user_id,
             thread_id=message.thread_id,
             role=message.role,
             content_type=message.content_type,
@@ -106,12 +108,14 @@ class GetMessagesParams(BaseModel):
     """Parameters for getting messages with pagination, sorting, and timestamp filtering.
     
     Attributes:
+        - user_id: The associated user's id
         - thread_id: The associated thread's id
         - limit: Number of messages to return (min 1, max 100) (default: 10)
         - from_timestamp: Timestamp to start filtering from (exclusive)
         - sort_by: Field to sort by (created_at or updated_at) (default: created_at)
         - sort_order: Sort order (asc or desc) (default: desc)    
     """
+    user_id: str = Field(description="The associated user's id")
     thread_id: str = Field(description="The associated thread's id")
     limit: int = Field(ge=1, le=100, default=10, description="Number of messages to return")
     from_timestamp: datetime | None = Field(default=None, description="Timestamp to start from filtering messages (exclusive)")
@@ -122,12 +126,14 @@ class GetDBMessagesParams(BaseModel):
     """Parameters for getting messages with pagination, sorting, and timestamp filtering.
     
     Attributes:
+        - user_id: The associated user's id
         - thread_id: The associated thread's id
         - limit: Number of messages to return (min 1, max 101) (default: 10) (100+1 for paginated limit and has_more flag)
         - from_timestamp: Timestamp to start filtering from (exclusive) 
         - sort_by: Field to sort by (created_at or updated_at) (default: created_at)
         - sort_order: Sort order (asc or desc) (default: desc)
     """
+    user_id: str = Field(description="The associated user's id")
     thread_id: str = Field(description="The associated thread's id")
     limit: int = Field(ge=1, le=101, default=10, description="Number of messages to return (100+1 for paginated limit and has_more flag)")
     from_timestamp: datetime | None = Field(default=None, description="Timestamp to start from filtering messages (exclusive)")
@@ -143,6 +149,7 @@ class UpdateMessageParams(BaseMessageTextParams, BaseMessageToolParams, BaseMess
 class CreateMessageParams(BaseMessageTextParams, BaseMessageToolParams, BaseMessageRecipeParams, BaseMessageAIModelParams):
     """Base parameters for message operations."""
     id: str = Field(description="The message's id")
+    user_id: str = Field(description="The associated user's id")
     thread_id: str = Field(description="The associated thread's id")
     role: MessageRole = Field(description="Who created the message")
     content_type: MessageContentType = Field(description="The message's content type")

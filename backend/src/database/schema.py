@@ -35,6 +35,7 @@ class DBMessage(Base):
     __tablename__ = "messages"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), index=True)
     thread_id = Column(String, ForeignKey("threads.id"), index=True)
     
     role = Column(Enum(MessageRole))
@@ -55,6 +56,7 @@ class DBMessage(Base):
     is_recipe_generation_started = Column(Boolean, nullable=True)
     is_recipe_generation_completed = Column(Boolean, nullable=True)
 
+    user = relationship("DBUser", back_populates="messages")
     thread = relationship("DBThread", back_populates="messages")
     recipe = relationship("DBRecipe", back_populates="message", uselist=False)
 
@@ -69,6 +71,7 @@ class DBUser(Base):
     created_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
     updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)), onupdate=strip_timezone(datetime.now(timezone.utc)))
     
+    messages = relationship("DBMessage", back_populates="user", cascade="all, delete-orphan")
     threads = relationship("DBThread", back_populates="user", cascade="all, delete-orphan")
     recipes = relationship("DBRecipe", back_populates="user", cascade="all, delete-orphan")
 

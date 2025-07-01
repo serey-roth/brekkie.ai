@@ -662,7 +662,7 @@ class TestDataPersistence:
                 # Get messages from database
                 db_messages = await service_container.message_service.get_paginated_messages(
                     db,
-                    GetMessagesParams(thread_id=thread_id)
+                    GetMessagesParams(user_id=user.id,  thread_id=thread_id)
                 )
                 print(f"💬 Database messages: {len(db_messages.messages)}")
                 assert len(db_messages.messages) >= 2, "Expected at least 2 messages (user + AI) in database"

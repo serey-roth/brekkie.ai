@@ -78,6 +78,7 @@ class TestSignupIntegration:
         
         sample_message = Message(
             id="anon123",
+            user_id=old_user_id,
             thread_id=sample_thread.id,
             role="user",
             content_type="text",
@@ -145,7 +146,7 @@ class TestSignupIntegration:
             assert db_thread.user_id == new_user_id
             
             db_paginated_threads = await service_container.thread_service.get_paginated_threads(db, GetUserThreadsParams(user_id=new_user_id))
-            db_paginated_messages = await service_container.message_service.get_paginated_messages(db, GetMessagesParams(thread_id=sample_thread.id))
+            db_paginated_messages = await service_container.message_service.get_paginated_messages(db, GetMessagesParams(user_id=new_user_id, thread_id=sample_thread.id))
             db_recipes = await service_container.recipe_service.get_user_recipes(db, user_id=new_user_id)
         
             assert len(db_paginated_threads.threads) == 1  

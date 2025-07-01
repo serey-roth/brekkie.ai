@@ -63,6 +63,11 @@ class MessageCacheService:
         return sum(1 for m in messages if m.role == MessageRole.user)
     
     
+    async def count_total_messages_sent_by_user(self, user_id: str) -> int:
+        messages = await self.get_messages_by_user_id(user_id)
+        return sum(1 for m in messages if m.role == MessageRole.user)
+    
+    
     async def create_message(self, user_id: str, params: CreateMessageParams, ttl: int | None = None) -> Message:
         message = Message(
             created_at=to_utc_isostring(params.created_at),
@@ -153,8 +158,8 @@ class MessageCacheService:
         return copied_messages
     
     
-    async def get_paginated_messages(self, user_id: str, params: GetMessagesParams) -> PaginatedMessages:
-        messages = await self.get_messages(user_id, params.thread_id)
+    async def get_paginated_messages(self, params: GetMessagesParams) -> PaginatedMessages:
+        messages = await self.get_messages(params.user_id, params.thread_id)
         if len(messages) == 0:
             return PaginatedMessages(
                 messages=[],

@@ -150,6 +150,23 @@ class MessageRepository:
         return result.scalar()
     
     
+    async def count_total_messages_sent_by_user(self, db: AsyncSession, user_id: str) -> int:
+        """Counts the total number of messages sent by a user.
+        
+        Args:
+            db: Database session for the operation
+            user_id: The user's id
+            
+        Returns:
+            Total number of messages sent by the user
+        """
+        result = await db.execute(
+            select(func.count(DBMessage.id))
+            .where(DBMessage.user_id == user_id, DBMessage.role == "user")
+        )
+        return result.scalar()
+    
+    
     async def create_messages(self, db: AsyncSession, params: list[CreateMessageParams]) -> list[DBMessage]:
         """Creates messages in the database.
         

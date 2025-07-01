@@ -11,20 +11,37 @@ load_dotenv()
 DATABASE_URL = os.getenv("DB_URL")
 is_development = os.getenv("ENVIRONMENT") == "development"
 
-db_engine = create_async_engine(
-    DATABASE_URL,
-    echo=is_development,
-)
+# Don't create the engine at module import time
+db_engine = None
+db_session_factory = None
 
-db_session_factory = async_sessionmaker(
-    bind=db_engine,
-    class_=AsyncSession,
-    expire_on_commit=False
-)
+def get_db_engine():
+    global db_engine
+    if db_engine is None:
+        if not DATABASE_URL:
+            logger.error("DB_URL environment variable is not set")
+            raise ValueError("DB_URL environment variable is not set")
+        db_engine = create_async_engine(
+            DATABASE_URL,
+            echo=is_development,
+        )
+    return db_engine
+
+def get_db_session_factory():
+    global db_session_factory
+    if db_session_factory is None:
+        engine = get_db_engine()
+        db_session_factory = async_sessionmaker(
+            bind=engine,
+            class_=AsyncSession,
+            expire_on_commit=False
+        )
+    return db_session_factory
 
 @asynccontextmanager
 async def db_transaction_maker() -> AsyncGenerator[AsyncSession, None]:
-    async with db_session_factory() as db:
+    session_factory = get_db_session_factory()
+    async with session_factory() as db:
         try:
             yield db
             await db.commit()

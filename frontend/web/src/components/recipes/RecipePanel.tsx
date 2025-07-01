@@ -47,7 +47,7 @@ export function RecipePanel({ selectedRecipeId, isSidebarOpen, onClose }: Recipe
             >
                 <div className="bg-background-light h-full pb-safe pt-safe px-safe">
                     <div className=" border-border mx-auto h-screen max-h-screen overflow-y-auto rounded-lg border-l p-4 shadow-lg custom-scrollbar">
-                        <div className="mb-6 ml-26 md:ml-0 flex justify-start">
+                        <div className="mb-6 ml-12 md:ml-0 flex justify-start">
                             <button
                                 onClick={onClose}
                                 className="text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border-none shadow-none backdrop-blur-sm transition-colors duration-200 focus:ring-0 focus:outline-none md:flex"

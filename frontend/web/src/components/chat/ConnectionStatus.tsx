@@ -69,7 +69,7 @@ export function ConnectionStatus({ connectionState }: ConnectionStatusProps) {
                     stiffness: 200,
                     staggerChildren: 0.1
                 }}
-                className={`absolute top-6 right-4 z-50 flex flex-col items-end gap-1`}
+                className={`absolute top-4 right-4 z-50 flex flex-col items-end gap-1`}
             >
                 <motion.div 
                     className={`flex items-center gap-2 rounded-lg px-2 py-2 group ${statusConfig.className}`}

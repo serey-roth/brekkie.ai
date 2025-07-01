@@ -116,7 +116,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 <div
                     className={`mt-4 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}
                 >
-                    {isOpen && <span className="text-contrast ml-4 text-xl font-bold whitespace-nowrap flex-1">brekkie.ai</span>}
+                    {isOpen && (
+                        <div className="flex flex-row items-center flex-1 gap-2">
+                            <span className="text-contrast ml-4 text-xl font-bold whitespace-nowrap">brekkie.ai</span>
+                            <span className="text-contrast-subtle   bg-primary/20 px-2 py-0.5 rounded-full text-xs font-semibold">beta</span>
+                        </div>
+                    )}
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}

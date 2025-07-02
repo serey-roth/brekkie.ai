@@ -21,9 +21,19 @@ def get_db_engine():
         if not DATABASE_URL:
             logger.error("DB_URL environment variable is not set")
             raise ValueError("DB_URL environment variable is not set")
+        
+        pool_config = {
+            "pool_size": 20,
+            "max_overflow": 30,
+            "pool_timeout": 30,
+            "pool_recycle": 3600,
+            "pool_pre_ping": True,
+            "echo": is_development,
+        }
+        
         db_engine = create_async_engine(
             DATABASE_URL,
-            echo=is_development,
+            **pool_config
         )
     return db_engine
 
@@ -48,4 +58,4 @@ async def db_transaction_maker() -> AsyncGenerator[AsyncSession, None]:
         except Exception as e:
             logger.error(f"Error in database transaction: {e}")
             await db.rollback()
-            raise
+            raise 

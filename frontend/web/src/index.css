@@ -70,6 +70,59 @@
     --color-border: #3c3431; /* subtle outline on dark bg */
 }
 
+/* Safe Area Inset Utilities */
+.px-safe {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+.py-safe {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pt-safe {
+    padding-top: env(safe-area-inset-top);
+}
+
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pl-safe {
+    padding-left: env(safe-area-inset-left);
+}
+
+.pr-safe {
+    padding-right: env(safe-area-inset-right);
+}
+
+.mx-safe {
+    margin-left: env(safe-area-inset-left);
+    margin-right: env(safe-area-inset-right);
+}
+
+.my-safe {
+    margin-top: env(safe-area-inset-top);
+    margin-bottom: env(safe-area-inset-bottom);
+}
+
+.mt-safe {
+    margin-top: env(safe-area-inset-top);
+}
+
+.mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+}
+
+.ml-safe {
+    margin-left: env(safe-area-inset-left);
+}
+
+.mr-safe {
+    margin-right: env(safe-area-inset-right);
+}
+
 /* Custom scrollbar that only appears on hover */
 .custom-scrollbar {
   scrollbar-width: thin;

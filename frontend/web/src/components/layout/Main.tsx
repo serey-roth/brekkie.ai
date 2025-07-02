@@ -77,10 +77,10 @@ export function Main() {
     }, [scrollRef, scrollToBottom]) });
     
     return (
-        <div className="bg-background min-h-screen">
+        <div className="bg-background min-h-screen px-safe pb-safe pt-safe">
             <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(!isSidebarOpen)} />
             <div
-                className={`bg-background grid min-h-screen overflow-hidden transition-all duration-300 px-safe pb-safe pt-safe ${
+                className={`bg-background grid min-h-screen overflow-hidden transition-all duration-300 ${
                     selectedRecipeId ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
                 } ${isSidebarOpen ? 'md:ml-16 lg:ml-[20rem]' : 'md:ml-16'}`}
             >

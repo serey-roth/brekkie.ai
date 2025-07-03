@@ -48,3 +48,6 @@ export const UserRecipeSchema = z
     })
     .extend(RecipeSchema.shape);
 export type UserRecipe = z.infer<typeof UserRecipeSchema>;
+
+export const GetUserRecipesResponseSchema = z.array(UserRecipeSchema);
+export type GetUserRecipesResponse = z.infer<typeof GetUserRecipesResponseSchema>;

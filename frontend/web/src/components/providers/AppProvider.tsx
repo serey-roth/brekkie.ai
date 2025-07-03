@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { HttpAccessTokenClient } from '@/api-clients/access-token-client';
 import { HttpAuthClient } from '@/api-clients/auth-client';
+import { HttpRecipesClient } from '@/api-clients/recipes-client';
 import { HttpThreadsClient } from '@/api-clients/threads-client';
 import { getConfigWithOverrides, type EnvironmentConfig } from '@/config/environment';
 import { AppContext, type AppContextType } from '@/context/app-context';
@@ -20,6 +21,7 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
     const authClient = useRef<HttpAuthClient>(new HttpAuthClient(config.apiBaseUrl));
     const threadsClient = useRef<HttpThreadsClient>(new HttpThreadsClient(config.apiBaseUrl));
     const accessTokenClient = useRef<HttpAccessTokenClient>(new HttpAccessTokenClient(config.apiBaseUrl));
+    const recipesClient = useRef<HttpRecipesClient>(new HttpRecipesClient(config.apiBaseUrl));
 
     const userAccessManager = useRef<UserAccessManager>(new UserAccessManager(
         accessTokenClient.current,
@@ -35,6 +37,7 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
             authClient: authClient.current,
             threadsClient: threadsClient.current,
             accessTokenClient: accessTokenClient.current,
+            recipesClient: recipesClient.current,
         },
         managers: {
             userAccessManager: userAccessManager.current,

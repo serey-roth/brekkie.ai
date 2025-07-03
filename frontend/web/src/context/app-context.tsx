@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import { HttpAccessTokenClient } from '@/api-clients/access-token-client';
 import { HttpAuthClient } from '@/api-clients/auth-client';
+import { HttpRecipesClient } from '@/api-clients/recipes-client';
 import { HttpThreadsClient } from '@/api-clients/threads-client';
 import { type EnvironmentConfig } from '@/config/environment';
 import type { UserAccessManager } from '@/managers/user-access-manager';
@@ -10,6 +11,7 @@ interface ApiClients {
     authClient: HttpAuthClient;
     threadsClient: HttpThreadsClient;
     accessTokenClient: HttpAccessTokenClient;
+    recipesClient: HttpRecipesClient;
 }
 
 interface AppManagers {
@@ -56,6 +58,11 @@ export function useAccessTokenApiClient() {
     const { apiClients } = useAppContext();
     return apiClients.accessTokenClient;
 }
+
+export function useRecipesApiClient() {
+    const { apiClients } = useAppContext();
+    return apiClients.recipesClient;
+}   
 
 export function useUserAccessManager() {
     const { managers } = useAppContext();

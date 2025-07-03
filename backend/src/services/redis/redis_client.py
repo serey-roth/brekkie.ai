@@ -2,7 +2,10 @@ import os
 import redis.asyncio as redis
 
 from dotenv import load_dotenv
-load_dotenv()
+
+# Load environment variables with proper precedence
+load_dotenv()  # Load .env if it exists
+load_dotenv(".env.local")  # Load .env.local (development)
 
 from utils.logger import Logger
 

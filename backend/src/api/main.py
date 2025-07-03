@@ -18,6 +18,7 @@ from api.routes.auth import router as auth_router
 from api.routes.access_token import router as access_token_router
 from api.routes.threads import router as threads_router
 from api.routes.health import router as health_router
+from api.routes.recipes import router as recipes_router
 
 from database.index import db_transaction_maker
 
@@ -43,12 +44,18 @@ from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from services.websocket_event_sender import WebSocketEventSender
 from services.redis.redis_client import get_redis_client
 
-load_dotenv()
-os.environ["ENVIRONMENT"] = os.getenv("ENVIRONMENT", "production")
+# Load environment variables with proper precedence
+load_dotenv()  # Load .env if it exists
+load_dotenv(".env.local")  # Load .env.local (development)
+
+# Set environment with proper fallback
+environment = os.getenv("ENVIRONMENT", "development")
+os.environ["ENVIRONMENT"] = environment
 os.environ["DB_URL"] = os.getenv("DB_URL")
 os.environ["REDIS_URL"] = os.getenv("REDIS_URL")
 os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL")
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
+os.environ["TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY")
 
 from utils.logger import Logger
 
@@ -166,6 +173,7 @@ app.include_router(chats_router, prefix="/ws")
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(access_token_router, prefix="/api/access-token")
 app.include_router(threads_router, prefix="/api")
+app.include_router(recipes_router, prefix="/api")
 
 # Mount static files - this will serve the frontend
 # Only mount if the directory exists to prevent startup failures

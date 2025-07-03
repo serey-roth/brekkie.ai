@@ -8,7 +8,10 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from dotenv import load_dotenv
 
-load_dotenv()  
+# Load environment variables with proper precedence
+load_dotenv()  # Load .env if it exists
+load_dotenv(".env.local")  # Load .env.local (development)
+
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
 os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL")
 os.environ["TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY")

@@ -11,6 +11,7 @@ import {
     LuArrowRightFromLine,
     LuArrowLeftFromLine,
     LuMessageSquareX,
+    LuUtensils,
 } from 'react-icons/lu';
 import { useThreadsApiClient, useUserAccessManager } from '@/context/app-context';
 import { useAuthModal, useAuth } from '@/context/auth-context';
@@ -57,10 +58,13 @@ const TRANSITIONS = {
 
 interface SidebarProps {
     isOpen: boolean;
-    onToggle: () => void;
+    openSidebar: () => void;
+    closeSidebar: () => void;
+    showRecipeListView: () => void;
+    hideRecipeListView: () => void;
 }
 
-export function Sidebar({ isOpen, onToggle }: SidebarProps) {
+export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView, hideRecipeListView }: SidebarProps) {
     const { openAuthModal } = useAuthModal();
     const { signout } = useAuth();
 
@@ -83,7 +87,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            onClick={onToggle}
+                            onClick={openSidebar}
                             className="text-contrast hover:text-primary bg-background/95 focus:ring-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border border-border shadow-lg backdrop-blur-sm transition-colors duration-200 focus:ring-2 focus:outline-none"
                         >
                             <LuPanelLeftClose size={20} />
@@ -100,7 +104,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                         animate="open"
                         exit="closed"
                         transition={TRANSITIONS.fast}
-                        onClick={onToggle}
+                        onClick={closeSidebar}
                         className="fixed inset-0 z-40 bg-contrast/20 backdrop-blur-[1px] md:hidden"
                     />
                 )}
@@ -118,14 +122,14 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 >
                     {isOpen && (
                         <div className="flex flex-row items-center flex-1 gap-2">
-                            <span className="text-contrast ml-4 text-xl font-bold whitespace-nowrap">brekkie.ai</span>
+                            <span className="text-contrast ml-3 text-xl font-bold whitespace-nowrap">brekkie.ai</span>
                             <span className="text-contrast-subtle   bg-primary/20 px-2 py-0.5 rounded-full text-xs font-semibold">beta</span>
                         </div>
                     )}
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={onToggle}
+                        onClick={isOpen ? closeSidebar : openSidebar}
                         className={`p-2 text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border border-transparent hover:border-primary/20 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
                     >
                         {isOpen ? <LuArrowLeftFromLine size={20} /> : <LuArrowRightFromLine size={20} />}
@@ -134,7 +138,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
                 <div className={`mt-2 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
                     <motion.button
-                        onClick={startThread}
+                        onClick={() => {
+                            showRecipeListView();
+                            if (isOpen) {
+                                closeSidebar();
+                            }
+                        }}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.95 }}
                         transition={TRANSITIONS.fast}
@@ -145,7 +154,30 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                         style={{ minWidth: '2.5rem', maxWidth: '100%' }}
                         tabIndex={0}
                     >
-                        <div className="flex w-10 h-10 ml-1 items-center justify-center">
+                        <div className="flex w-10 h-10 items-center justify-center">
+                            <LuUtensils size={20} />
+                        </div>
+                        {isOpen && <span className="whitespace-nowrap">Recipes</span>}
+                    </motion.button>
+                </div>
+
+                <div className={`mt-2 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
+                    <motion.button
+                        onClick={() => {
+                            startThread();
+                            hideRecipeListView();
+                        }}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={TRANSITIONS.fast}
+                        animate={{
+                            width: isOpen ? '100%' : '2.5rem',
+                        }}
+                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent hover:border-primary/20 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
+                        style={{ minWidth: '2.5rem', maxWidth: '100%' }}
+                        tabIndex={0}
+                    >
+                        <div className="flex w-10 h-10 items-center justify-center">
                             <LuMessageSquarePlus size={20} />
                         </div>
                         {isOpen && <span className="whitespace-nowrap">New Chat</span>}
@@ -206,7 +238,12 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                                             key={thread.id}
                                             whileHover={{ scale: 1.01 }}
                                             whileTap={{ scale: 0.99 }}
-                                            onClick={() => resumeThread(thread.id)}
+                                            onClick={() => {
+                                                if (currentThreadId !== thread.id) {
+                                                    resumeThread(thread.id);
+                                                }
+                                                hideRecipeListView();
+                                            }}
                                             className={`hover:bg-primary/10 flex w-full items-center gap-2 rounded-xl p-1 text-left text-sm transition-colors duration-200 border border-transparent hover:border-primary/20 sm:p-2 ${currentThreadId === thread.id ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : ''}`}
                                         >
                                             <div className="flex h-8 w-8 items-center justify-center bg-primary/10 rounded-full">
@@ -439,7 +476,7 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
             }
             setThreads(prev => {
                 if (chatState.thread) {
-                    return [...prev, chatState.thread];
+                    return [chatState.thread, ...prev];
                 }
                 return prev;
             });

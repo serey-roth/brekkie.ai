@@ -69,16 +69,12 @@ export class ChatStateManager {
 
     startNewThread() {
         this._state = getInitialChatState(); 
-        this._messageManager.resetState();
-        this._recipeManager.resetState();
         this._eventManager.publish('currentThreadChanged', null);
         this._eventManager.publish('chatStateChanged', this._state);    
     }
 
     resumePreviousThread(threadId: string) {
         this._state = getInitialChatState();
-        this._messageManager.resetState();
-        this._recipeManager.resetState();
         this._eventManager.publish('currentThreadChanged', { thread_id: threadId });
         this._eventManager.publish('chatStateChanged', this._state);
     }
@@ -101,6 +97,7 @@ export class ChatStateManager {
         this.updateState(draft => {
             switch (event.event) {
                 case 'thread_started': {
+                    draft.isReady = false;
                     draft.thread = event.data.thread;
                     draft.threadState = 'started';
 
@@ -113,6 +110,7 @@ export class ChatStateManager {
                 }
 
                 case 'thread_resumed': {
+                    draft.isReady = true;
                     draft.thread = event.data.thread;
                     draft.threadState = 'resumed';
 
@@ -208,6 +206,7 @@ export class ChatStateManager {
                 }
 
                 case 'summary_updated': {
+                    draft.isReady = true;
                     draft.thread = event.data.thread;
                     break;
                 }

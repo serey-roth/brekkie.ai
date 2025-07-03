@@ -194,16 +194,16 @@ function useChatState({ onThreadResumed }: {
 
     const [currentChatState, setCurrentChatState] = useState(chatStateManager.getState());
     const [chatSessionErrorMessage, setChatSessionErrorMessage] = useState<string | null>(null);
-    const [threadTitle, setThreadTitle] = useState<string | null>(chatStateManager.getState().thread?.title ?? (chatStateManager.getState().thread?.is_empty ? null : 'New chat'));
+    const [threadTitle, setThreadTitle] = useState<string | null>(chatStateManager.getState().thread?.title ?? (chatStateManager.getState().thread?.is_empty === false ? 'New chat' : null));
 
     useEffect(() => {
         const chatStateReadyListener = (state: ChatState) => {
             setCurrentChatState(state);
-            setThreadTitle(state.thread?.title ?? (state.thread?.is_empty ? null : 'New chat'));
+            setThreadTitle(state.thread?.title ?? (state.thread?.is_empty === false ? 'New chat' : null));
         };
         const chatStateChangedListener = (state: ChatState) => {
             setCurrentChatState(state);
-            setThreadTitle(state.thread?.title ?? (state.thread?.is_empty ? null : 'New chat'));
+            setThreadTitle(state.thread?.title ?? (state.thread?.is_empty === false ? 'New chat' : null));
         };
         const threadResumedListener = () => {
             onThreadResumed();
@@ -216,7 +216,7 @@ function useChatState({ onThreadResumed }: {
                 setChatSessionErrorMessage(error.message);
             }
         }
-        const threadTitleUpdatedListener = (thread: Thread) => setThreadTitle(thread.title ?? (thread.is_empty ? null : 'New chat'));
+        const threadTitleUpdatedListener = (thread: Thread) => setThreadTitle(thread.title ?? (thread.is_empty === false ? 'New chat' : null));
 
         chatStateManager.subscribe('chatStateReady', chatStateReadyListener);
         chatStateManager.subscribe('chatStateChanged', chatStateChangedListener);

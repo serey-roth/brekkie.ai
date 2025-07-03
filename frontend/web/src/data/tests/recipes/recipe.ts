@@ -1,4 +1,4 @@
-import type { Recipe } from '../../schemas/recipes';
+import type { Recipe } from '@/data/schemas/recipes';
 
 export const testRecipe: Recipe = {
     name: "Classic Chocolate Chip Cookies",

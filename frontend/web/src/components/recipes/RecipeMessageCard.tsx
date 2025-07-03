@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { FaClock, FaUserFriends } from "react-icons/fa";
 import { LuLoader } from "react-icons/lu";
 import { useRecipeManager } from "@/context/chat-context";
 import type { UserRecipe } from "@/data/schemas/recipes";
-import { formatRecipeCategory, formatRecipeTime } from "@/utils/recipe-utils";
-import { Markdown } from "../ui/Markdown";
+import { RecipeCard } from "./RecipeCard";
 
 type RecipeCardProps = {
     recipeId: string;
@@ -71,41 +69,10 @@ export function RecipeMessageCard({ recipeId, isGenerating, onSelectRecipe, sele
     if (!recipe) return null;
 
     return (
-        <div
-            className={`bg-contrast-subtle border-border/10 w-full cursor-pointer rounded-lg border p-4 shadow-sm ${selectedRecipeId === recipeId ? 'border-accent border-2 shadow-md' : ''}`}
-            onClick={handleSelectRecipe}
-        >
-            <h3 className="text-background mb-2 text-lg font-medium">
-                <Markdown>{recipe.name ?? ''}</Markdown>
-            </h3>
-
-            <div className="text-background-light mb-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-                {(recipe.prep_time_minutes || recipe.cook_time_minutes) && (
-                    <div className="flex items-center gap-1">
-                        <FaClock className="text-sm" />
-                        <span className="text-sm">Total: {formatRecipeTime((recipe.prep_time_minutes ?? 0) + (recipe.cook_time_minutes ?? 0))}</span>
-                    </div>
-                )}
-                {recipe.servings && (
-                    <div className="flex items-center gap-1">
-                        <FaUserFriends className="text-sm" />
-                        <span className="text-sm">{recipe.servings} servings</span>
-                    </div>
-                )}
-            </div>
-
-            {recipe.categories && recipe.categories.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                    {recipe.categories.map((category, index) => (
-                        <span
-                            key={index}
-                            className="bg-accent-dark text-accent-light rounded-full px-2 py-0.5 text-xs"
-                        >
-                            {formatRecipeCategory(category.name)}
-                        </span>
-                    ))}
-                </div>
-            )}
-        </div>
+        <RecipeCard
+            recipe={recipe}
+            selectedRecipeId={selectedRecipeId}
+            onSelectRecipe={handleSelectRecipe}
+        />
     );
 }

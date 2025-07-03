@@ -36,7 +36,10 @@ export class RecipeManager {
     addRecipes(recipes: UserRecipe[]) {
         this._recipes = produce(this._recipes, draft => {
             recipes.forEach(recipe => {
-                draft.push(recipe);
+                const existingRecipe = draft.find(r => r.id === recipe.id);
+                if (!existingRecipe) {
+                    draft.push(recipe);
+                }
             });
         });
         this._eventManager.publish('recipesAdded', recipes);

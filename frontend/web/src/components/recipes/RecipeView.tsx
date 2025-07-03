@@ -150,7 +150,7 @@ const RecipeHeader = React.memo(function RecipeHeader({ name, description }: { n
                 <Markdown>{name ?? ''}</Markdown>
             </motion.h1>
             {description && (
-                <motion.p 
+                <motion.div 
                     variants={{
                         hidden: { opacity: 0, y: 20 },
                         visible: { opacity: 1, y: 0 },
@@ -159,7 +159,7 @@ const RecipeHeader = React.memo(function RecipeHeader({ name, description }: { n
                     className="text-contrast-subtle text-base"
                 >
                     <Markdown>{description}</Markdown>
-                </motion.p>
+                </motion.div>
             )}
         </motion.header>
     );

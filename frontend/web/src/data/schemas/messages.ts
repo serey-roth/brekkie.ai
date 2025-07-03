@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { UserRecipeSchema } from './recipes';
 
 export const MessageRoleSchema = z.enum(['user', 'assistant']);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
@@ -59,3 +60,8 @@ export const GetThreadMessagesPayloadSchema = z.object({
     from_timestamp: z.string().nullable().optional(),
 });
 export type GetThreadMessagesPayload = z.infer<typeof GetThreadMessagesPayloadSchema>;
+export const GetThreadMessagesResponseSchema = z.object({
+    paginated_messages: PaginatedMessagesSchema,
+    recipes: z.array(UserRecipeSchema),
+});
+export type GetThreadMessagesResponse = z.infer<typeof GetThreadMessagesResponseSchema>;

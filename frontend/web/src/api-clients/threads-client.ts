@@ -1,10 +1,10 @@
 import { ApiErrorSchema } from "@/data/schemas/errors";
-import { PaginatedMessagesSchema, type GetThreadMessagesPayload, type PaginatedMessages } from "@/data/schemas/messages";
+import { GetThreadMessagesResponseSchema, type GetThreadMessagesPayload, type GetThreadMessagesResponse } from "@/data/schemas/messages";
 import { PaginatedThreadsSchema, type GetUserThreadsPayload, type PaginatedThreads } from "@/data/schemas/threads";
 
 export interface IThreadsClient {
     getUserThreads(payload: GetUserThreadsPayload, accessToken: string | null): Promise<PaginatedThreads>;
-    getThreadMessages(payload: GetThreadMessagesPayload, accessToken: string | null): Promise<PaginatedMessages>;
+    getThreadMessages(payload: GetThreadMessagesPayload, accessToken: string | null): Promise<GetThreadMessagesResponse>;
 }
 
 export class HttpThreadsClient implements IThreadsClient {
@@ -64,7 +64,7 @@ export class HttpThreadsClient implements IThreadsClient {
         return result.data;
     }   
 
-    async getThreadMessages(payload: GetThreadMessagesPayload, accessToken: string | null): Promise<PaginatedMessages> {
+    async getThreadMessages(payload: GetThreadMessagesPayload, accessToken: string | null): Promise<GetThreadMessagesResponse> {
         const headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -103,7 +103,7 @@ export class HttpThreadsClient implements IThreadsClient {
             throw new Error(`${json.detail.message || response.statusText}`);
         }
 
-        const result = await PaginatedMessagesSchema.safeParseAsync(json);
+        const result = await GetThreadMessagesResponseSchema.safeParseAsync(json);
         if (!result.success) {
             throw new Error(`Invalid response from server: ${JSON.stringify(json)}`);
         }

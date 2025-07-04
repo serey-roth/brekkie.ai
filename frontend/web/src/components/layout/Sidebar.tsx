@@ -370,9 +370,20 @@ function useCurrentThread() {
         const currentThreadChangedListener = (threadId: { thread_id: string } | null) => {
             setCurrentThreadId(threadId?.thread_id ?? null);
         };
+        const threadStartedListener = (thread: Thread) => {
+            setCurrentThreadId(thread.id);
+        };
+        const threadResumedListener = (thread: Thread) => {
+            setCurrentThreadId(thread.id);
+        };
+
         chatStateManager.subscribe('currentThreadChanged', currentThreadChangedListener);
+        chatStateManager.subscribe('threadStarted', threadStartedListener);
+        chatStateManager.subscribe('threadResumed', threadResumedListener);
         return () => {
             chatStateManager.unsubscribe('currentThreadChanged', currentThreadChangedListener);
+            chatStateManager.unsubscribe('threadStarted', threadStartedListener);
+            chatStateManager.unsubscribe('threadResumed', threadResumedListener);
         };
     }, [chatStateManager]);
 
@@ -427,7 +438,12 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
                     exclude_empty: true,
                 }, userAccessData.access_token);
 
-                setThreads(prev => [...prev, ...response.threads]);
+                setThreads(prev => {
+                    // The response threads should be authoritative, so we replace the existing threads with the new ones
+                    const map = new Map(prev.map(t => [t.id, t]));
+                    response.threads.forEach(thread => map.set(thread.id, thread));
+                    return Array.from(map.values()).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+                });
                 setHasMoreThreads(response.has_more);
                 setNextTimestamp(response.next_timestamp);
             } catch (error) {

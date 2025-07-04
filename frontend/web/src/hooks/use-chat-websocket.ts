@@ -14,13 +14,14 @@ type ChatWebSocketArgs = {
     connectionStateManager: ConnectionStateManager;
 };
 
-const getWebsocketUrl = (baseWsUrl: string, accessToken: string | null, threadId: string | null) => {
+const getWebsocketUrl = (baseWsUrl: string, accessToken: string | null, threadId: string | null): string | null => {
     if (accessToken === null) {
         return null;
     }
+    const timestamp = Date.now();
     return threadId
-        ? `${baseWsUrl}/chat/${threadId}?access_token=${accessToken}`
-        : `${baseWsUrl}/chat?access_token=${accessToken}`;
+        ? `${baseWsUrl}/chat/${threadId}?access_token=${accessToken}&timestamp=${timestamp}`
+        : `${baseWsUrl}/chat?access_token=${accessToken}&timestamp=${timestamp}`
 }
 
 const CLOSE_CODES_TO_NOT_RECONNECT = [

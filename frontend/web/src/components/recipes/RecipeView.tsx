@@ -352,7 +352,9 @@ const InstructionsList = React.memo(function InstructionsList({ instructions }: 
                                 <div className="bg-primary flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm text-white">
                                     {i + 1}
                                 </div>
-                                <h3 className="text-contrast truncate text-base font-medium">{title}</h3>
+                                <h3 className="text-contrast truncate text-base font-medium">
+                                    <Markdown>{title}</Markdown>
+                                </h3>
                             </div>
                             {hasContent && (
                                 <FaChevronDown
@@ -380,7 +382,9 @@ const InstructionsList = React.memo(function InstructionsList({ instructions }: 
                                     }}
                                     className="overflow-hidden"
                                 >
-                                    <div className="text-contrast px-4 pt-1 pb-4 text-sm">{description}</div>
+                                    <div className="text-contrast px-4 pt-1 pb-4 text-sm">
+                                        <Markdown>{description}</Markdown>
+                                    </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>

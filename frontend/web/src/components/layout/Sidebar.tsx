@@ -475,6 +475,13 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
                 return;
             }
             setThreads(prev => {
+                // Check if the thread already exists in the list
+                const existingIndex = prev.findIndex(t => t.id === chatState.thread?.id);
+                if (existingIndex !== -1) {
+                    // Thread already exists, don't add it again
+                    return prev;
+                }
+                // Add the new thread to the beginning of the list
                 if (chatState.thread) {
                     return [chatState.thread, ...prev];
                 }
@@ -493,7 +500,7 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
                     newThreads[index] = chatState.thread;
                     return newThreads;
                 }
-                return prev
+                return prev;
             }); 
         };
 

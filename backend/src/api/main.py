@@ -9,7 +9,6 @@ from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
@@ -21,6 +20,7 @@ from api.routes.health import router as health_router
 from api.routes.recipes import router as recipes_router
 
 from database.index import db_transaction_maker
+from database.checkpointer import create_checkpointer_pool
 
 from repositories.thread_repository import ThreadRepository
 from repositories.message_repository import MessageRepository
@@ -76,85 +76,79 @@ print("🚀 FastAPI app starting...")
 async def lifespan(app: FastAPI):
     logger.info("Starting up...")
 
-    async with (
-        AsyncPostgresSaver.from_conn_string(os.getenv("CHECKPOINT_DB_URL")) as checkpointer,
-        # AsyncPostgresStore.from_conn_string(os.getenv("MEMORY_STORE_DB_URL"), index={
-        #     "dims": 1536,
-        #     "embed": init_embeddings("openai:text-embedding-3-small"),
-        # }, pool_config=PoolConfig(
-        #     min_size=1,
-        #     max_size=10,
-        #     timeout=30
-        # )) as store
-    ):
-        await checkpointer.setup()
-                            
-        websocket_event_sender = WebSocketEventSender()
-        ai_food_agent = GoogleAIFoodAgent(checkpointer=checkpointer)
-        
-        thread_service = ThreadService(repository=ThreadRepository())
-        message_service = MessageService(repository=MessageRepository())
-        user_service = UserService(repository=UserRepository())
-        recipe_service = RecipeService(repository=RecipeRepository())
-        
-        redis_client = get_redis_client()
-        user_access_cache_service = UserAccessCacheService(redis_client=redis_client, ttl=USER_ACCESS_CACHE_TTL)
-        thread_cache_service = ThreadCacheService(redis_client=redis_client, ttl=THREAD_CACHE_TTL)
-        message_cache_service = MessageCacheService(redis_client=redis_client, ttl=MESSAGE_CACHE_TTL)
-        recipe_cache_service = RecipeCacheService(redis_client=redis_client, ttl=RECIPE_CACHE_TTL)
-        
-        chat_session_store = ChatSessionStore(
-            thread_cache_service=thread_cache_service,
-            message_cache_service=message_cache_service,
-            recipe_cache_service=recipe_cache_service,
-            message_service=message_service,
-            recipe_service=recipe_service,
-            thread_service=thread_service,
-            user_access_cache_service=user_access_cache_service,
-        )
-        chat_session_limit_checker = ChatSessionLimitChecker(
-            user_access_cache_service=user_access_cache_service,
-            authenticated_user_message_limit=AUTHENTICATED_USER_MESSAGE_LIMIT,
-            unauthenticated_user_message_limit=UNAUTHENTICATED_USER_MESSAGE_LIMIT
-        )
-        chat_session_handlers = ChatSessionHandlers(
-            db_transaction_maker=db_transaction_maker,
-            chat_session_store=chat_session_store
-        )
-        chat_session_orchestrator = ChatSessionOrchestrator(
-            session_ttl=SESSION_TTL,
-            db_transaction_maker=db_transaction_maker,
-            user_access_cache_service=user_access_cache_service,
-            ai_food_agent=ai_food_agent,
-            websocket_event_sender=websocket_event_sender,  
-            chat_session_store=chat_session_store,
-            chat_session_handlers=chat_session_handlers,
-            chat_session_limit_checker=chat_session_limit_checker
-        )
+    #https://github.com/langchain-ai/langgraph/discussions/1429
+    checkpointer_db_pool = create_checkpointer_pool()
+    await checkpointer_db_pool.open(wait=True)
+    checkpointer = AsyncPostgresSaver(conn=checkpointer_db_pool)
+    await checkpointer.setup()
+    
+    websocket_event_sender = WebSocketEventSender()
+    ai_food_agent = GoogleAIFoodAgent(checkpointer=checkpointer)
+    
+    thread_service = ThreadService(repository=ThreadRepository())
+    message_service = MessageService(repository=MessageRepository())
+    user_service = UserService(repository=UserRepository())
+    recipe_service = RecipeService(repository=RecipeRepository())
+    
+    redis_client = get_redis_client()
+    user_access_cache_service = UserAccessCacheService(redis_client=redis_client, ttl=USER_ACCESS_CACHE_TTL)
+    thread_cache_service = ThreadCacheService(redis_client=redis_client, ttl=THREAD_CACHE_TTL)
+    message_cache_service = MessageCacheService(redis_client=redis_client, ttl=MESSAGE_CACHE_TTL)
+    recipe_cache_service = RecipeCacheService(redis_client=redis_client, ttl=RECIPE_CACHE_TTL)
+    
+    chat_session_store = ChatSessionStore(
+        thread_cache_service=thread_cache_service,
+        message_cache_service=message_cache_service,
+        recipe_cache_service=recipe_cache_service,
+        message_service=message_service,
+        recipe_service=recipe_service,
+        thread_service=thread_service,
+        user_access_cache_service=user_access_cache_service,
+    )
+    chat_session_limit_checker = ChatSessionLimitChecker(
+        user_access_cache_service=user_access_cache_service,
+        authenticated_user_message_limit=AUTHENTICATED_USER_MESSAGE_LIMIT,
+        unauthenticated_user_message_limit=UNAUTHENTICATED_USER_MESSAGE_LIMIT
+    )
+    chat_session_handlers = ChatSessionHandlers(
+        db_transaction_maker=db_transaction_maker,
+        chat_session_store=chat_session_store
+    )
+    chat_session_orchestrator = ChatSessionOrchestrator(
+        session_ttl=SESSION_TTL,
+        db_transaction_maker=db_transaction_maker,
+        user_access_cache_service=user_access_cache_service,
+        ai_food_agent=ai_food_agent,
+        websocket_event_sender=websocket_event_sender,  
+        chat_session_store=chat_session_store,
+        chat_session_handlers=chat_session_handlers,
+        chat_session_limit_checker=chat_session_limit_checker
+    )
 
-        service_container = ServiceContainer(
-            db_transaction_maker=db_transaction_maker,
-            ai_food_agent=ai_food_agent,
-            user_access_cache_service=user_access_cache_service,
-            user_service=user_service,
-            message_service=message_service,
-            message_cache_service=message_cache_service,
-            recipe_service=recipe_service,
-            recipe_cache_service=recipe_cache_service,
-            thread_service=thread_service,
-            thread_cache_service=thread_cache_service,
-            websocket_event_sender=websocket_event_sender,
-            chat_session_store=chat_session_store,
-            chat_session_orchestrator=chat_session_orchestrator,
-            chat_session_limit_checker=chat_session_limit_checker
-        )
+    service_container = ServiceContainer(
+        db_transaction_maker=db_transaction_maker,
+        ai_food_agent=ai_food_agent,
+        user_access_cache_service=user_access_cache_service,
+        user_service=user_service,
+        message_service=message_service,
+        message_cache_service=message_cache_service,
+        recipe_service=recipe_service,
+        recipe_cache_service=recipe_cache_service,
+        thread_service=thread_service,
+        thread_cache_service=thread_cache_service,
+        websocket_event_sender=websocket_event_sender,
+        chat_session_store=chat_session_store,
+        chat_session_orchestrator=chat_session_orchestrator,
+        chat_session_limit_checker=chat_session_limit_checker
+    )
 
-        app.state.service_container = service_container
-        logger.info("Service container initialized")
-
-        yield
-
-        logger.info("Shutting down...")
+    app.state.service_container = service_container
+    logger.info("Service container initialized")
+    
+    yield
+    
+    logger.info("Shutting down...")
+    await checkpointer_db_pool.close()
         
 
 app = FastAPI(lifespan=lifespan)

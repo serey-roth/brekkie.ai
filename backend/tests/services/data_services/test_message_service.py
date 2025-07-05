@@ -89,6 +89,7 @@ class TestSimpleMessageOperations:
             text_content="test-text-content",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
+            parent_id="user_message_id",
         )
         
         message = await message_service.create_assistant_text_message(async_session, params)
@@ -103,7 +104,7 @@ class TestSimpleMessageOperations:
         assert message.text_content == params.text_content
         assert message.created_at == to_utc_isostring(params.created_at)
         assert message.updated_at == to_utc_isostring(params.updated_at)
-        
+        assert message.parent_id == params.parent_id
     
     async def test_create_assistant_recipe_message(self, async_session: AsyncSession, message_service: MessageService):
         params = CreateAssistantRecipeMessageParams(
@@ -115,6 +116,7 @@ class TestSimpleMessageOperations:
             is_recipe_generation_completed=False,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
+            parent_id="user_message_id",
         )
         
         message = await message_service.create_assistant_recipe_message(async_session, params)
@@ -131,7 +133,7 @@ class TestSimpleMessageOperations:
         assert message.is_recipe_generation_completed == params.is_recipe_generation_completed
         assert message.created_at == to_utc_isostring(params.created_at)
         assert message.updated_at == to_utc_isostring(params.updated_at)
-        
+        assert message.parent_id == params.parent_id
     
     async def test_update_message(self, async_session: AsyncSession, message_service: MessageService):
         message = await message_service.create_assistant_text_message(async_session, CreateAssistantTextMessageParams(
@@ -141,6 +143,7 @@ class TestSimpleMessageOperations:
             text_content="test-text-content",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
+            parent_id="user_message_id",
         ))
         
         params = UpdateMessageParams(
@@ -166,6 +169,7 @@ class TestSimpleMessageOperations:
             text_content="test-text-content",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
+            parent_id="user_message_id",
         )
         message = await message_service.create_assistant_text_message(async_session, params)
         
@@ -181,6 +185,7 @@ class TestSimpleMessageOperations:
         assert message.text_content == params.text_content
         assert message.created_at == to_utc_isostring(params.created_at)
         assert message.updated_at == to_utc_isostring(params.updated_at)
+        assert message.parent_id == params.parent_id
 
     async def test_count_thread_messages(self, async_session: AsyncSession, message_service: MessageService):
         for i in range(10):
@@ -191,6 +196,7 @@ class TestSimpleMessageOperations:
                 text_content=f"test-text-content-{i}",
                 created_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
                 updated_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
+                parent_id=f"test-message-id-{i}"
             ))
         
         count = await message_service.count_thread_messages(async_session, "test-thread-id")
@@ -206,6 +212,7 @@ class TestSimpleMessageOperations:
                 text_content=f"test-text-content-{i}",
                 created_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
                 updated_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
+                parent_id=f"test-message-id-{i}"
             ) for i in range(50)
         ]
         
@@ -231,6 +238,7 @@ class TestPaginatedMessages:
                 text_content=f"test-text-content-{i}",
                 created_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
                 updated_at=datetime.now(timezone.utc) + timedelta(seconds=i * 100),
+                parent_id=f"test-message-id-{i}"
             ) for i in range(50)
         ]
 

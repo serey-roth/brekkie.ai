@@ -483,11 +483,12 @@ class TestGetRecipesByMessageId:
         return str(uuid4())
     
     @pytest.fixture(scope="function")
-    def sample_message(self, message_id: str, thread_id: str, recipe_id: str):
+    def sample_message(self, message_id: str, thread_id: str, recipe_id: str, user_id: str):
         """Sample message that references a recipe for testing."""
         return {
             "id": message_id,
             "thread_id": thread_id,
+            "user_id": user_id,
             "role": MessageRole.assistant,
             "content_type": MessageContentType.recipe,
             "recipe_id": recipe_id,

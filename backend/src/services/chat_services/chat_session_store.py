@@ -1,10 +1,8 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Callable, Any, TypeVar
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from schemas.message_content_type import MessageContentType
-from schemas.message_role import MessageRole
 from schemas.messages import (
     CreateAssistantToolMessageParams,
     Message,

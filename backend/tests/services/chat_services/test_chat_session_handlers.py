@@ -93,9 +93,13 @@ def sample_user_access_data():
     )
     
     
+@pytest.fixture
+def sample_user_message_id():
+    return "123"
+    
 class TestAssistantStartedResponding:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data):
+    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data, sample_user_message_id):
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
@@ -126,6 +130,7 @@ class TestAssistantStartedResponding:
             user_access_data=sample_user_access_data,
             thread_id=thread_id,
             assistant_message_id=assistant_message_id,
+            user_message_id=sample_user_message_id,
             payload=TextMessageStartedPayload(),
             timestamp=timestamp,
         )
@@ -150,6 +155,7 @@ class TestAssistantStartedResponding:
                 text_content="",
                 created_at=timestamp,
                 updated_at=timestamp,
+                parent_id=sample_user_message_id,
             ),
         )
         
@@ -159,7 +165,7 @@ class TestAssistantStartedResponding:
         })
         
     @pytest.mark.asyncio
-    async def test_no_db_transaction(self, chat_session_handlers, sample_user_access_data):
+    async def test_no_db_transaction(self, chat_session_handlers, sample_user_access_data, sample_user_message_id):
         @asynccontextmanager
         async def bad_transaction():
             yield None
@@ -171,12 +177,13 @@ class TestAssistantStartedResponding:
                 user_access_data=sample_user_access_data,
                 thread_id="123",
                 assistant_message_id="123",
+                user_message_id=sample_user_message_id,
                 timestamp=datetime.now(timezone.utc),
             )
     
     
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data):
+    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data, sample_user_message_id):
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
@@ -188,6 +195,7 @@ class TestAssistantStartedResponding:
                 user_access_data=sample_user_access_data,
                 thread_id=thread_id,
                 assistant_message_id=assistant_message_id,
+                user_message_id=sample_user_message_id,
                 timestamp=timestamp,
             )
 
@@ -400,7 +408,7 @@ class TestAssistantFinishedResponding:
 
 class TestRecipeGenerationStarted:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data):
+    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data, sample_user_message_id):
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
@@ -453,6 +461,7 @@ class TestRecipeGenerationStarted:
             content_type=MessageContentType.recipe,
             tool_name=recipe_tool_name,
             tool_input=recipe_tool_input,
+            parent_id=sample_user_message_id,
         )
         
         mock_chat_session_store.create_recipe.return_value = expected_recipe
@@ -466,6 +475,7 @@ class TestRecipeGenerationStarted:
                 user_access_data=sample_user_access_data,
                 thread_id=thread_id,
                 assistant_message_id=assistant_message_id,
+                user_message_id=sample_user_message_id,
                 payload=RecipeGenerationStartedPayload(
                     tool_name=recipe_tool_name,
                     tool_input=recipe_tool_input,
@@ -497,6 +507,7 @@ class TestRecipeGenerationStarted:
                     tool_input=recipe_tool_input,
                     created_at=timestamp,
                     updated_at=timestamp,
+                    parent_id=sample_user_message_id,
                 ),
             )
             
@@ -507,7 +518,7 @@ class TestRecipeGenerationStarted:
             })
         
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data):
+    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data, sample_user_message_id):
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
@@ -525,6 +536,7 @@ class TestRecipeGenerationStarted:
                 user_access_data=sample_user_access_data,
                 thread_id=thread_id,
                 assistant_message_id=assistant_message_id,
+                user_message_id=sample_user_message_id,
                 payload=RecipeGenerationStartedPayload(
                     tool_name=recipe_tool_name,
                     tool_input=recipe_tool_input,
@@ -910,7 +922,7 @@ class TestRecipeGenerationCompleted:
 
 class TestSearchStarted:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data):
+    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data, sample_user_message_id):
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
@@ -948,6 +960,7 @@ class TestSearchStarted:
             user_access_data=sample_user_access_data,
             thread_id=thread_id,
             assistant_message_id=assistant_message_id,
+            user_message_id=sample_user_message_id,
             payload=SearchStartedPayload(
                 tool_name=search_tool_name,
                 tool_input=search_tool_input,
@@ -977,6 +990,7 @@ class TestSearchStarted:
                 tool_input=search_tool_input,
                 created_at=timestamp,
                 updated_at=timestamp,
+                parent_id=sample_user_message_id,
             ),
         )
         
@@ -986,7 +1000,7 @@ class TestSearchStarted:
         })
         
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data):
+    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data, sample_user_message_id):
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
@@ -1003,6 +1017,7 @@ class TestSearchStarted:
                 user_access_data=sample_user_access_data,
                 thread_id=thread_id,
                 assistant_message_id=assistant_message_id,
+                user_message_id=sample_user_message_id,
                 payload=SearchStartedPayload(
                     tool_name=search_tool_name,
                     tool_input=search_tool_input,

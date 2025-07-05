@@ -235,11 +235,12 @@ class ChatSessionEngine:
         
         
     async def _handle_user_message(self, user_access_data: UserAccessData, payload: UserMessagePayload) -> None:
+        user_message_id = payload.id
         timestamp = datetime.now(timezone.utc)
         async with self.db_transaction_maker() as db:
-            await self.session_store.create_user_message(db, user_access_data, self.thread_id, payload.id, payload.content, timestamp)
+            await self.session_store.create_user_message(db, user_access_data, self.thread_id, user_message_id, payload.content, timestamp)
             
-        await self.message_processor.process_user_message(user_access_data, self.thread_id, payload.content)
+        await self.message_processor.process_user_message(user_access_data, self.thread_id, user_message_id, payload.content)
         
         
     async def run(self):

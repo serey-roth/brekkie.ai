@@ -1,11 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { FaCircleExclamation } from 'react-icons/fa6';
 import { LuLoader } from 'react-icons/lu';
-import { ChatMessageGroup } from '@/components/chat/MessageGroup';
-import type { MessageGroup } from '@/data/schemas/messages';
+import { ChatMessageGroup, AssistantThinkingMessageBubble } from '@/components/chat/MessageGroup';
+import type { RoleMessageGroup } from '@/data/schemas/messages';
 
 interface MessageListProps {
-    messageGroups: MessageGroup[];
+    messageGroups: RoleMessageGroup[];
     isAssistantThinking: boolean;
     isAssistantResponding: boolean;
     selectedRecipeId: string | null;
@@ -61,12 +61,12 @@ export function MessageList({
                 <ChatMessageGroup
                     key={idx}
                     group={group}
-                    isAssistantThinking={isAssistantThinking}
                     isAssistantResponding={isAssistantResponding}
                     selectedRecipeId={selectedRecipeId}
                     onSelectRecipe={onSelectRecipe}
                 />
             ))}
+            {isAssistantThinking && <AssistantThinkingMessageBubble />}
         </AnimatePresence>
     );
 } 

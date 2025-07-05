@@ -126,7 +126,7 @@ def test_get_agent_config(mock_agent_service):
     config = mock_agent_service.get_agent_config("user_id", "thread_id")
     assert_deep_equal(config, {
         "configurable": {"user_id": "user_id", "thread_id": "thread_id"},
-        "tags": ["food_agent"],
+        "tags": ["brekkie-ai-api", "food_agent"],
         "metadata": {"thread_id": "thread_id"}
     })
     

@@ -96,7 +96,8 @@ class ChatSessionHandlers:
         payload: TextMessageStartedPayload,
         timestamp: datetime, 
         *, 
-        db: AsyncSession, 
+        db: AsyncSession,
+        user_message_id: str,
     ) -> ChatSessionHandlersResult:
         try:
             logger.debug(f"Text message started for user_id {user_access_data.user_id} with message_id {assistant_message_id} and timestamp {timestamp}")
@@ -114,6 +115,7 @@ class ChatSessionHandlers:
                 text_content="",
                 created_at=timestamp,
                 updated_at=timestamp,
+                parent_id=user_message_id,
             ))
             
             return { "thread": thread, "message": message }
@@ -213,6 +215,7 @@ class ChatSessionHandlers:
         timestamp: datetime, 
         *, 
         db: AsyncSession,
+        user_message_id: str,
     ) -> ChatSessionHandlersResult:
         try:
             logger.debug(f"Recipe generation started for user_id {user_access_data.user_id} with message_id {assistant_message_id} and timestamp {timestamp}")
@@ -238,6 +241,7 @@ class ChatSessionHandlers:
                 tool_input=recipe_tool_input,
                 created_at=timestamp,
                 updated_at=timestamp,
+                parent_id=user_message_id,
             ))
             
             return { "thread": thread, "message": message, "recipe": recipe }
@@ -359,6 +363,7 @@ class ChatSessionHandlers:
         timestamp: datetime, 
         *, 
         db: AsyncSession,
+        user_message_id: str,
     ) -> ChatSessionHandlersResult:
         try:
             logger.debug(f"Search started for user_id {user_access_data.user_id} with message_id {assistant_message_id} and timestamp {timestamp}")
@@ -380,6 +385,7 @@ class ChatSessionHandlers:
                 tool_input=search_tool_input,
                 created_at=timestamp,
                 updated_at=timestamp,
+                parent_id=user_message_id,
             ))
             
             return { "thread": thread, "message": message }

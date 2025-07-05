@@ -246,6 +246,7 @@ class TestGetThreadMessages:
                     "thread_id": thread_id,
                     "role": MessageRole.user.value,
                     "content_type": MessageContentType.text.value,
+                    "parent_id": None,
                     "text_content": "Hello, world!",
                     "created_at": to_utc_isostring(message_created_at),
                     "updated_at": to_utc_isostring(message_updated_at),
@@ -271,6 +272,7 @@ class TestGetThreadMessages:
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
         user_access_data = await service_container.user_access_cache_service.promote_to_authenticated(user_access_data.access_token, user_access_data.user_id, "test@test.com", "Test User")
         
+        user_message_id = str(uuid4())
         thread_id = str(uuid4())
         message_id = str(uuid4())
         recipe_id = str(uuid4())
@@ -324,6 +326,7 @@ class TestGetThreadMessages:
                 thread_id=thread.id,
                 role=MessageRole.assistant,
                 content_type=MessageContentType.recipe,
+                parent_id=user_message_id,
                 created_at=message_created_at,
                 updated_at=message_updated_at,
                 recipe_id=recipe.id,
@@ -343,6 +346,7 @@ class TestGetThreadMessages:
                         "role": MessageRole.assistant.value,     
                         "content_type": MessageContentType.recipe.value,
                         "text_content": None,
+                        "parent_id": user_message_id,
                         "created_at": to_utc_isostring(message_created_at),
                         "updated_at": to_utc_isostring(message_updated_at),
                         "recipe_id": recipe_id,

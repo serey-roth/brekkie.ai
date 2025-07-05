@@ -406,6 +406,7 @@ class TestCreateMessage:
             text_content="text_content",
             created_at=to_utc_isostring(created_at),
             updated_at=to_utc_isostring(updated_at),
+            parent_id="user_message_id",
         )
         
         params = CreateAssistantTextMessageParams(
@@ -415,6 +416,7 @@ class TestCreateMessage:
             text_content="text_content",
             created_at=created_at,
             updated_at=updated_at,
+            parent_id="user_message_id",
         )
         
         await message_cache_service.create_assistant_text_message("user_id", params)
@@ -438,6 +440,7 @@ class TestCreateMessage:
             updated_at=to_utc_isostring(updated_at),
             is_recipe_generation_started=True,
             is_recipe_generation_completed=False,
+            parent_id="user_message_id",
         )
         
         params = CreateAssistantRecipeMessageParams(
@@ -449,6 +452,7 @@ class TestCreateMessage:
             updated_at=updated_at,
             is_recipe_generation_started=True,
             is_recipe_generation_completed=False,
+            parent_id="user_message_id",
         )
         
         await message_cache_service.create_assistant_recipe_message("user_id", params)
@@ -473,6 +477,7 @@ class TestCreateMessage:
             model_name="gpt-4o",
             input_tokens=1000,
             output_tokens=500,
+            parent_id="user_message_id",
         )
         
         params = CreateAssistantTextMessageParams(
@@ -485,6 +490,7 @@ class TestCreateMessage:
             model_name="gpt-4o",
             input_tokens=1000,
             output_tokens=500,
+            parent_id="user_message_id",
         )
         
         await message_cache_service.create_assistant_text_message("user_id", params)
@@ -511,6 +517,7 @@ class TestCreateMessage:
             model_name="gpt-4o",
             input_tokens=1000,
             output_tokens=500,
+            parent_id="user_message_id",
         )
         
         params = CreateAssistantToolMessageParams(
@@ -525,6 +532,7 @@ class TestCreateMessage:
             model_name="gpt-4o",
             input_tokens=1000,
             output_tokens=500,
+            parent_id="user_message_id",
         )
         
         await message_cache_service.create_assistant_tool_message("user_id", params)

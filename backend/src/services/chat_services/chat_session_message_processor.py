@@ -49,9 +49,32 @@ class ChatSessionMessageProcessor:
             "thread_title_updated": self.chat_session_handlers.handle_thread_title_updated,
             "ai_agent_error": self.chat_session_handlers.handle_ai_agent_error,
         }
+        
+    
+    def _requires_user_message_id(self, event: ConversationStreamEvent) -> bool:
+        event_name = event.event
+        return event_name in [
+            "text_message_started", 
+            "recipe_generation_started", 
+            "search_started", 
+        ]
 
     
-    def _requires_existing_assistant_message(self, event: ConversationStreamEvent) -> bool:
+    def _requires_assistant_message_id(self, event: ConversationStreamEvent) -> bool:
+        event_name = event.event
+        return event_name in [
+            "text_message_started",
+            "text_message_chunk_generated", 
+            "text_message_completed", 
+            "recipe_generation_started",
+            "recipe_field_detected", 
+            "recipe_generation_completed", 
+            "search_started",
+            "search_completed",
+        ]
+        
+        
+    def _requires_existing_assistant_message_id(self, event: ConversationStreamEvent) -> bool:
         event_name = event.event
         return event_name in [
             "text_message_chunk_generated", 
@@ -83,6 +106,7 @@ class ChatSessionMessageProcessor:
         self, 
         user_access_data: UserAccessData,
         thread_id: str,
+        user_message_id: str,
         assistant_message_id: str,
         event: ConversationStreamEvent,
         timestamp: datetime,
@@ -100,9 +124,12 @@ class ChatSessionMessageProcessor:
             "timestamp": timestamp,
         }
         
-        if event_name not in ["summary_updated", "thread_title_updated", "ai_agent_error"]:
+        if self._requires_user_message_id(event):
+            kwargs["user_message_id"] = user_message_id
+            
+        if self._requires_assistant_message_id(event):
             kwargs["assistant_message_id"] = assistant_message_id
-        
+            
         return await handler(**kwargs)
         
     
@@ -110,12 +137,13 @@ class ChatSessionMessageProcessor:
         self,
         user_access_data: UserAccessData,
         thread_id: str,
+        user_message_id: str,
         event: ConversationStreamEvent,
     ):
         if self._should_create_assistant_message(event):
             self.assistant_message_id = str(uuid.uuid4())
         
-        if self._requires_existing_assistant_message(event):
+        if self._requires_existing_assistant_message_id(event):
             if self.assistant_message_id is None:
                 raise ValueError("Assistant message id is not set")
             
@@ -125,6 +153,7 @@ class ChatSessionMessageProcessor:
         result = await self._call_handler(
             user_access_data=user_access_data,
             thread_id=thread_id,
+            user_message_id=user_message_id,
             assistant_message_id=assistant_message_id,
             event=event,
             timestamp=timestamp,
@@ -145,13 +174,14 @@ class ChatSessionMessageProcessor:
         self, 
         user_access_data: UserAccessData,
         thread_id: str, 
+        user_message_id: str,
         user_input: str,
     ):
         try:
             logger.debug(f"Processing chat message from user {user_access_data.user_id}: {user_input[:50]}...")
             
             async def on_event(event: ConversationStreamEvent):
-                await self._handle_event(user_access_data, thread_id, event)
+                await self._handle_event(user_access_data, thread_id, user_message_id, event)
                 
             await self.ai_food_agent.stream_conversation(
                 user_id=user_access_data.user_id,
@@ -165,6 +195,7 @@ class ChatSessionMessageProcessor:
             await self._handle_event(
                 user_access_data=user_access_data,
                 thread_id=thread_id,
+                user_message_id=user_message_id,
                 event=ConversationStreamEvent(
                     event="ai_agent_error",
                     payload=AIAgentErrorPayload(error_message=str(e))

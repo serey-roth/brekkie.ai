@@ -8,35 +8,11 @@ import { isAssistantMessage, isAssistantRecipeMessage } from '@/utils/message-ut
 
 interface ChatMessageGroupProps {
     group: RoleMessageGroup;
-    isAssistantThinking: boolean;
     isAssistantResponding: boolean;
     selectedRecipeId: string | null;
     onSelectRecipe: (recipeId: string | null) => void;
 }
 
-function AssistantMessageContent({ 
-    message
-}: { 
-    message: AssistantMessage; 
-}) {
-    // TODO: Future enhancement - Add typing effect with progressive markdown rendering
-    // Consider implementing a custom typing animation that works well with markdown elements
-    // like lists, headers, and code blocks without breaking the visual flow
-    
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ 
-                type: "tween",
-                duration: 0.5, 
-                ease: "easeInOut" 
-            }}
-        >
-            <Markdown>{message.text_content ?? ''}</Markdown>
-        </motion.div>
-    );
-}
 
 function UserMessageBubble({ message }: { message: UserMessage }) {
     return (
@@ -84,11 +60,34 @@ function UserMessageGroup({ messages }: { messages: UserMessage[] }) {
     );
 }
 
+function AssistantMessageContent({ 
+    message
+}: { 
+    message: AssistantMessage; 
+}) {
+    // TODO: Future enhancement - Add typing effect with progressive markdown rendering
+    // Consider implementing a custom typing animation that works well with markdown elements
+    // like lists, headers, and code blocks without breaking the visual flow
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ 
+                type: "tween",
+                duration: 0.5, 
+                ease: "easeInOut" 
+            }}
+        >
+            <Markdown>{message.text_content ?? ''}</Markdown>
+        </motion.div>
+    );
+}
+
+
 function AssistantMessageBubble({ 
     message, 
     isFirst, 
     isLast, 
-    isAssistantThinking, 
     isAssistantResponding,
     selectedRecipeId,
     onSelectRecipe 
@@ -96,7 +95,6 @@ function AssistantMessageBubble({
     message: AssistantMessage;
     isFirst: boolean;
     isLast: boolean;
-    isAssistantThinking: boolean;
     isAssistantResponding: boolean;
     selectedRecipeId: string | null;
     onSelectRecipe: (recipeId: string | null) => void;
@@ -121,16 +119,16 @@ function AssistantMessageBubble({
                         </div>
                         
                         <motion.div
-                            key={isAssistantThinking || isAssistantResponding ? 'active' : 'finished'}
+                            key={isAssistantResponding ? 'active' : 'finished'}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.15 }}
                         >
-                            {isAssistantThinking || isAssistantResponding ? (
+                            {isAssistantResponding ? (
                                 <div className="flex items-center gap-1">
                                     <span className="text-base font-medium text-primary/70">
-                                        Milo is {isAssistantThinking ? 'thinking' : 'typing'} 
+                                        Milo is responding
                                     </span>
                                     <div className="flex items-center gap-1 mt-2">
                                         {[0, 1, 2].map((i) => (
@@ -188,13 +186,42 @@ function AssistantMessageBubble({
     );
 }
 
-function ThinkingMessageBubble({ 
-    isAssistantThinking, 
-    isAssistantResponding
+function AssistantMessageGroup({ 
+    messages, 
+    isAssistantResponding,
+    selectedRecipeId,
+    onSelectRecipe 
 }: { 
-    isAssistantThinking: boolean;
+    messages: AssistantMessage[];
     isAssistantResponding: boolean;
+    selectedRecipeId: string | null;
+    onSelectRecipe: (recipeId: string | null) => void;
 }) {
+    return (
+        <div className="flex w-full gap-3 sm:gap-2 items-start justify-start">
+            <div className="flex flex-col flex-shrink-0 w-full">
+                {messages.map((msg, i) => {
+                    const isFirst = i === 0;
+                    const isLast = i === messages.length - 1;
+
+                    return (
+                        <AssistantMessageBubble
+                            key={msg.id}
+                            message={msg}
+                            isFirst={isFirst}
+                            isLast={isLast}
+                            isAssistantResponding={isAssistantResponding}
+                            selectedRecipeId={selectedRecipeId}
+                            onSelectRecipe={onSelectRecipe}
+                        />
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+export function AssistantThinkingMessageBubble() {
     return (
         <div className="flex w-full gap-3 sm:gap-2 items-start justify-start">
             <div className="flex flex-col flex-shrink-0 w-full">
@@ -206,9 +233,7 @@ function ThinkingMessageBubble({
                                     <LuBot size={18} className="text-primary" />
                                 </div>
                             </div>
-                            
                             <motion.div
-                                key={isAssistantThinking || isAssistantResponding ? 'active' : 'finished'}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
@@ -216,7 +241,7 @@ function ThinkingMessageBubble({
                             >
                                 <div className="flex items-center gap-1">
                                     <span className="text-base font-medium text-primary/70">
-                                        Milo is {isAssistantThinking ? 'thinking' : 'typing'} 
+                                        Milo is thinking
                                     </span>
                                     <div className="flex items-center gap-1 mt-2">
                                         {[0, 1, 2].map((i) => (
@@ -246,60 +271,7 @@ function ThinkingMessageBubble({
     );
 }
 
-function AssistantMessageGroup({ 
-    messages, 
-    isAssistantThinking, 
-    isAssistantResponding,
-    selectedRecipeId,
-    onSelectRecipe 
-}: { 
-    messages: AssistantMessage[];
-    isAssistantThinking: boolean;
-    isAssistantResponding: boolean;
-    selectedRecipeId: string | null;
-    onSelectRecipe: (recipeId: string | null) => void;
-}) {
-    const isActive = isAssistantThinking || isAssistantResponding;
-    const hasMessages = messages.length > 0;
-
-    // Don't render anything if no messages and not active
-    if (!hasMessages && !isActive) return null;
-
-    return (
-        <div className="flex w-full gap-3 sm:gap-2 items-start justify-start">
-            <div className="flex flex-col flex-shrink-0 w-full">
-                {hasMessages ? (
-                    // Render actual messages
-                    messages.map((msg, i) => {
-                        const isFirst = i === 0;
-                        const isLast = i === messages.length - 1;
-
-                        return (
-                            <AssistantMessageBubble
-                                key={msg.id}
-                                message={msg}
-                                isFirst={isFirst}
-                                isLast={isLast}
-                                isAssistantThinking={isAssistantThinking}
-                                isAssistantResponding={isAssistantResponding}
-                                selectedRecipeId={selectedRecipeId}
-                                onSelectRecipe={onSelectRecipe}
-                            />
-                        );
-                    })
-                ) : (
-                    // Render thinking bubble
-                    <ThinkingMessageBubble 
-                        isAssistantThinking={isAssistantThinking}
-                        isAssistantResponding={isAssistantResponding}
-                    />
-                )}
-            </div>
-        </div>
-    );
-}
-
-export function ChatMessageGroup({ group, selectedRecipeId, onSelectRecipe, isAssistantThinking, isAssistantResponding = false }: ChatMessageGroupProps) {
+export function ChatMessageGroup({ group, selectedRecipeId, onSelectRecipe, isAssistantResponding = false }: ChatMessageGroupProps) {
     const { role, messages } = group;
 
     return (
@@ -307,7 +279,6 @@ export function ChatMessageGroup({ group, selectedRecipeId, onSelectRecipe, isAs
             {role === 'user' && <UserMessageGroup messages={messages} />}
             {role === 'assistant' && <AssistantMessageGroup 
                 messages={messages}
-                isAssistantThinking={isAssistantThinking}
                 isAssistantResponding={isAssistantResponding}
                 selectedRecipeId={selectedRecipeId}
                 onSelectRecipe={onSelectRecipe}

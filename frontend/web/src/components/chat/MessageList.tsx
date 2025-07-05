@@ -1,10 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { FaCircleExclamation } from 'react-icons/fa6';
 import { LuLoader } from 'react-icons/lu';
-import { ChatMessageGroup } from '@/components/chat/MessageGroup';
+import { ChatMessageGroup, AssistantThinkingMessageBubble } from '@/components/chat/MessageGroup';
 import type { RoleMessageGroup } from '@/data/schemas/messages';
 
-interface MessageTurnListProps {
+interface MessageListProps {
     messageGroups: RoleMessageGroup[];
     isAssistantThinking: boolean;
     isAssistantResponding: boolean;
@@ -15,7 +15,7 @@ interface MessageTurnListProps {
     errorLoadingMoreMessages: string | null;
 }
 
-export function MessageTurnList({
+export function MessageList({
     messageGroups,
     isAssistantThinking,
     isAssistantResponding,
@@ -24,7 +24,7 @@ export function MessageTurnList({
     isLoadingMoreMessages,
     loadingMessage,
     errorLoadingMoreMessages,
-}: MessageTurnListProps) {
+}: MessageListProps) {
     return (
         <AnimatePresence mode="popLayout">
             <motion.div
@@ -61,12 +61,12 @@ export function MessageTurnList({
                 <ChatMessageGroup
                     key={idx}
                     group={group}
-                    isAssistantThinking={isAssistantThinking}
                     isAssistantResponding={isAssistantResponding}
                     selectedRecipeId={selectedRecipeId}
                     onSelectRecipe={onSelectRecipe}
                 />
             ))}
+            {isAssistantThinking && <AssistantThinkingMessageBubble />}
         </AnimatePresence>
     );
 } 

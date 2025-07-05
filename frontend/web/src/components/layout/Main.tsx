@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AuthScreen } from '@/components/auth/AuthScreen';
-import { MessageTurnList } from '@/components/chat/MessageList';
+import { MessageList } from '@/components/chat/MessageList';
 import { ChatLayout } from '@/components/layout/ChatLayout';
 import { WelcomeScreen } from '@/components/layout/WelcomeScreen';
 import { RecipePanel } from '@/components/recipes/RecipePanel';
@@ -114,7 +114,7 @@ export function Main() {
                     threadTitle={threadTitle}
                 >
                     {messageGroups.length > 0 ? (
-                        <MessageTurnList
+                        <MessageList
                             messageGroups={messageGroups}
                             isLoadingMoreMessages={isLoadingMoreMessages}
                             isAssistantThinking={currentChatState?.isAssistantThinking ?? false}
@@ -301,6 +301,8 @@ function useChatLimit() {
             const limitMessage = createLimitMessage(limit, messageCount, isAuthenticated);
             if (limitMessage) {
                 setChatLimitMessage({ type: 'warning', message: limitMessage });
+            } else {
+                setChatLimitMessage(null);
             }
         }
         const accessChangedListener = (userAccessData: UserAccessData | null) => {
@@ -311,8 +313,12 @@ function useChatLimit() {
                 const limitMessage = createLimitMessage(limit, messageCount, isAuthenticated);
                 if (limitMessage) {
                     setChatLimitMessage({ type: 'warning', message: limitMessage });
+                } else {
+                    setChatLimitMessage(null);
                 }
-            } 
+            } else {
+                setChatLimitMessage(null);
+            }
         }
 
         userAccessManager.subscribe('accessEnsured', accessEnsuredListener);

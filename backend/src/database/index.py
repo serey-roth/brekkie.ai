@@ -23,8 +23,8 @@ def get_db_engine():
             raise ValueError("DB_URL environment variable is not set")
         
         pool_config = {
-            "pool_size": 20,
-            "max_overflow": 30,
+            "pool_size": 5,  # Reduced from 20 - suitable for 512MB VM
+            "max_overflow": 10,  # Reduced from 30 - max 15 total connections
             "pool_timeout": 30,
             "pool_recycle": 3600,
             "pool_pre_ping": True,

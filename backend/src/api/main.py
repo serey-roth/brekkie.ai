@@ -42,7 +42,7 @@ from services.data_services.recipe_service import RecipeService
 from services.data_services.recipe_cache_service import RecipeCacheService
 from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from services.websocket_event_sender import WebSocketEventSender
-from services.redis.redis_client import get_redis_client
+from services.redis.redis_client import create_redis_client
 
 # Load environment variables with proper precedence
 load_dotenv()  # Load .env if it exists
@@ -81,21 +81,21 @@ async def lifespan(app: FastAPI):
     await checkpointer_db_pool.open(wait=True)
     checkpointer = AsyncPostgresSaver(conn=checkpointer_db_pool)
     await checkpointer.setup()
-    
-    websocket_event_sender = WebSocketEventSender()
     ai_food_agent = GoogleAIFoodAgent(checkpointer=checkpointer)
+    
+    redis_client = create_redis_client()
+    user_access_cache_service = UserAccessCacheService(redis_client=redis_client, ttl=USER_ACCESS_CACHE_TTL)
+    thread_cache_service = ThreadCacheService(redis_client=redis_client, ttl=THREAD_CACHE_TTL)
+    message_cache_service = MessageCacheService(redis_client=redis_client, ttl=MESSAGE_CACHE_TTL)
+    recipe_cache_service = RecipeCacheService(redis_client=redis_client, ttl=RECIPE_CACHE_TTL)
     
     thread_service = ThreadService(repository=ThreadRepository())
     message_service = MessageService(repository=MessageRepository())
     user_service = UserService(repository=UserRepository())
     recipe_service = RecipeService(repository=RecipeRepository())
     
-    redis_client = get_redis_client()
-    user_access_cache_service = UserAccessCacheService(redis_client=redis_client, ttl=USER_ACCESS_CACHE_TTL)
-    thread_cache_service = ThreadCacheService(redis_client=redis_client, ttl=THREAD_CACHE_TTL)
-    message_cache_service = MessageCacheService(redis_client=redis_client, ttl=MESSAGE_CACHE_TTL)
-    recipe_cache_service = RecipeCacheService(redis_client=redis_client, ttl=RECIPE_CACHE_TTL)
-    
+    websocket_event_sender = WebSocketEventSender()
+
     chat_session_store = ChatSessionStore(
         thread_cache_service=thread_cache_service,
         message_cache_service=message_cache_service,
@@ -143,12 +143,15 @@ async def lifespan(app: FastAPI):
     )
 
     app.state.service_container = service_container
+    app.state.checkpointer_db_pool = checkpointer_db_pool
+    app.state.redis_client = redis_client
     logger.info("Service container initialized")
     
     yield
-    
+
     logger.info("Shutting down...")
     await checkpointer_db_pool.close()
+    await redis_client.close()
         
 
 app = FastAPI(lifespan=lifespan)

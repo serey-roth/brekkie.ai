@@ -18,7 +18,7 @@ class AIFoodAgent(ABC):
         
         
     def get_agent_config(self, user_id: str, thread_id: str):
-        return RunnableConfig(configurable={"user_id": user_id, "thread_id": thread_id}, tags=["food_agent"], metadata={"thread_id": thread_id})
+        return RunnableConfig(configurable={"user_id": user_id, "thread_id": thread_id}, tags=["brekkie-ai-api", "food_agent"], metadata={"thread_id": thread_id})
     
     
     def update_memory(self, messages: list, user_id: str, thread_id: str):

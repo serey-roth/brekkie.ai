@@ -4,9 +4,9 @@ import { FaArrowDown } from 'react-icons/fa';
 import { FaCircleExclamation, FaTriangleExclamation } from 'react-icons/fa6';
 import ChatInput from '@/components/chat/ChatInput';
 import { ConnectionStatus } from '@/components/chat/ConnectionStatus';
+import { ThreadTitle } from '@/components/ui/ThreadTitle';
 import type { ConnectionState } from '@/data/schemas/connection-state';
 import type { ChatLimitMessage } from '@/data/schemas/errors';
-import { TypingAnimation } from '../ui/TypingAnimation';
 
 interface ChatLayoutProps {
     children: React.ReactNode;
@@ -18,6 +18,7 @@ interface ChatLayoutProps {
     connectionState: ConnectionState;
     isAuthenticated: boolean;
     threadTitle: string | null;
+    threadTitleState: 'empty' | 'loading' | 'complete';
     disableSendButton?: boolean;
     chatSessionErrorMessage?: string;
     chatLimitMessage?: ChatLimitMessage;
@@ -32,6 +33,7 @@ export function ChatLayout({
     disableSendButton,
     connectionState,
     threadTitle,
+    threadTitleState,
     chatSessionErrorMessage,
     chatLimitMessage,
     isAuthenticated,
@@ -60,16 +62,17 @@ export function ChatLayout({
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         >
             <ConnectionStatus connectionState={connectionState} />
-            {threadTitle && <div className={`absolute top-0 left-0 right-0 bottom-0 z-10 h-20 bg-background border-b border-border shadow-sm transition-all duration-300 w-full`}>
+            <div className={`absolute top-0 left-0 right-0 bottom-0 z-10 h-20 bg-background transition-all duration-300 ease-in-out w-full ${threadTitle || threadTitleState !== 'empty' ? 'border-b border-border shadow-sm' : 'border-b border-transparent shadow-none'}`}>
                 {/* TODO: The title is sandwiched between absolute-positioned icons on smaller devices, making for awkward alignment */}
-                <div className="w-full flex pl-16 md:pl-4 mt-6">
-                    <TypingAnimation 
-                        text={threadTitle} 
+                <div className="w-full flex pl-16 md:pl-4 mt-[1.15rem] h-8">
+                    <ThreadTitle 
+                        title={threadTitle}
+                        state={threadTitleState}
+                        className="truncate text-ellipsis max-w-[350px] md:max-w-none"
                         speed={30}
-                        className="text-xl font-semibold text-contrast truncate text-ellipsis max-w-[350px] md:max-w-none"
                     />
                 </div>
-            </div>}
+            </div>
             <motion.div
                 layout
                 className="mx-auto flex h-screen max-w-3xl flex-col items-center overflow-hidden"

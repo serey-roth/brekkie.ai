@@ -47,7 +47,8 @@ export function Main() {
 
 
     // TODO: Auto scroll to bottom should happens once at the beginning and message change when no manual scroll happens
-    const { currentChatState, chatSessionErrorMessage, threadTitle, resetChatState } = useChatState({ onThreadResumed: scrollToBottom });
+    const { currentChatState, chatSessionErrorMessage, resetChatState } = useChatState({ onThreadResumed: scrollToBottom });
+    const { threadTitle, threadTitleState } = useThreadTitle();
     const { chatLimitMessage } = useChatLimit();
 
     useScrollHandler({
@@ -112,6 +113,7 @@ export function Main() {
                     disableSendButton={!currentChatState || isLoadingMoreMessages || !connectionState.isConnected}
                     onSignIn={openAuthModal}
                     threadTitle={threadTitle}
+                    threadTitleState={threadTitleState}
                 >
                     {messageGroups.length > 0 ? (
                         <MessageList
@@ -194,16 +196,13 @@ function useChatState({ onThreadResumed }: {
 
     const [currentChatState, setCurrentChatState] = useState(chatStateManager.getState());
     const [chatSessionErrorMessage, setChatSessionErrorMessage] = useState<string | null>(null);
-    const [threadTitle, setThreadTitle] = useState<string | null>(chatStateManager.getState().thread?.title ?? (chatStateManager.getState().thread?.is_empty === false ? 'New chat' : null));
 
     useEffect(() => {
         const chatStateReadyListener = (state: ChatState) => {
             setCurrentChatState(state);
-            setThreadTitle(state.thread?.title ?? (state.thread?.is_empty === false ? 'New chat' : null));
         };
         const chatStateChangedListener = (state: ChatState) => {
             setCurrentChatState(state);
-            setThreadTitle(state.thread?.title ?? (state.thread?.is_empty === false ? 'New chat' : null));
         };
         const threadResumedListener = () => {
             onThreadResumed();
@@ -216,18 +215,15 @@ function useChatState({ onThreadResumed }: {
                 setChatSessionErrorMessage(error.message);
             }
         }
-        const threadTitleUpdatedListener = (thread: Thread) => setThreadTitle(thread.title ?? (thread.is_empty === false ? 'New chat' : null));
 
         chatStateManager.subscribe('chatStateReady', chatStateReadyListener);
         chatStateManager.subscribe('chatStateChanged', chatStateChangedListener);
         chatStateManager.subscribe('threadResumed', threadResumedListener);
-        chatStateManager.subscribe('threadTitleUpdated', threadTitleUpdatedListener);
         chatStateManager.subscribe('chatSessionErrorOccurred', chatSessionErrorOccurredListener);
         return () => {
             chatStateManager.unsubscribe('chatStateReady', chatStateReadyListener);
             chatStateManager.unsubscribe('chatStateChanged', chatStateChangedListener);
             chatStateManager.unsubscribe('threadResumed', threadResumedListener);
-            chatStateManager.unsubscribe('threadTitleUpdated', threadTitleUpdatedListener);
             chatStateManager.unsubscribe('chatSessionErrorOccurred', chatSessionErrorOccurredListener);
         };
     }, [chatStateManager, onThreadResumed]);
@@ -236,7 +232,62 @@ function useChatState({ onThreadResumed }: {
         chatStateManager.resetState();
     }, [chatStateManager]);
 
-    return { currentChatState, chatSessionErrorMessage, threadTitle, resetChatState };
+    return { currentChatState, chatSessionErrorMessage, resetChatState };
+}   
+
+function useThreadTitle() {
+    const chatStateManager = useChatStateManager();
+    const [threadTitle, setThreadTitle] = useState<string | null>(null);
+    const [threadTitleState, setThreadTitleState] = useState<'empty' | 'loading' | 'complete'>('empty');
+
+    useEffect(() => {
+        const updateTitle = (thread: Thread | null) => {
+            if (thread?.title) {
+                setThreadTitle(thread.title);
+                setThreadTitleState('complete');
+            } else if (thread?.is_empty === false) {
+                // Prevent flickering: only set loading if not already loading
+                // (Multiple events can fire rapidly during title generation)
+                if (threadTitleState !== 'loading') {
+                    setThreadTitle(null);
+                    setThreadTitleState('loading');
+                }
+            } else {
+                // Prevent flickering: only set empty if not already empty
+                // (Avoid unnecessary re-renders when state hasn't changed)
+                if (threadTitleState !== 'empty') {
+                    setThreadTitle(null);
+                    setThreadTitleState('empty');
+                }
+            }
+        }
+        const firstMessageSentListener = () => {
+            // Show loading immediately when user starts conversation
+            // (Title generation happens async, so we need optimistic UI)
+            setThreadTitleState('loading');
+        }
+        const chatStateListener = (state: ChatState) => {
+            // Preserve loading state during async title generation
+            // (Thread might appear empty briefly while title is being generated)
+            if (threadTitleState === 'loading' && state.thread?.is_empty) {
+                return;
+            }
+            updateTitle(state.thread);
+        };
+        const threadTitleUpdatedListener = (thread: Thread) => updateTitle(thread);
+        chatStateManager.subscribe('chatStateReady', chatStateListener);
+        chatStateManager.subscribe('chatStateChanged', chatStateListener);
+        chatStateManager.subscribe('firstMessageSent', firstMessageSentListener);
+        chatStateManager.subscribe('threadTitleUpdated', threadTitleUpdatedListener);
+        return () => {
+            chatStateManager.unsubscribe('chatStateReady', chatStateListener);
+            chatStateManager.unsubscribe('chatStateChanged', chatStateListener);
+            chatStateManager.unsubscribe('firstMessageSent', firstMessageSentListener);
+            chatStateManager.unsubscribe('threadTitleUpdated', threadTitleUpdatedListener);
+        };
+    }, [chatStateManager, threadTitleState]);
+
+    return { threadTitle, threadTitleState };
 }   
 
 function useChatMessageGroups({ onMessageChange }: {

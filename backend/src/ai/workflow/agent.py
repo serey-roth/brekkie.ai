@@ -23,6 +23,7 @@ class AgentState(MessagesState):
 # TODO: 2. Add modification workflow for recipes
 # TODO: 3. Future optimization - Background summarization?
 # TODO: 4. Add a way to update the thread title in the background, maybe a sub-workflow?
+# TODO: 5. Should we parallelize the thread title update and AI response?
 
 class AgentFactory: 
     def __init__(
@@ -50,8 +51,8 @@ class AgentFactory:
         workflow.set_entry_point("call_model")
         workflow.add_conditional_edges("call_model", self.route_model_response)
         workflow.add_edge("tools", "call_model")
-        workflow.add_edge("summarize_conversation", "update_thread_title")
-        workflow.add_conditional_edges("update_thread_title", self.should_end_after_title)
+        workflow.add_edge("summarize_conversation", "__end__")
+        workflow.add_edge("update_thread_title", "__end__")
         
         return workflow.compile(name="food_agent", checkpointer=self.checkpointer)
 
@@ -65,41 +66,24 @@ class AgentFactory:
             temperature=0.1,
             api_key=os.getenv("GOOGLE_API_KEY"),
         )
+
+        title_message = (
+            f"Review the recent conversation messages above and return ONLY a concise thread title (max 60 characters).\n\n"
+            f"Identify the main topic, concern, or request from the user's messages.\n\n"
+            f"Focus on: What are they asking for? What's their situation? What kind of support do they need?\n\n"
+            f"Use warm, conversational language that feels natural and supportive.\n\n"
+            f"Examples: 'Need dinner ideas', 'Feeling stressed about cooking', 'Want to try new recipes', 'Help with meal planning'\n\n"
+            f"IMPORTANT: Return ONLY the title text. No markdown, no explanations, no quotes."
+        )
         
-        has_summary = summary and summary.strip()
-        
-        if has_summary:
-            title_message = (
-                f"Using this conversation summary as your primary reference:\n'{summary}'\n\n"
-                f"Return ONLY a concise thread title (max 60 characters) that captures the core theme of this conversation.\n\n"
-                f"Focus on: The user's main challenge, need, or request. What are they seeking help with?\n\n"
-                f"Use warm, conversational language that feels natural and supportive.\n\n"
-                f"Examples: 'Need dinner ideas', 'Feeling stressed about cooking', 'Want to try new recipes', 'Help with meal planning'\n\n"
-                f"IMPORTANT: Return ONLY the title text. No markdown, no explanations, no quotes."
-            )
-        else:
-            title_message = (
-                f"Review the recent conversation messages above and return ONLY a concise thread title (max 60 characters).\n\n"
-                f"Identify the main topic, concern, or request from the user's messages.\n\n"
-                f"Focus on: What are they asking for? What's their situation? What kind of support do they need?\n\n"
-                f"Use warm, conversational language that feels natural and supportive.\n\n"
-                f"Examples: 'Need dinner ideas', 'Feeling stressed about cooking', 'Want to try new recipes', 'Help with meal planning'\n\n"
-                f"IMPORTANT: Return ONLY the title text. No markdown, no explanations, no quotes."
-            )
-        
-        recent_messages = messages[-8:] + [HumanMessage(content=title_message)]
+        recent_messages = messages[-5:] + [HumanMessage(content=title_message)]
         response = await thread_title_llm.ainvoke(recent_messages)
         
         write = get_stream_writer()
         write({ "event": "thread_title_updated", "thread_title": response.content.strip() })
         
         return { "thread_title": response.content.strip() }
-    
-    
-    def should_end_after_title(self, state: AgentState) -> Literal["call_model", "__end__"]:
-        # After updating the thread title, the conversation should always end
-        return "__end__"
-    
+
     
     async def summarize_conversation(self, state: AgentState):
         messages = state.get("messages", [])
@@ -172,7 +156,7 @@ class AgentFactory:
         if len(last_message.tool_calls) > 0:
             return "tools"
         # TODO: We should do these as background tasks
-        elif len(messages) > 3 and state.get("thread_title", None) is None:
+        elif len(messages) > 5 and state.get("thread_title", None) is None:
             return "update_thread_title"
         elif len(messages) > 12:
             return "summarize_conversation"

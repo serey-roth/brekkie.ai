@@ -53,7 +53,7 @@ export function RecipeMessageCard({ recipeId, isGenerating, onSelectRecipe, sele
 
         return (
             <div
-                className={`bg-contrast-subtle border-border/50 w-full cursor-pointer rounded-lg border p-4 shadow-sm ${selectedRecipeId === recipeId ? 'border-accent border-2 shadow-md' : ''}`}
+                className={`bg-contrast-subtle border-border/50 w-full cursor-pointer rounded-lg border p-4 shadow-sm transition-all duration-200 ease-in-out hover:shadow-md hover:border-border ${selectedRecipeId === recipeId ? 'border-accent border-2 shadow-md scale-[1.02]' : ''} ${isGenerating && !recipe?.name ? 'pointer-events-none cursor-not-allowed opacity-60' : ''}`}
                 onClick={handleSelectRecipe}
             >
                 <div className="flex flex-col gap-3">

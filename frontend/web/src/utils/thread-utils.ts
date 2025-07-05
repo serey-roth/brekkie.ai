@@ -48,8 +48,8 @@ export function getThreadGroups(threads: Thread[]) {
     return [
         { label: 'Today', items: groups.today },
         { label: 'Yesterday', items: groups.yesterday },
-        { label: 'Previous 7 days', items: groups.prev7 },
-        { label: 'Previous 30 days', items: groups.prev30 },
+        { label: 'This week', items: groups.prev7 },
+        { label: 'This month', items: groups.prev30 },
         { label: 'Older', items: groups.older },
     ].filter(group => group.items.length > 0);
 }

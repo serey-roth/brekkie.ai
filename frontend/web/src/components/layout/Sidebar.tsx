@@ -191,7 +191,17 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                     transition={TRANSITIONS.medium}
                     className="flex-1 overflow-hidden"
                 >
-                    <div className="h-full overflow-y-auto my-2 px-4">
+                    {isOpen && threadGroups.length > 0 && (
+                        <div className="mt-2 flex flex-row items-center justify-between px-6">
+                            <h2 className="text-contrast text-sm tracking-wider">
+                                Recent chats
+                            </h2>
+                            <div className="text-contrast-subtle text-xs opacity-80">
+                                Sorted by last activity
+                            </div>
+                        </div>
+                    )}
+                    <div className="h-full overflow-y-auto px-4 pt-4 pb-8">
                         {isOpen && threadGroups.length === 0 && !isFetching && !error && (
                             <div className="text-contrast-subtle py-8 text-center text-sm">
                                 <div className="mb-2">
@@ -220,16 +230,16 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                                 </p>
                             </div>
                         )}
-                        {threadGroups.map(group => (
+                        {threadGroups.map((group, index) => (
                             <motion.div
                                 key={group.label}
                                 variants={ANIMATION_CONFIG.threadGroup}
                                 initial="initial"
                                 animate="animate"
                                 transition={TRANSITIONS.medium}
-                                className="mb-3"
+                                className={`${index < threadGroups.length - 1 ? 'mb-3' : ''}`}
                             >
-                                <h3 className="text-contrast-subtle mb-2 text-xs font-medium tracking-wider uppercase">
+                                <h3 className={`text-contrast-subtle mb-2 mx-2 text-sm tracking-wider`}>
                                     {group.label}
                                 </h3>
                                 <div className="space-y-0.5">
@@ -265,16 +275,18 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                                 </div>
                             </motion.div>
                         ))}
-
-                        <div ref={fetchMoreObserverTarget} className="flex h-8 items-center justify-center">
+                        <div ref={fetchMoreObserverTarget} className="flex h-4 items-center justify-center">
                             {isFetching && (
                                 <motion.div
                                     variants={ANIMATION_CONFIG.loading}
                                     initial="initial"
                                     animate="animate"
                                     exit="exit"
-                                    className="border-primary/20 border-t-primary h-5 w-5 animate-spin rounded-full border-2"
-                                />
+                                    className="flex items-center gap-2 text-contrast-subtle text-sm"
+                                >
+                                    <div className="border-primary/20 border-t-primary h-4 w-4 animate-spin rounded-full border-2" />
+                                    <span>Loading more chats...</span>
+                                </motion.div>
                             )}
                         </div>
                     </div>
@@ -286,16 +298,16 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                         initial="closed"
                         animate="open"
                         transition={TRANSITIONS.medium}
-                        className="overflow-hidden"
+                        className="h-12 flex-shrink-0 border-t border-border/50"
                     >
-                        <div className="h-full flex items-center gap-2 overflow-y-auto ml-2 mr-4 px-2 sm:px-4 ">
+                        <div className="flex items-center gap-2 ml-2 mr-4 px-2 sm:px-4 h-full">
                             <LuUser size={20} className="flex-shrink-0" />
                             <span className="text-contrast-subtle text-sm truncate min-w-0 flex-1">{userAccessData?.name}</span>
                         </div>
                     </motion.div>
                 )}
 
-                <div className={`mt-2 mb-4 flex gap-2 items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
+                <div className={`mt-2 mb-4 flex gap-2 flex-shrink-0 items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
                     {!userAccessData?.is_authenticated && (
                         <motion.button
                             whileHover={{ scale: 1.01 }}
@@ -531,11 +543,12 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
     useEffect(() => {
         const observer = new IntersectionObserver(
             entries => {
+                console.log('🔄 IntersectionObserver - entries:', entries);
                 if (entries[0].isIntersecting && !error && isOpen && userAccessData?.access_token) {
                     fetchThreads();
                 }
             },
-            { threshold: 1.0 }
+            { threshold: 1 } // 100% of the target element must be visible in the viewport
         );
 
         const target = fetchMoreObserverTarget.current;

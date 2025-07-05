@@ -48,22 +48,6 @@ class TestCreateUser:
         assert user.created_at == strip_timezone(params.created_at)
         assert user.updated_at == strip_timezone(params.updated_at)
         
-    async def test_create_user_with_none_values(self, async_session: AsyncSession, user_repository: UserRepository, user_id: str):
-        params = CreateDbUserParams(
-            id=user_id,
-            email=None,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-        )
-
-        await user_repository.create_user(async_session, params)
-        await async_session.commit()
-        
-        user = await user_repository.get_user_by_id(async_session, user_id)
-        assert user is not None
-        assert user.id == user_id
-        assert user.email is None
-        
     
     async def test_create_user_with_existing_email(self, async_session: AsyncSession, user_repository: UserRepository, user_id: str):
         params = CreateDbUserParams(

@@ -1,11 +1,8 @@
 import pytest
-from httpx import AsyncClient
-from httpx import ASGITransport
+
 from fastapi import status
 
 from src.services.service_container import ServiceContainer
-
-
 
 
 class TestEnsureAccessToken:

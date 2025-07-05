@@ -5,8 +5,6 @@ from string import Template
 
 class ChatSessionErrorType(str, Enum):
     ACCESS_TOKEN_NOT_FOUND = "access_token_not_found"
-    EXPIRED_ACCESS_TOKEN = "access_token_expired"
-    INVALID_ACCESS_TOKEN = "invalid_access_token"
     OVER_MESSAGE_LIMIT = "over_message_limit"
     THREAD_NOT_FOUND = "thread_not_found"
     INTERNAL_SERVER_ERROR = "internal_server_error"
@@ -46,35 +44,6 @@ class AccessTokenNotFoundError(ChatSessionError):
         data = super().dict(access_token=self.access_token)
         return data
 
-
-class ExpiredAccessTokenError(ChatSessionError):
-    def __init__(self, expiry_time: str):
-        self.expiry_time = expiry_time
-        super().__init__(
-            code=4401,
-            type=ChatSessionErrorType.EXPIRED_ACCESS_TOKEN,
-            message_template="Your session has expired after ${expiry_time}. Please refresh or start a new session."
-        )
-        
-    def dict(self, **kwargs) -> dict:
-        data = super().dict(expiry_time=self.expiry_time)
-        return data
-
-
-class InvalidAccessTokenError(ChatSessionError):
-    def __init__(self, access_token: str | None = None):
-        self.access_token = access_token
-        super().__init__(
-            code=4402,
-            type=ChatSessionErrorType.INVALID_ACCESS_TOKEN,
-            message_template="Invalid access token: ${access_token or 'unknown'}. Please refresh the page and try again."
-        )
-        
-    def dict(self, **kwargs) -> dict:
-        data = super().dict(access_token=self.access_token)
-        return data
-    
-    
 class OverMessageLimitError(ChatSessionError):
     def __init__(self, message_limit: int):
         self.message_limit = message_limit

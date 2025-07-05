@@ -1,8 +1,8 @@
 
-from datetime import datetime, timezone
-from typing import Literal, ClassVar
+from datetime import datetime
+from typing import Annotated, Literal, ClassVar
 
-from pydantic import BaseModel, Field
+from pydantic import AfterValidator, BaseModel, Field, model_validator
 
 from database.schema import DBMessage
 
@@ -18,7 +18,7 @@ class UserMessagePayload(BaseModel):
     id: str = Field(description="The message's id")
     content: str = Field(description="The message's text content")
 
-# TODO: Should we add user_id to the message?
+
 class Message(BaseModel):
     """A message in a thread."""
     id: str = Field(description="The message's id")
@@ -29,6 +29,7 @@ class Message(BaseModel):
     created_at: str = Field(description="The message's creation timestamp in ISO string format")
     updated_at: str = Field(description="The message's last update timestamp in ISO string format")
     text_content: str | None = Field(default=None, description="The message's text content if it's a text message")
+    parent_id: str | None = Field(default=None, description="The parent message's id if it's a reply")
     recipe_id: str | None = Field(default=None, description="The associated recipe's id if it's a recipe message")
     model_name: str | None = Field(default=None, description="The AI model used to generate the message")
     input_tokens: int | None = Field(default=None, description="The number of input tokens used to generate the message")
@@ -49,6 +50,7 @@ class Message(BaseModel):
             role=message.role,
             content_type=message.content_type,
             text_content=message.text_content,
+            parent_id=message.parent_id,
             recipe_id=message.recipe_id,
             created_at=to_utc_isostring(message.created_at),
             updated_at=to_utc_isostring(message.updated_at),
@@ -77,6 +79,11 @@ class ThreadMessagesResponse(BaseModel):
     recipes: list[UserRecipe] = Field(description="The recipes associated with the messages in the thread")
 
 
+class BaseMessageParentParams(BaseModel):
+    """Base parameters for message operations with parent fields."""
+    parent_id: str | None = Field(default=None, description="The parent message's id if it's a reply")
+    
+    
 class BaseMessageTextParams(BaseModel):
     """Base parameters for message operations with text fields."""
     text_content: str | None = Field(default=None, description="The message's text content if it's a text message")
@@ -140,13 +147,13 @@ class GetDBMessagesParams(BaseModel):
     sort_by: Literal["created_at", "updated_at"] = Field(default="created_at", description="Field to sort by")
     sort_order: Literal["asc", "desc"] = Field(default="desc", description="Sort order")
 
-class UpdateMessageParams(BaseMessageTextParams, BaseMessageToolParams, BaseMessageRecipeParams, BaseMessageAIModelParams):
+class UpdateMessageParams(BaseMessageParentParams, BaseMessageTextParams, BaseMessageToolParams, BaseMessageRecipeParams, BaseMessageAIModelParams):
     """Parameters for updating a message."""
     id: str = Field(description="The message's id")
     updated_at: datetime = Field(description="When the message was last updated")
 
 
-class CreateMessageParams(BaseMessageTextParams, BaseMessageToolParams, BaseMessageRecipeParams, BaseMessageAIModelParams):
+class CreateMessageParams(BaseMessageParentParams, BaseMessageTextParams, BaseMessageToolParams, BaseMessageRecipeParams, BaseMessageAIModelParams):
     """Base parameters for message operations."""
     id: str = Field(description="The message's id")
     user_id: str = Field(description="The associated user's id")
@@ -177,22 +184,37 @@ class TextContentMixin(BaseModel):
             data.setdefault("text_content", self.default_text_content)
         super().__init__(**data)
         
+        
+def validate_parent_id(v: str) -> str:
+    v = v.strip() if v else ""
+    if not v:
+        raise ValueError("parent_id is required and cannot be empty")
+    return v
+
+class ParentIdMixin(BaseModel):
+    """Mixin for messages with parent id.""" 
+    parent_id: Annotated[
+        str, 
+        Field(description="The parent message's id"), 
+        AfterValidator(validate_parent_id)
+    ]
+        
 class CreateUserMessageParams(RoleAndContentTypeMixin, TextContentMixin, CreateMessageParams):
     """Parameters for creating a user message."""
     default_role: ClassVar[MessageRole] = MessageRole.user
     default_content_type: ClassVar[MessageContentType] = MessageContentType.text
     
-class CreateAssistantTextMessageParams(RoleAndContentTypeMixin, TextContentMixin, CreateMessageParams):
+class CreateAssistantTextMessageParams(RoleAndContentTypeMixin, TextContentMixin, ParentIdMixin, CreateMessageParams):
     """Parameters for creating an assistant text message."""
     default_role: ClassVar[MessageRole] = MessageRole.assistant
     default_content_type: ClassVar[MessageContentType] = MessageContentType.text  
     
-class CreateAssistantRecipeMessageParams(RoleAndContentTypeMixin, CreateMessageParams):
+class CreateAssistantRecipeMessageParams(RoleAndContentTypeMixin, ParentIdMixin, CreateMessageParams):
     """Parameters for creating an assistant recipe message."""
     default_role: ClassVar[MessageRole] = MessageRole.assistant
     default_content_type: ClassVar[MessageContentType] = MessageContentType.recipe
     
-class CreateAssistantToolMessageParams(RoleAndContentTypeMixin, CreateMessageParams):
+class CreateAssistantToolMessageParams(RoleAndContentTypeMixin, ParentIdMixin, CreateMessageParams):
     """Parameters for creating an assistant tool message."""
     default_role: ClassVar[MessageRole] = MessageRole.assistant
     default_content_type: ClassVar[MessageContentType] = MessageContentType.tool

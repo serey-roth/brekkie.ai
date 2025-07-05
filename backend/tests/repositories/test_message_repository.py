@@ -29,6 +29,7 @@ class TestCreateMessage:
         
         params = CreateMessageParams(
             id=str(uuid4()),
+            user_id=str(uuid4()),
             thread_id=str(uuid4()),
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -46,6 +47,7 @@ class TestCreateMessage:
         
         assert result is not None
         assert result.id == params.id
+        assert result.user_id == params.user_id
         assert result.thread_id == params.thread_id
         assert result.role == params.role
         assert result.content_type == params.content_type
@@ -58,6 +60,7 @@ class TestCreateMessage:
         
         params = CreateMessageParams(
             id=str(uuid4()),
+            user_id=str(uuid4()),
             thread_id=str(uuid4()),
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -70,8 +73,10 @@ class TestCreateMessage:
             tool_name="recipe_generator",
             tool_input={"ingredients": ["chicken", "rice"]},
             tool_output={"recipe": "Chicken and rice recipe"},
+            recipe_id=str(uuid4()),
             is_recipe_generation_started=True,
             is_recipe_generation_completed=False,
+            parent_id=str(uuid4()),
         )
 
         await message_repository.create_message(
@@ -83,6 +88,8 @@ class TestCreateMessage:
         result = await async_session.get(DBMessage, params.id)
         
         assert result.text_content == params.text_content
+        assert result.recipe_id == params.recipe_id
+        assert result.parent_id == params.parent_id
         assert result.model_name == params.model_name
         assert result.input_tokens == params.input_tokens
         assert result.output_tokens == params.output_tokens
@@ -97,6 +104,7 @@ class TestCreateMessage:
         """Test creating an assistant text message."""
         params = CreateMessageParams(
             id=str(uuid4()),
+            user_id=str(uuid4()),
             thread_id=str(uuid4()),
             role=MessageRole.assistant,
             content_type=MessageContentType.text,
@@ -123,6 +131,7 @@ class TestCreateMessage:
         """Test creating an assistant recipe message."""
         params = CreateMessageParams(
             id=str(uuid4()),
+            user_id=str(uuid4()),
             thread_id=str(uuid4()),
             role=MessageRole.assistant,
             content_type=MessageContentType.recipe,
@@ -149,6 +158,7 @@ class TestCreateMessage:
         """Test creating a user text message."""
         params = CreateMessageParams(
             id=str(uuid4()),
+            user_id=str(uuid4()),
             thread_id=str(uuid4()),
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -175,6 +185,7 @@ class TestCreateMessage:
         """Test creating a tool message."""
         params = CreateMessageParams(
             id=str(uuid4()),
+            user_id=str(uuid4()),
             thread_id=str(uuid4()),
             role=MessageRole.assistant,
             content_type=MessageContentType.tool,
@@ -205,6 +216,7 @@ class TestCreateMessage:
         """Test that timezone information is properly stripped from datetime fields."""
         params = CreateMessageParams(
             id=str(uuid4()),
+            user_id=str(uuid4()),
             thread_id=str(uuid4()),
             role=MessageRole.user,
             content_type=MessageContentType.text,
@@ -236,6 +248,7 @@ class TestGetMessage:
     def sample_message(self, message_id: str):
         return {
             "id": message_id,
+            "user_id": str(uuid4()),
             "thread_id": str(uuid4()),
             "role": MessageRole.user,
             "content_type": MessageContentType.text,
@@ -274,6 +287,11 @@ class TestGetMessage:
         
 class TestGetMessages:
     @pytest.fixture(scope="function")
+    def user_id(self):
+        return str(uuid4())
+    
+    
+    @pytest.fixture(scope="function")
     def thread_id(self):
         return str(uuid4())
     
@@ -284,11 +302,12 @@ class TestGetMessages:
     
 
     @pytest.fixture(scope="function")
-    def sample_messages(self, thread_id: str, recipe_id: str):
+    def sample_messages(self, user_id: str, thread_id: str, recipe_id: str):
         """Create a list of messages for testing."""
         return [
             {
                 "id": str(uuid4()),
+                "user_id": user_id,
                 "thread_id": thread_id,
                 "role": MessageRole.user,
                 "content_type": MessageContentType.text,
@@ -298,6 +317,7 @@ class TestGetMessages:
             },
             {
                 "id": str(uuid4()),
+                "user_id": user_id,
                 "thread_id": thread_id,
                 "role": MessageRole.assistant,
                 "content_type": MessageContentType.text,
@@ -307,6 +327,7 @@ class TestGetMessages:
             },
             {
                 "id": str(uuid4()),
+                "user_id": user_id,
                 "thread_id": thread_id,
                 "role": MessageRole.assistant,
                 "content_type": MessageContentType.tool,
@@ -318,6 +339,7 @@ class TestGetMessages:
             },
             {
                 "id": str(uuid4()),
+                "user_id": user_id,
                 "thread_id": thread_id,
                 "role": MessageRole.assistant,
                 "content_type": MessageContentType.recipe,
@@ -333,7 +355,8 @@ class TestGetMessages:
         async_session: AsyncSession, 
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
-        thread_id: str
+        thread_id: str,
+        user_id: str
     ):
         for message in sample_messages:
             params = CreateMessageParams(**message)
@@ -351,10 +374,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages from the database."""
-        params = GetDBMessagesParams(thread_id=thread_id, sort_by="created_at", sort_order="desc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, sort_by="created_at", sort_order="desc")
         result = await message_repository.get_messages(async_session, params)
         
         sorted_messages = sorted(sample_messages, key=lambda x: x["created_at"], reverse=True) # Sort messages by created_at in descending order
@@ -396,10 +420,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages with a smaller limit than the number of messages."""
-        params = GetDBMessagesParams(thread_id=thread_id, limit=2, sort_by="created_at", sort_order="desc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, limit=2, sort_by="created_at", sort_order="desc")
         result = await message_repository.get_messages(async_session, params)
         
         first_two_messages = sorted(sample_messages, key=lambda x: x["created_at"], reverse=True)[:2]
@@ -420,10 +445,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages sorted by created_at in ascending order."""
-        params = GetDBMessagesParams(thread_id=thread_id, sort_by="created_at", sort_order="asc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, sort_by="created_at", sort_order="asc")
         result = await message_repository.get_messages(async_session, params)
         
         assert len(result) == len(sample_messages)
@@ -444,10 +470,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages sorted by created_at in descending order."""
-        params = GetDBMessagesParams(thread_id=thread_id, sort_by="created_at", sort_order="desc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, sort_by="created_at", sort_order="desc")
         result = await message_repository.get_messages(async_session, params)
         
         assert len(result) == len(sample_messages)
@@ -468,10 +495,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages sorted by updated_at in ascending order."""
-        params = GetDBMessagesParams(thread_id=thread_id, sort_by="updated_at", sort_order="asc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, sort_by="updated_at", sort_order="asc")
         result = await message_repository.get_messages(async_session, params)
         
         assert len(result) == len(sample_messages)
@@ -492,10 +520,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages sorted by updated_at in descending order."""
-        params = GetDBMessagesParams(thread_id=thread_id, sort_by="updated_at", sort_order="desc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, sort_by="updated_at", sort_order="desc")
         result = await message_repository.get_messages(async_session, params)
         
         assert len(result) == len(sample_messages)
@@ -516,10 +545,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages with from_timestamp filter and created_at ascending sort."""
-        params = GetDBMessagesParams(thread_id=thread_id, from_timestamp=sample_messages[2]["created_at"], sort_by="created_at", sort_order="asc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, from_timestamp=sample_messages[2]["created_at"], sort_by="created_at", sort_order="asc")
         result = await message_repository.get_messages(async_session, params)
         
         assert len(result) == 1
@@ -536,10 +566,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages with from_timestamp filter and created_at descending sort."""
-        params = GetDBMessagesParams(thread_id=thread_id, from_timestamp=sample_messages[2]["created_at"], sort_by="created_at", sort_order="desc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, from_timestamp=sample_messages[2]["created_at"], sort_by="created_at", sort_order="desc")
         result = await message_repository.get_messages(async_session, params)
         
         assert len(result) == 2
@@ -560,10 +591,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages with from_timestamp filter and updated_at ascending sort."""
-        params = GetDBMessagesParams(thread_id=thread_id, from_timestamp=sample_messages[2]["updated_at"], sort_by="updated_at", sort_order="asc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, from_timestamp=sample_messages[2]["updated_at"], sort_by="updated_at", sort_order="asc")
         result = await message_repository.get_messages(async_session, params)
         
         assert len(result) == 1
@@ -580,10 +612,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages with from_timestamp filter and updated_at descending sort."""
-        params = GetDBMessagesParams(thread_id=thread_id, from_timestamp=sample_messages[2]["updated_at"], sort_by="updated_at", sort_order="desc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, from_timestamp=sample_messages[2]["updated_at"], sort_by="updated_at", sort_order="desc")
         result = await message_repository.get_messages(async_session, params)
         
         assert len(result) == 2
@@ -604,10 +637,11 @@ class TestGetMessages:
         message_repository: MessageRepository, 
         sample_messages: list[dict], 
         thread_id: str, 
+        user_id: str,
         create_messages_in_db
     ):
         """Test getting messages with limit and from_timestamp filters."""
-        params = GetDBMessagesParams(thread_id=thread_id, limit=1, from_timestamp=sample_messages[2]["created_at"], sort_by="created_at", sort_order="desc")
+        params = GetDBMessagesParams(user_id=user_id, thread_id=thread_id, limit=1, from_timestamp=sample_messages[2]["created_at"], sort_by="created_at", sort_order="desc")
         result = await message_repository.get_messages(async_session, params)
         
         assert len(result) == 1
@@ -629,6 +663,7 @@ class TestUpdateMessage:
         """Create a sample message for testing."""
         return {
             "id": message_id,
+            "user_id": str(uuid4()),
             "thread_id": str(uuid4()),
             "role": MessageRole.user,
             "content_type": MessageContentType.text,
@@ -709,6 +744,7 @@ class TestCountThreadMessages:
         return [
             {
                 "id": str(uuid4()),
+                "user_id": user_id,
                 "thread_id": thread_id,
                 "role": MessageRole.user,
                 "content_type": MessageContentType.text,
@@ -718,7 +754,8 @@ class TestCountThreadMessages:
             },
             {
                 "id": str(uuid4()),
-                "thread_id": str(uuid4()),
+                "user_id": user_id,
+                "thread_id": thread_id,
                 "role": MessageRole.user,
                 "content_type": MessageContentType.text,
                 "created_at": datetime.now(timezone.utc),
@@ -727,6 +764,7 @@ class TestCountThreadMessages:
             },
             {
                 "id": str(uuid4()),
+                "user_id": user_id,
                 "thread_id": thread_id,
                 "role": MessageRole.user,
                 "content_type": MessageContentType.text,
@@ -738,7 +776,7 @@ class TestCountThreadMessages:
     
     
     @pytest_asyncio.fixture(scope="function")
-    async def create_messages_in_db(self, async_session: AsyncSession, message_repository: MessageRepository, sample_messages: list[dict], thread_id: str):
+    async def create_messages_in_db(self, async_session: AsyncSession, message_repository: MessageRepository, sample_messages: list[dict], thread_id: str, user_id: str):
         for message in sample_messages:
             params = CreateMessageParams(**message)
             await message_repository.create_message(async_session, params)
@@ -746,10 +784,10 @@ class TestCountThreadMessages:
         await async_session.commit()
     
     
-    async def test_count_thread_messages(self, async_session: AsyncSession, message_repository: MessageRepository, sample_messages: list[dict], thread_id: str, create_messages_in_db):
+    async def test_count_thread_messages(self, async_session: AsyncSession, message_repository: MessageRepository, sample_messages: list[dict], thread_id: str, user_id: str, create_messages_in_db):
         """Test counting messages in a specific thread."""
         result = await message_repository.count_thread_messages(async_session, thread_id)
-        assert result == 2
+        assert result == 3
 
 
 class TestCreateMessages:

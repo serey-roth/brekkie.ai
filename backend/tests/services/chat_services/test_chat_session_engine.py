@@ -690,7 +690,8 @@ class TestHandleUserMessage:
     async def test_success(self, chat_session_engine, sample_user_access_data, sample_thread_id, mock_db, mock_db_transaction_maker):
         chat_session_engine.db_transaction_maker = mock_db_transaction_maker
         user_access_data = sample_user_access_data
-        payload = UserMessagePayload(id="1", content="hi")
+        user_message_id = "1"
+        payload = UserMessagePayload(id=user_message_id, content="hi")
         
         with patch.object(chat_session_engine, 'message_processor', new_callable=AsyncMock) as mock_processor,\
             patch('services.chat_services.chat_session_engine.datetime') as mock_datetime:
@@ -704,12 +705,12 @@ class TestHandleUserMessage:
                 mock_db,
                 user_access_data,
                 sample_thread_id,
-                payload.id,
+                user_message_id,
                 payload.content,
                 timestamp
             )
             
-            mock_processor.process_user_message.assert_awaited_once_with(user_access_data, sample_thread_id, payload.content)
+            mock_processor.process_user_message.assert_awaited_once_with(user_access_data, sample_thread_id, user_message_id, payload.content)
 
 
 class TestRun:

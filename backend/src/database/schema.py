@@ -38,6 +38,8 @@ class DBMessage(Base):
     user_id = Column(String, ForeignKey("users.id"), index=True)
     thread_id = Column(String, ForeignKey("threads.id"), index=True)
     
+    parent_id = Column(String, ForeignKey("messages.id"), nullable=True)
+    
     role = Column(Enum(MessageRole))
     content_type = Column(Enum(MessageContentType))
     text_content = Column(Text, nullable=True)
@@ -55,6 +57,14 @@ class DBMessage(Base):
     recipe_id = Column(String, ForeignKey("recipes.id"), nullable=True)
     is_recipe_generation_started = Column(Boolean, nullable=True)
     is_recipe_generation_completed = Column(Boolean, nullable=True)
+
+    parent = relationship(
+        "DBMessage", 
+        back_populates="children", 
+        uselist=False,
+        remote_side=[id] # This resolves the self-referencing relationship
+    )
+    children = relationship("DBMessage", back_populates="parent", cascade="all, delete-orphan")
 
     user = relationship("DBUser", back_populates="messages")
     thread = relationship("DBThread", back_populates="messages")

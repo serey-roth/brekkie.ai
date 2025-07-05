@@ -1,6 +1,26 @@
-import type { Message } from "@/data/schemas/messages";
+import type { AssistantTextMessage, Message, UserMessage } from "@/data/schemas/messages";
 
-const message1: Message = {
+const message0: UserMessage = {
+    id: "0",
+    thread_id: "1",
+    role: "user",
+    content_type: "text",
+    text_content: "I'd like to make a Mediterranean Pasta &amp; Salad.",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    model_name: null,
+    input_tokens: null,
+    output_tokens: null,
+    recipe_id: null,
+    parent_id: null,
+    tool_name: null,
+    tool_input: null,
+    tool_output: null,
+    is_recipe_generation_started: false,
+    is_recipe_generation_completed: false,
+}
+
+const message1: AssistantTextMessage = {
     id: "1",
     thread_id: "1",
     role: "assistant",
@@ -17,6 +37,7 @@ const message1: Message = {
     tool_name: null,
     tool_input: null,
     tool_output: null,
+    parent_id: message0.id,
 }
 
 const message2: Message = {

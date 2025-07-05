@@ -43,6 +43,7 @@ export function useRecipeGenerationSimulation() {
             role: "assistant",
             content_type: "recipe",
             text_content: null,
+            parent_id: "test-user-message-1",
             recipe_id: "recipe_1",
             model_name: null,
             input_tokens: null,

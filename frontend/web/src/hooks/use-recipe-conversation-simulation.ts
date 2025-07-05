@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useChatStateManager } from "@/context/chat-context";
-import type { Message } from "@/data/schemas/messages";
+import type { AssistantRecipeMessage, Message } from "@/data/schemas/messages";
 import type { UserRecipe } from "@/data/schemas/recipes";
 import type { Thread } from "@/data/schemas/threads";
 import type { UserAccessData } from "@/data/schemas/user-access";
@@ -74,7 +74,7 @@ export function useRecipeConversationSimulation() {
             await delay(1000);
 
             // First user message
-            chatStateManager.createUserMessage(chunks.user_message_1[0]);
+            const userMessage1 = chatStateManager.createUserMessage(chunks.user_message_1[0]);
             await delay(2000);
 
             // First AI response
@@ -103,6 +103,7 @@ export function useRecipeConversationSimulation() {
                 tool_name: null,
                 tool_input: null,
                 tool_output: null,
+                parent_id: userMessage1.id,
             } satisfies Message;
 
             chatStateManager.handleChatEvent({
@@ -148,7 +149,7 @@ export function useRecipeConversationSimulation() {
             await delay(1000);
 
             // Second user message
-            chatStateManager.createUserMessage(chunks.user_message_2[0]);
+            const userMessage2 = chatStateManager.createUserMessage(chunks.user_message_2[0]);
             await delay(2000);
 
             // Second AI response
@@ -170,6 +171,7 @@ export function useRecipeConversationSimulation() {
                 tool_name: null,
                 tool_input: null,
                 tool_output: null,
+                parent_id: userMessage2.id,
             } satisfies Message;
             
             chatStateManager.handleChatEvent({
@@ -253,7 +255,8 @@ export function useRecipeConversationSimulation() {
                 input_tokens: null,
                 output_tokens: null,
                 text_content: null,
-            } satisfies Message;
+                parent_id: userMessage2.id,
+            } satisfies AssistantRecipeMessage;
 
             const userRecipe = {
                 id: recipeId,

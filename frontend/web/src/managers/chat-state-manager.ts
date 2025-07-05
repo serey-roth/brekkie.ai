@@ -246,6 +246,7 @@ export class ChatStateManager {
             tool_output: null,
             is_recipe_generation_started: null,
             is_recipe_generation_completed: null,
+            parent_id: null,
         };
 
         this._messageManager.addMessage(message);

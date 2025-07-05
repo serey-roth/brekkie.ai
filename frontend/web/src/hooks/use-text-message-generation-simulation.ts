@@ -20,6 +20,8 @@ export function useTextMessageGenerationSimulation() {
     const [isCompleted, setIsCompleted] = useState(false);
 
     const currentMessageIndex = useRef(0);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
     useEffect(() => {
         const thread = {
             id: "1",
@@ -44,37 +46,47 @@ export function useTextMessageGenerationSimulation() {
             }
         } satisfies ChatEvent)
 
-        const interval = setInterval(() => {
-            if (currentMessageIndex.current === evolvingAssistantTextMessage.length - 1) {
-                const message = evolvingAssistantTextMessage[currentMessageIndex.current];
+        // Add a delay before starting chunk generation
+        timeoutRef.current = setTimeout(() => {
+            intervalRef.current = setInterval(() => {
+                if (currentMessageIndex.current === evolvingAssistantTextMessage.length - 1) {
+                    const message = evolvingAssistantTextMessage[currentMessageIndex.current];
+                    chatStateManager.handleChatEvent({
+                        event: "text_message_completed",
+                        data: {
+                            user_access_data: userAccessData,
+                            thread: thread,
+                            message: message,
+                        }
+                    } satisfies ChatEvent)
+                    setIsCompleted(true);
+                    if (intervalRef.current) {
+                        clearInterval(intervalRef.current);
+                    }
+                    return;
+                }
+
                 chatStateManager.handleChatEvent({
-                    event: "text_message_completed",
+                    event: "text_message_chunk_generated",
                     data: {
                         user_access_data: userAccessData,
                         thread: thread,
-                        message: message,
+                        message: evolvingAssistantTextMessage[currentMessageIndex.current],
                     }
                 } satisfies ChatEvent)
-                setIsCompleted(true);
-                clearInterval(interval);
-                return;
-            }
 
-            chatStateManager.handleChatEvent({
-                event: "text_message_chunk_generated",
-                data: {
-                    user_access_data: userAccessData,
-                    thread: thread,
-                    message: evolvingAssistantTextMessage[currentMessageIndex.current],
-                }
-            } satisfies ChatEvent)
-
-            currentMessageIndex.current++;
-        }, 1000);
+                currentMessageIndex.current++;
+            }, 1000);
+        }, 2000);
 
         return () => {
             setIsRunning(false);
-            clearInterval(interval);
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
         };
     }, [chatStateManager]);
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AuthScreen } from '@/components/auth/AuthScreen';
-import { MessageList } from '@/components/chat/MessageList';
+import { MessageTurnList } from '@/components/chat/MessageList';
 import { ChatLayout } from '@/components/layout/ChatLayout';
 import { WelcomeScreen } from '@/components/layout/WelcomeScreen';
 import { RecipePanel } from '@/components/recipes/RecipePanel';
@@ -10,10 +10,10 @@ import { useChatContext, useChatStateManager, useConnectionStateManager, useMess
 import type { ChatState } from '@/data/schemas/chat-state';
 import type { ConnectionState } from '@/data/schemas/connection-state';
 import type { ChatLimitMessage, ChatSessionError } from '@/data/schemas/errors';
-import type { Message, MessageGroup } from '@/data/schemas/messages';
+import type { Message, RoleMessageGroup } from '@/data/schemas/messages';
 import type { Thread } from '@/data/schemas/threads';
 import type { UserAccessData } from '@/data/schemas/user-access';
-import { groupChatMessages } from '@/utils/message-utils';
+import { groupMessagesByRole } from '@/utils/message-utils';
 import { RecipeListView } from './RecipeListView';
 import { Sidebar } from './Sidebar';
 
@@ -64,7 +64,7 @@ export function Main() {
         }, [])
     });
 
-    const { messageGroups } = useChatMessages({ onMessageChange: useCallback(() => {
+    const { messageGroups } = useChatMessageGroups({ onMessageChange: useCallback(() => {
         const container = scrollRef.current;
         if (!container) return;
         const distanceFromBottom =
@@ -76,7 +76,7 @@ export function Main() {
             setScrollToBottomMessage("New message");
         }
     }, [scrollRef, scrollToBottom]) });
-    
+        
     return (
         <div className="bg-background min-h-screen px-safe pb-safe pt-safe">
             <Sidebar 
@@ -114,7 +114,7 @@ export function Main() {
                     threadTitle={threadTitle}
                 >
                     {messageGroups.length > 0 ? (
-                        <MessageList
+                        <MessageTurnList
                             messageGroups={messageGroups}
                             isLoadingMoreMessages={isLoadingMoreMessages}
                             isAssistantThinking={currentChatState?.isAssistantThinking ?? false}
@@ -239,11 +239,11 @@ function useChatState({ onThreadResumed }: {
     return { currentChatState, chatSessionErrorMessage, threadTitle, resetChatState };
 }   
 
-function useChatMessages({ onMessageChange }: {
+function useChatMessageGroups({ onMessageChange }: {
     onMessageChange: () => void;
 }) {
     const messageManager = useMessageManager();
-    const [messageGroups, setMessageGroups] = useState<MessageGroup[]>(groupChatMessages(messageManager.getMessages()));
+    const [messageGroups, setMessageGroups] = useState<RoleMessageGroup[]   >(groupMessagesByRole(messageManager.getMessages()));
 
     useEffect(() => {
         const messageAddedListener = () => {
@@ -253,7 +253,7 @@ function useChatMessages({ onMessageChange }: {
             onMessageChange();
         }
         const messagesUpdatedListener = (messages: Message[]) => {
-            setMessageGroups(groupChatMessages(messages));
+            setMessageGroups(groupMessagesByRole(messages));
         }
         messageManager.subscribe('messageAdded', messageAddedListener);
         messageManager.subscribe('messageUpdated', messageUpdatedListener);

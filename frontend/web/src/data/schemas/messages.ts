@@ -12,9 +12,10 @@ export const MessageSchema = z.object({
     thread_id: z.string(),
     role: MessageRoleSchema,
     content_type: MessageContentTypeSchema,
-    text_content: z.string().nullable(),
     created_at: z.string(),
     updated_at: z.string(),
+    parent_id: z.string().nullable(),
+    text_content: z.string().nullable(),
     recipe_id: z.string().nullable(),
     model_name: z.string().nullable(),
     input_tokens: z.number().nullable(),
@@ -29,14 +30,16 @@ export type Message = z.infer<typeof MessageSchema>;
 
 export type UserMessage = Message & { role: 'user', text_content: string, content_type: 'text' };
 
-export type AssistantMessage = Message & { role: 'assistant' };
+export type AssistantMessage = Message & { role: 'assistant', parent_id: string };
 export type AssistantTextMessage = AssistantMessage & { content_type: 'text', text_content: string };
 export type AssistantRecipeMessage = AssistantMessage & { content_type: 'recipe', recipe_id: string, is_recipe_generation_started: boolean, is_recipe_generation_completed: boolean };
 export type AssistantToolMessage = AssistantMessage & { content_type: 'tool', tool_name: string, tool_input: Record<string, unknown>, tool_output: Record<string, unknown> };
 
-export type MessageGroup =
-    | { role: 'user'; messages: UserMessage[] }
-    | { role: 'assistant'; messages: AssistantMessage[] };
+export type RoleMessageGroup = {
+    role: 'user', messages: UserMessage[]
+} | {
+    role: 'assistant', messages: AssistantMessage[]
+}
 
 export const UserMessagePayloadSchema = z.object({
     id: z.string(),

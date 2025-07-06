@@ -1,16 +1,21 @@
-import { FaClock, FaUserFriends } from "react-icons/fa";
-import Markdown from "react-markdown";
-import type { UserRecipe } from "@/data/schemas/recipes";
-import { formatRecipeCategory, formatRecipeTime } from "@/utils/recipe-utils";
+import { FaClock, FaUserFriends } from 'react-icons/fa';
+import Markdown from 'react-markdown';
+import type { UserRecipe } from '@/data/schemas/recipes';
+import { formatRecipeCategory, formatRecipeTime } from '@/utils/recipe-utils';
 
 type RecipeCardProps = {
     recipe: UserRecipe;
     selectedRecipeId: string | null;
     onSelectRecipe: (recipeId: string) => void;
     className?: string;
-}
+};
 
-export const RecipeCard = ({ recipe, selectedRecipeId, onSelectRecipe, className }: RecipeCardProps) => {
+export const RecipeCard = ({
+    recipe,
+    selectedRecipeId,
+    onSelectRecipe,
+    className,
+}: RecipeCardProps) => {
     return (
         <div
             className={`bg-contrast-subtle border-border/10 w-full cursor-pointer rounded-lg border p-4 shadow-sm transition-all duration-300 ease-out ${selectedRecipeId === recipe.id ? 'border-accent border-2 shadow-md' : 'hover:border-border/40'} ${className}`}
@@ -24,7 +29,12 @@ export const RecipeCard = ({ recipe, selectedRecipeId, onSelectRecipe, className
                 {(recipe.prep_time_minutes || recipe.cook_time_minutes) && (
                     <div className="flex items-center gap-1">
                         <FaClock className="text-sm" />
-                        <span className="text-sm">Total: {formatRecipeTime((recipe.prep_time_minutes ?? 0) + (recipe.cook_time_minutes ?? 0))}</span>
+                        <span className="text-sm">
+                            Total:{' '}
+                            {formatRecipeTime(
+                                (recipe.prep_time_minutes ?? 0) + (recipe.cook_time_minutes ?? 0),
+                            )}
+                        </span>
                     </div>
                 )}
                 {recipe.servings && (

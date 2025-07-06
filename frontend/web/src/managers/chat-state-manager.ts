@@ -10,7 +10,6 @@ import { isAssistantMessage } from '@/utils/message-utils';
 import { MessageManager } from './message-manager';
 import { RecipeManager } from './recipe-manager';
 
-
 type ChatStateEvents = {
     chatStateReady: ChatState;
     chatStateChanged: ChatState;
@@ -47,11 +46,17 @@ export class ChatStateManager {
         this._recipeManager = recipeManager;
     }
 
-    subscribe<K extends keyof ChatStateEvents>(event: K, callback: (payload: ChatStateEvents[K]) => void) {
+    subscribe<K extends keyof ChatStateEvents>(
+        event: K,
+        callback: (payload: ChatStateEvents[K]) => void,
+    ) {
         this._eventManager.subscribe(event, callback);
     }
 
-    unsubscribe<K extends keyof ChatStateEvents>(event: K, callback: (payload: ChatStateEvents[K]) => void) {
+    unsubscribe<K extends keyof ChatStateEvents>(
+        event: K,
+        callback: (payload: ChatStateEvents[K]) => void,
+    ) {
         this._eventManager.unsubscribe(event, callback);
     }
 
@@ -68,9 +73,9 @@ export class ChatStateManager {
     }
 
     startNewThread() {
-        this._state = getInitialChatState(); 
+        this._state = getInitialChatState();
         this._eventManager.publish('currentThreadChanged', null);
-        this._eventManager.publish('chatStateChanged', this._state);    
+        this._eventManager.publish('chatStateChanged', this._state);
     }
 
     resumePreviousThread(threadId: string) {
@@ -86,7 +91,7 @@ export class ChatStateManager {
     hasThreadResumed(): boolean {
         return this._state?.threadState === 'resumed';
     }
-    
+
     updateState(updater: (draft: ChatState) => void) {
         this._state = produce(this._state, updater);
         this._eventManager.publish('chatStateChanged', this._state);
@@ -94,7 +99,7 @@ export class ChatStateManager {
     }
 
     handleChatEvent(event: ChatEvent) {
-        this.updateState(draft => {
+        this.updateState((draft) => {
             switch (event.event) {
                 case 'thread_started': {
                     draft.isReady = false;
@@ -154,7 +159,7 @@ export class ChatStateManager {
                     draft.isAssistantThinking = false;
                     draft.isAssistantResponding = false;
                     draft.thread = event.data.thread;
-                    
+
                     const updatedMessage = event.data.message;
                     if (!isAssistantMessage(updatedMessage)) {
                         return;
@@ -178,7 +183,10 @@ export class ChatStateManager {
 
                     const updatedMessage = event.data.message;
                     if (isAssistantMessage(updatedMessage)) {
-                        this._messageManager.updateAssistantMessage(updatedMessage.id, updatedMessage);
+                        this._messageManager.updateAssistantMessage(
+                            updatedMessage.id,
+                            updatedMessage,
+                        );
                     }
 
                     this._recipeManager.updateRecipe(event.data.recipe);
@@ -191,8 +199,10 @@ export class ChatStateManager {
 
                     const updatedMessage = event.data.message;
                     if (isAssistantMessage(updatedMessage)) {
-                        this._messageManager.updateAssistantMessage(updatedMessage.id, updatedMessage);
-
+                        this._messageManager.updateAssistantMessage(
+                            updatedMessage.id,
+                            updatedMessage,
+                        );
                     }
 
                     this._recipeManager.updateRecipe(event.data.recipe);
@@ -216,7 +226,9 @@ export class ChatStateManager {
                     draft.isAssistantResponding = false;
                     draft.thread = event.data.thread;
 
-                    this._eventManager.publish('assistantErrorOccurred', { error_message: event.data.error_message });
+                    this._eventManager.publish('assistantErrorOccurred', {
+                        error_message: event.data.error_message,
+                    });
                     break;
                 }
 
@@ -255,7 +267,7 @@ export class ChatStateManager {
             this._eventManager.publish('firstMessageSent', message);
         }
 
-        this.updateState(draft => {
+        this.updateState((draft) => {
             draft.isAssistantThinking = true;
         });
 
@@ -278,5 +290,3 @@ export class ChatStateManager {
         this._eventManager.publish('chatStateChanged', this._state);
     }
 }
-
-

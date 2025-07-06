@@ -55,7 +55,7 @@ export default function ChatInput({ onSend, disabled, inputContainerRef }: ChatI
                             ref={textareaRef}
                             autoFocus={true}
                             value={input}
-                            onChange={e => setInput(e.target.value)}
+                            onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             className="text-contrast placeholder-contrast-subtle max-h-[200px] min-h-[36px] w-full resize-none border-none bg-transparent p-0 text-left text-base leading-relaxed outline-none sm:text-[18px]"
                             placeholder="What's on your mind?"
@@ -69,12 +69,14 @@ export default function ChatInput({ onSend, disabled, inputContainerRef }: ChatI
                             className={`flex h-10 min-h-[44px] w-10 min-w-[44px] items-center justify-center rounded-full text-lg shadow-md transition-all duration-200 ${
                                 input.trim() && !disabled
                                     ? 'bg-primary hover:bg-primary-dark text-white'
-                                    : 'bg-background-light/50 text-contrast-subtle/50 opacity-80 cursor-not-allowed'
+                                    : 'bg-background-light/50 text-contrast-subtle/50 cursor-not-allowed opacity-80'
                             }`}
                         >
                             <FiArrowUp
                                 size={20}
-                                className={input.trim() && !disabled ? 'text-white' : 'text-inherit'}
+                                className={
+                                    input.trim() && !disabled ? 'text-white' : 'text-inherit'
+                                }
                             />
                         </button>
                     </div>

@@ -1,6 +1,6 @@
-import type { IAccessTokenClient } from "@/api-clients/access-token-client";
-import { type UserAccessData } from "@/data/schemas/user-access";
-import { EventManager } from "@/utils/event-manager";
+import type { IAccessTokenClient } from '@/api-clients/access-token-client';
+import { type UserAccessData } from '@/data/schemas/user-access';
+import { EventManager } from '@/utils/event-manager';
 
 type UserAccessEvents = {
     accessEnsured: UserAccessData;
@@ -20,7 +20,7 @@ export class UserAccessManager {
     private _accessTokenClient: IAccessTokenClient;
     private _eventManager = new EventManager<UserAccessEvents>();
     private _config: UserAccessManagerConfig;
-    
+
     constructor(accessTokenClient: IAccessTokenClient, config: UserAccessManagerConfig) {
         this._accessTokenClient = accessTokenClient;
         this._config = config;
@@ -42,11 +42,17 @@ export class UserAccessManager {
         return this._accessData;
     }
 
-    subscribe<K extends keyof UserAccessEvents>(event: K, callback: (payload: UserAccessEvents[K]) => void) {
+    subscribe<K extends keyof UserAccessEvents>(
+        event: K,
+        callback: (payload: UserAccessEvents[K]) => void,
+    ) {
         this._eventManager.subscribe(event, callback);
     }
 
-    unsubscribe<K extends keyof UserAccessEvents>(event: K, callback: (payload: UserAccessEvents[K]) => void) {
+    unsubscribe<K extends keyof UserAccessEvents>(
+        event: K,
+        callback: (payload: UserAccessEvents[K]) => void,
+    ) {
         this._eventManager.unsubscribe(event, callback);
     }
 
@@ -74,7 +80,9 @@ export class UserAccessManager {
 
     hasReachedMessageLimit(userAccessData: UserAccessData): boolean | null {
         const messageCount = userAccessData.user_message_count;
-        const messageLimit = userAccessData.is_authenticated ? this._config.maxMessageCountAuthenticated : this._config.maxMessageCountAnonymous;
+        const messageLimit = userAccessData.is_authenticated
+            ? this._config.maxMessageCountAuthenticated
+            : this._config.maxMessageCountAnonymous;
         return messageCount >= messageLimit;
     }
 
@@ -83,22 +91,24 @@ export class UserAccessManager {
         if (isAuthenticated === null) {
             return this._config.maxMessageCountAnonymous;
         }
-        return isAuthenticated ? this._config.maxMessageCountAuthenticated : this._config.maxMessageCountAnonymous;
+        return isAuthenticated
+            ? this._config.maxMessageCountAuthenticated
+            : this._config.maxMessageCountAnonymous;
     }
 
     async ensureUserAccess() {
         const accessToken = localStorage.getItem('brekkie-access-token');
-        
+
         const accessData = await this._accessTokenClient.ensureUserAccess(accessToken);
         this._accessData = accessData;
-        
-        this.saveAccessToken(accessData.access_token);  
+
+        this.saveAccessToken(accessData.access_token);
 
         this._eventManager.publish('accessEnsured', accessData);
 
         if (this.hasReachedMessageLimit(accessData)) {
             this._eventManager.publish('limitReached', 'Message limit reached');
-        }       
+        }
     }
 
     saveAccessToken(accessToken: string) {
@@ -114,4 +124,4 @@ export class UserAccessManager {
     dispose() {
         this._eventManager.dispose();
     }
-}   
+}

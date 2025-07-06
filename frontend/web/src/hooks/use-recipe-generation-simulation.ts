@@ -1,20 +1,20 @@
-import { useEffect, useRef, useState } from "react";
-import { useChatStateManager } from "@/context/chat-context";
-import { type ChatEvent } from "@/data/schemas/chat-events";
-import { type Message } from "@/data/schemas/messages";
-import { type UserRecipe } from "@/data/schemas/recipes";
-import { type Thread } from "@/data/schemas/threads";
-import { type UserAccessData } from "@/data/schemas/user-access";
-import { evolvingRecipeList } from "@/data/tests/recipes/evolving-recipe";
+import { useEffect, useRef, useState } from 'react';
+import { useChatStateManager } from '@/context/chat-context';
+import { type ChatEvent } from '@/data/schemas/chat-events';
+import { type Message } from '@/data/schemas/messages';
+import { type UserRecipe } from '@/data/schemas/recipes';
+import { type Thread } from '@/data/schemas/threads';
+import { type UserAccessData } from '@/data/schemas/user-access';
+import { evolvingRecipeList } from '@/data/tests/recipes/evolving-recipe';
 
 const userAccessData: UserAccessData = {
-    access_token: "mock-access-token",
+    access_token: 'mock-access-token',
     is_authenticated: true,
-    user_id: "1",
+    user_id: '1',
     email: null,
     name: null,
     user_message_count: 0,
-}
+};
 
 export function useRecipeGenerationSimulation() {
     const chatStateManager = useChatStateManager();
@@ -24,27 +24,27 @@ export function useRecipeGenerationSimulation() {
     useEffect(() => {
         const recipes = evolvingRecipeList;
         const thread = {
-            id: "1",
-            user_id: "1",
+            id: '1',
+            user_id: '1',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             resumed_at: null,
             error_message: null,
-            title: "Test Recipe Generation Thread",
+            title: 'Test Recipe Generation Thread',
             summary: null,
             is_empty: false,
         } satisfies Thread;
 
         const recipeMessage = {
-            id: "1",
+            id: '1',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            thread_id: "1",
-            role: "assistant",
-            content_type: "recipe",
+            thread_id: '1',
+            role: 'assistant',
+            content_type: 'recipe',
             text_content: null,
-            parent_id: "test-user-message-1",
-            recipe_id: "recipe_1",
+            parent_id: 'test-user-message-1',
+            recipe_id: 'recipe_1',
             model_name: null,
             input_tokens: null,
             output_tokens: null,
@@ -56,11 +56,11 @@ export function useRecipeGenerationSimulation() {
         } satisfies Message;
 
         const userRecipe = {
-            id: "recipe_1",
+            id: 'recipe_1',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            thread_id: "1",
-            user_id: "1",
+            thread_id: '1',
+            user_id: '1',
             name: null,
             description: null,
             prep_time_minutes: null,
@@ -82,14 +82,14 @@ export function useRecipeGenerationSimulation() {
         setIsRunning(true);
 
         chatStateManager.handleChatEvent({
-            event: "recipe_generation_started",
+            event: 'recipe_generation_started',
             data: {
                 user_access_data: userAccessData,
                 thread: thread,
                 message: recipeMessage,
                 recipe: userRecipe,
-            }
-        } satisfies ChatEvent)
+            },
+        } satisfies ChatEvent);
 
         const interval = setInterval(() => {
             if (currentRecipeIndex.current === recipes.length - 1) {
@@ -98,34 +98,44 @@ export function useRecipeGenerationSimulation() {
                     ...userRecipe,
                     ...recipe,
                 } satisfies UserRecipe;
-                const newMessage = { ...recipeMessage, recipe_id: userRecipe.id, is_recipe_generation_completed: true, is_recipe_generation_started: false} satisfies Message;
+                const newMessage = {
+                    ...recipeMessage,
+                    recipe_id: userRecipe.id,
+                    is_recipe_generation_completed: true,
+                    is_recipe_generation_started: false,
+                } satisfies Message;
                 chatStateManager.handleChatEvent({
-                    event: "recipe_generation_completed",
+                    event: 'recipe_generation_completed',
                     data: {
                         user_access_data: userAccessData,
                         thread: thread,
                         message: newMessage,
                         recipe: newUserRecipe,
-                    }
-                } satisfies ChatEvent)
+                    },
+                } satisfies ChatEvent);
                 clearInterval(interval);
                 return;
             }
 
-            const newMessage = { ...recipeMessage, recipe_id: userRecipe.id, is_recipe_generation_started: true, is_recipe_generation_completed: false } satisfies Message;
+            const newMessage = {
+                ...recipeMessage,
+                recipe_id: userRecipe.id,
+                is_recipe_generation_started: true,
+                is_recipe_generation_completed: false,
+            } satisfies Message;
             const newUserRecipe = {
                 ...userRecipe,
                 ...recipes[currentRecipeIndex.current],
-            } satisfies UserRecipe; 
+            } satisfies UserRecipe;
             chatStateManager.handleChatEvent({
-                event: "recipe_field_detected",
+                event: 'recipe_field_detected',
                 data: {
                     user_access_data: userAccessData,
                     thread: thread,
                     message: newMessage,
                     recipe: newUserRecipe,
-                }
-            } satisfies ChatEvent)
+                },
+            } satisfies ChatEvent);
 
             currentRecipeIndex.current++;
         }, 1000);

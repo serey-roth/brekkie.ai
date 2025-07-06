@@ -1,12 +1,12 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { DateTime } from "luxon";
-import { useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { FaCircleExclamation, FaUtensils } from "react-icons/fa6";
-import { LuLoader } from "react-icons/lu";
-import { useRecipesApiClient, useUserAccessManager } from "@/context/app-context";
-import { useRecipeManager } from "@/context/chat-context";
-import type { UserRecipe } from "@/data/schemas/recipes";
-import { RecipeCard } from "../recipes/RecipeCard";
+import { AnimatePresence, motion } from 'framer-motion';
+import { DateTime } from 'luxon';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import { FaCircleExclamation, FaUtensils } from 'react-icons/fa6';
+import { LuLoader } from 'react-icons/lu';
+import { useRecipesApiClient, useUserAccessManager } from '@/context/app-context';
+import { useRecipeManager } from '@/context/chat-context';
+import type { UserRecipe } from '@/data/schemas/recipes';
+import { RecipeCard } from '../recipes/RecipeCard';
 
 interface RecipeListViewProps {
     selectedRecipeId: string | null;
@@ -14,9 +14,15 @@ interface RecipeListViewProps {
     isRecipePanelOpen: boolean;
 }
 
-export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanelOpen }: RecipeListViewProps) => {
+export const RecipeListView = ({
+    selectedRecipeId,
+    onSelectRecipe,
+    isRecipePanelOpen,
+}: RecipeListViewProps) => {
     const [recipes, setRecipes] = useState<UserRecipe[]>([]);
-    const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'success' | 'error'>(
+        'idle',
+    );
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -27,25 +33,29 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
     // Group recipes by month
     const groupedRecipes = useMemo(() => {
         const groups: { [key: string]: UserRecipe[] } = {};
-        
+
         recipes
-            .sort((a, b) => DateTime.fromISO(b.created_at).toMillis() - DateTime.fromISO(a.created_at).toMillis())
-            .forEach(recipe => {
+            .sort(
+                (a, b) =>
+                    DateTime.fromISO(b.created_at).toMillis() -
+                    DateTime.fromISO(a.created_at).toMillis(),
+            )
+            .forEach((recipe) => {
                 const date = DateTime.fromISO(recipe.created_at);
-                const monthKey = date.toFormat('yyyy-MM'); 
-                
+                const monthKey = date.toFormat('yyyy-MM');
+
                 if (!groups[monthKey]) {
                     groups[monthKey] = [];
                 }
                 groups[monthKey].push(recipe);
             });
-        
+
         return Object.entries(groups)
             .sort(([a], [b]) => b.localeCompare(a)) // Sort months descending
             .map(([monthKey, recipes]) => ({
                 monthKey,
                 date: DateTime.fromFormat(monthKey + '-01', 'yyyy-MM-dd'), // First day of the month
-                recipes
+                recipes,
             }));
     }, [recipes]);
 
@@ -53,7 +63,7 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
         const now = DateTime.now();
         const currentMonth = now.startOf('month');
         const lastMonth = now.minus({ months: 1 }).startOf('month');
-        
+
         if (date.hasSame(currentMonth, 'month')) {
             return 'This Month';
         } else if (date.hasSame(lastMonth, 'month')) {
@@ -66,7 +76,7 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
     const fetchRecipes = useCallback(async () => {
         setLoadingState('loading');
         setErrorMessage(null);
-        
+
         try {
             const accessToken = userAccessManager.getAccessToken();
             const userRecipes = await recipesApiClient.getUserRecipes(accessToken);
@@ -82,7 +92,7 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
 
     useEffect(() => {
         fetchRecipes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (
@@ -91,41 +101,41 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            transition={{ 
-                type: 'spring', 
-                damping: 30, 
+            transition={{
+                type: 'spring',
+                damping: 30,
                 stiffness: 300,
-                duration: 0.4
+                duration: 0.4,
             }}
         >
             <motion.div
-                className="mx-auto flex h-screen flex-col items-center overflow-hidden relative"
+                className="relative mx-auto flex h-screen flex-col items-center overflow-hidden"
                 initial={{ scale: 0.98, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.98, opacity: 0 }}
-                transition={{ 
-                    type: 'spring', 
-                    damping: 25, 
+                transition={{
+                    type: 'spring',
+                    damping: 25,
                     stiffness: 200,
                     duration: 0.3,
-                    delay: 0.1
+                    delay: 0.1,
                 }}
             >
                 {/* Header */}
                 <motion.div
-                    className="absolute top-0 left-0 right-0 z-10 h-20 bg-background/95 backdrop-blur-sm border-b border-border/50 shadow-sm w-full"
-                    initial={{ y: -20, opacity: 0, width: "100%" }}
-                    animate={{ y: 0, opacity: 1, width: "100%" }}
-                    exit={{ y: -20, opacity: 0, width: "100%" }}
-                    transition={{ 
+                    className="bg-background/95 border-border/50 absolute top-0 right-0 left-0 z-10 h-20 w-full border-b shadow-sm backdrop-blur-sm"
+                    initial={{ y: -20, opacity: 0, width: '100%' }}
+                    animate={{ y: 0, opacity: 1, width: '100%' }}
+                    exit={{ y: -20, opacity: 0, width: '100%' }}
+                    transition={{
                         duration: 0.4,
-                        ease: "easeOut",
-                        delay: 0.1
+                        ease: 'easeOut',
+                        delay: 0.1,
                     }}
                 >
-                    <div className="flex items-center justify-between py-4 px-4 md:px-8 md:py-6 pl-16 md:pl-4">
+                    <div className="flex items-center justify-between px-4 py-4 pl-16 md:px-8 md:py-6 md:pl-4">
                         <motion.span
-                            className="text-xl font-semibold text-contrast"
+                            className="text-contrast text-xl font-semibold"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -134,8 +144,8 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
                             My Recipes
                         </motion.span>
                         {recipes.length > 0 && (
-                            <motion.div 
-                                className="text-sm text-contrast-subtle"
+                            <motion.div
+                                className="text-contrast-subtle text-sm"
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
@@ -150,13 +160,13 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
                 {/* Scrollable Content */}
                 <motion.div
                     ref={scrollRef}
-                    className="w-full flex-1 overflow-y-auto px-4 pb-4 pt-[100px] custom-scrollbar max-w-3xl transition-all duration-300 ease-out"
+                    className="custom-scrollbar w-full max-w-3xl flex-1 overflow-y-auto px-4 pt-[100px] pb-4 transition-all duration-300 ease-out"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ delay: 0.2 }}
                 >
-                    <div className="w-full max-w-4xl mx-auto px-4 md:px-8">
+                    <div className="mx-auto w-full max-w-4xl px-4 md:px-8">
                         <AnimatePresence mode="wait">
                             {loadingState === 'loading' && (
                                 <motion.div
@@ -164,20 +174,24 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
                                     initial={{ opacity: 0, y: 30 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -30 }}
-                                    transition={{ 
-                                        type: 'spring', 
-                                        damping: 25, 
+                                    transition={{
+                                        type: 'spring',
+                                        damping: 25,
                                         stiffness: 200,
-                                        duration: 0.4
+                                        duration: 0.4,
                                     }}
                                     className="flex flex-col items-center justify-center py-16"
                                 >
                                     <motion.div
-                                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                        transition={{
+                                            duration: 1,
+                                            repeat: Infinity,
+                                            ease: 'linear',
+                                        }}
                                     >
-                                        <LuLoader className="w-8 h-8 text-primary mb-4 animate-spin" />
+                                        <LuLoader className="text-primary mb-4 h-8 w-8 animate-spin" />
                                     </motion.div>
-                                    <motion.p 
+                                    <motion.p
                                         className="text-contrast-subtle text-sm"
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
@@ -194,11 +208,11 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
                                     initial={{ opacity: 0, y: 30 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -30 }}
-                                    transition={{ 
-                                        type: 'spring', 
-                                        damping: 25, 
+                                    transition={{
+                                        type: 'spring',
+                                        damping: 25,
                                         stiffness: 200,
-                                        duration: 0.4
+                                        duration: 0.4,
                                     }}
                                     className="flex flex-col items-center justify-center py-16 text-center"
                                 >
@@ -207,34 +221,35 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
                                         animate={{ scale: 1, opacity: 1 }}
                                         transition={{ delay: 0.1 }}
                                     >
-                                        <FaCircleExclamation className="w-12 h-12 text-primary/60 mb-4" />
+                                        <FaCircleExclamation className="text-primary/60 mb-4 h-12 w-12" />
                                     </motion.div>
-                                    <motion.h3 
-                                        className="text-lg font-medium text-contrast mb-2"
+                                    <motion.h3
+                                        className="text-contrast mb-2 text-lg font-medium"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.2 }}
                                     >
                                         Oops! Something went wrong
                                     </motion.h3>
-                                    <motion.p 
-                                        className="text-contrast-subtle text-sm mb-6 max-w-md"
+                                    <motion.p
+                                        className="text-contrast-subtle mb-6 max-w-md text-sm"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.3 }}
                                     >
-                                        {errorMessage || "We couldn't load your recipes right now. Don't worry, we're on it!"}
+                                        {errorMessage ||
+                                            "We couldn't load your recipes right now. Don't worry, we're on it!"}
                                     </motion.p>
                                     <motion.button
                                         onClick={fetchRecipes}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
-                                        className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                        className="bg-primary hover:bg-primary-dark flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.4 }}
                                     >
-                                        <LuLoader className="w-4 h-4" />
+                                        <LuLoader className="h-4 w-4" />
                                         Try Again
                                     </motion.button>
                                 </motion.div>
@@ -246,11 +261,11 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
                                     initial={{ opacity: 0, y: 30 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -30 }}
-                                    transition={{ 
-                                        type: 'spring', 
-                                        damping: 25, 
+                                    transition={{
+                                        type: 'spring',
+                                        damping: 25,
                                         stiffness: 200,
-                                        duration: 0.4
+                                        duration: 0.4,
                                     }}
                                     className="flex flex-col items-center justify-center py-16 text-center"
                                 >
@@ -259,25 +274,26 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
                                         animate={{ scale: 1, opacity: 1 }}
                                         transition={{ delay: 0.1 }}
                                     >
-                                        <FaUtensils className="w-16 h-16 text-primary/40 mb-6" />
+                                        <FaUtensils className="text-primary/40 mb-6 h-16 w-16" />
                                     </motion.div>
-                                    <motion.h3 
-                                        className="text-xl font-semibold text-contrast mb-3"
+                                    <motion.h3
+                                        className="text-contrast mb-3 text-xl font-semibold"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.2 }}
                                     >
                                         No recipes yet!
                                     </motion.h3>
-                                    <motion.p 
-                                        className="text-contrast-subtle text-sm mb-2 max-w-md"
+                                    <motion.p
+                                        className="text-contrast-subtle mb-2 max-w-md text-sm"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.3 }}
                                     >
-                                        Ready to start cooking? Chat with Milo and he'll whip up some amazing recipes just for you.
+                                        Ready to start cooking? Chat with Milo and he'll whip up
+                                        some amazing recipes just for you.
                                     </motion.p>
-                                    <motion.p 
+                                    <motion.p
                                         className="text-contrast-subtle text-xs"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -294,89 +310,96 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
-                                    transition={{ 
-                                        type: 'spring', 
-                                        damping: 25, 
+                                    transition={{
+                                        type: 'spring',
+                                        damping: 25,
                                         stiffness: 200,
-                                        duration: 0.4
+                                        duration: 0.4,
                                     }}
                                     className="space-y-6"
                                 >
-                                    {groupedRecipes.map(({ monthKey, date, recipes: groupRecipes }, groupIndex) => (
-                                        <motion.div
-                                            key={monthKey}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ 
-                                                duration: 0.3,
-                                                delay: groupIndex * 0.1,
-                                                type: 'spring',
-                                                damping: 25,
-                                                stiffness: 200
-                                            }}
-                                            className="space-y-3"
-                                        >
-                                            {/* Month Header */}
-                                            <motion.div 
-                                                className="bg-background/95 backdrop-blur-sm py-2 border-b border-border/30 flex items-center gap-2"
-                                                initial={{ opacity: 0, x: -20, y: -5 }}
-                                                animate={{ opacity: 1, x: 0, y: 0 }}
-                                                exit={{ opacity: 0, x: -20, y: -5 }}
-                                                transition={{ 
-                                                    delay: groupIndex * 0.1 + 0.1,
+                                    {groupedRecipes.map(
+                                        ({ monthKey, date, recipes: groupRecipes }, groupIndex) => (
+                                            <motion.div
+                                                key={monthKey}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{
+                                                    duration: 0.3,
+                                                    delay: groupIndex * 0.1,
                                                     type: 'spring',
                                                     damping: 25,
-                                                    stiffness: 200
+                                                    stiffness: 200,
                                                 }}
+                                                className="space-y-3"
                                             >
-                                                <h2 className="text-sm font-medium text-contrast-subtle">
-                                                    {formatMonth(date)}
-                                                </h2>
-                                                <motion.div 
-                                                    className="text-sm text-contrast-subtle rounded-full bg-contrast-subtle/10 px-2 py-1"
-                                                    initial={{ scale: 0.8, opacity: 0 }}
-                                                    animate={{ scale: 1, opacity: 1 }}
-                                                    exit={{ scale: 0.8, opacity: 0 }}
-                                                    transition={{ 
-                                                        delay: groupIndex * 0.1 + 0.2,
+                                                {/* Month Header */}
+                                                <motion.div
+                                                    className="bg-background/95 border-border/30 flex items-center gap-2 border-b py-2 backdrop-blur-sm"
+                                                    initial={{ opacity: 0, x: -20, y: -5 }}
+                                                    animate={{ opacity: 1, x: 0, y: 0 }}
+                                                    exit={{ opacity: 0, x: -20, y: -5 }}
+                                                    transition={{
+                                                        delay: groupIndex * 0.1 + 0.1,
                                                         type: 'spring',
-                                                        damping: 20,
-                                                        stiffness: 300
+                                                        damping: 25,
+                                                        stiffness: 200,
                                                     }}
                                                 >
-                                                    {groupRecipes.length}
-                                                </motion.div>  
-                                            </motion.div>
-                                            
-                                            {/* Recipes Grid */}
-                                            <motion.div 
-                                                className={`space-y-3 md:space-y-0 md:grid gap-2 ${isRecipePanelOpen ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}
-                                            >
-                                                {groupRecipes.map((recipe, index) => (
+                                                    <h2 className="text-contrast-subtle text-sm font-medium">
+                                                        {formatMonth(date)}
+                                                    </h2>
                                                     <motion.div
-                                                        key={recipe.id}
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        exit={{ opacity: 0 }}
-                                                        transition={{ 
-                                                            duration: 0.4, 
-                                                            delay: groupIndex * 0.1 + index * 0.08 + 0.2,
+                                                        className="text-contrast-subtle bg-contrast-subtle/10 rounded-full px-2 py-1 text-sm"
+                                                        initial={{ scale: 0.8, opacity: 0 }}
+                                                        animate={{ scale: 1, opacity: 1 }}
+                                                        exit={{ scale: 0.8, opacity: 0 }}
+                                                        transition={{
+                                                            delay: groupIndex * 0.1 + 0.2,
                                                             type: 'spring',
-                                                            damping: 25,
-                                                            stiffness: 200
+                                                            damping: 20,
+                                                            stiffness: 300,
                                                         }}
                                                     >
-                                                        <RecipeCard
-                                                            recipe={recipe}
-                                                            selectedRecipeId={selectedRecipeId}
-                                                            onSelectRecipe={() => onSelectRecipe(recipe.id)}
-                                                            className="hover:shadow-lg hover:scale-[1.02] hover:bg-contrast-subtle/80"
-                                                        />
+                                                        {groupRecipes.length}
                                                     </motion.div>
-                                                ))}
+                                                </motion.div>
+
+                                                {/* Recipes Grid */}
+                                                <motion.div
+                                                    className={`gap-2 space-y-3 md:grid md:space-y-0 ${isRecipePanelOpen ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}
+                                                >
+                                                    {groupRecipes.map((recipe, index) => (
+                                                        <motion.div
+                                                            key={recipe.id}
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            exit={{ opacity: 0 }}
+                                                            transition={{
+                                                                duration: 0.4,
+                                                                delay:
+                                                                    groupIndex * 0.1 +
+                                                                    index * 0.08 +
+                                                                    0.2,
+                                                                type: 'spring',
+                                                                damping: 25,
+                                                                stiffness: 200,
+                                                            }}
+                                                        >
+                                                            <RecipeCard
+                                                                recipe={recipe}
+                                                                selectedRecipeId={selectedRecipeId}
+                                                                onSelectRecipe={() =>
+                                                                    onSelectRecipe(recipe.id)
+                                                                }
+                                                                className="hover:bg-contrast-subtle/80 hover:scale-[1.02] hover:shadow-lg"
+                                                            />
+                                                        </motion.div>
+                                                    ))}
+                                                </motion.div>
                                             </motion.div>
-                                        </motion.div>
-                                    ))}
+                                        ),
+                                    )}
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -385,4 +408,4 @@ export const RecipeListView = ({ selectedRecipeId, onSelectRecipe, isRecipePanel
             </motion.div>
         </motion.div>
     );
-};  
+};

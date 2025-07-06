@@ -58,7 +58,7 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                 setError('Name is required');
                 return;
             }
-            
+
             if (password.length < 8) {
                 setError('Password must be at least 8 characters long');
                 return;
@@ -83,7 +83,9 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
             }
             handleClose();
         } catch (error) {
-            setError(error instanceof Error ? error.message : 'An error occurred. Please try again.');
+            setError(
+                error instanceof Error ? error.message : 'An error occurred. Please try again.',
+            );
         } finally {
             setIsSubmitting(false);
         }
@@ -107,31 +109,31 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                         layout
                         className="fixed inset-0 z-[101] flex items-center justify-center p-2 sm:p-4"
                     >
-                        <div className="relative w-full max-w-[320px] sm:max-w-md min-h-[350px] transition-all duration-300">
+                        <div className="relative min-h-[350px] w-full max-w-[320px] transition-all duration-300 sm:max-w-md">
                             <button
                                 onClick={handleClose}
-                                className="text-contrast-subtle hover:text-primary absolute top-2 right-2 sm:top-4 sm:right-4 focus:outline-none"
+                                className="text-contrast-subtle hover:text-primary absolute top-2 right-2 focus:outline-none sm:top-4 sm:right-4"
                                 aria-label="Close"
                             >
-                                <LuX size={18} className="sm:w-[22px] sm:h-[22px]" />
+                                <LuX size={18} className="sm:h-[22px] sm:w-[22px]" />
                             </button>
-                            <div className="border-border rounded-xl sm:rounded-2xl border bg-white p-3 sm:p-6 shadow-lg">
-                                <div className="mb-4 sm:mb-8 text-center">
-                                    <h1 className="text-contrast mb-1 sm:mb-2 text-lg sm:text-2xl font-semibold">
+                            <div className="border-border rounded-xl border bg-white p-3 shadow-lg sm:rounded-2xl sm:p-6">
+                                <div className="mb-4 text-center sm:mb-8">
+                                    <h1 className="text-contrast mb-1 text-lg font-semibold sm:mb-2 sm:text-2xl">
                                         Welcome to brekkie.ai
                                     </h1>
-                                    <p className="text-contrast-subtle text-xs sm:text-sm max-w-md mx-auto">
+                                    <p className="text-contrast-subtle mx-auto max-w-md text-xs sm:text-sm">
                                         Sign in to save your chats and unlock a higher message
                                         limit.
                                     </p>
                                 </div>
-                                <div className="mb-3 sm:mb-6 flex gap-2 sm:gap-4">
+                                <div className="mb-3 flex gap-2 sm:mb-6 sm:gap-4">
                                     <button
                                         onClick={() => {
                                             setMode('signin');
                                             setError('');
                                         }}
-                                        className={`flex-1 border-b-2 py-1 sm:py-2 text-xs sm:text-sm font-medium transition-colors ${
+                                        className={`flex-1 border-b-2 py-1 text-xs font-medium transition-colors sm:py-2 sm:text-sm ${
                                             mode === 'signin'
                                                 ? 'text-primary border-primary'
                                                 : 'text-contrast-subtle hover:text-primary border-transparent'
@@ -144,7 +146,7 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                                             setMode('signup');
                                             setError('');
                                         }}
-                                        className={`flex-1 border-b-2 py-1 sm:py-2 text-xs sm:text-sm font-medium transition-colors ${
+                                        className={`flex-1 border-b-2 py-1 text-xs font-medium transition-colors sm:py-2 sm:text-sm ${
                                             mode === 'signup'
                                                 ? 'text-primary border-primary'
                                                 : 'text-contrast-subtle hover:text-primary border-transparent'
@@ -158,7 +160,7 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                                     <div>
                                         <label
                                             htmlFor="email"
-                                            className="text-contrast mb-1 block text-xs sm:text-sm font-medium"
+                                            className="text-contrast mb-1 block text-xs font-medium sm:text-sm"
                                         >
                                             Email
                                         </label>
@@ -166,22 +168,26 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                                             type="email"
                                             id="email"
                                             value={email}
-                                            onChange={e => setEmail(e.target.value)}
-                                            className="bg-background border-border text-contrast placeholder-contrast-subtle focus:ring-primary/20 focus:border-primary w-full rounded-md sm:rounded-xl border px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:outline-none"
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="bg-background border-border text-contrast placeholder-contrast-subtle focus:ring-primary/20 focus:border-primary w-full rounded-md border px-2 py-1 text-xs focus:ring-2 focus:outline-none sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
                                             placeholder="Enter your email"
                                         />
                                     </div>
 
-                                    <motion.div 
+                                    <motion.div
                                         initial={false}
-                                        animate={mode === 'signup' ? { opacity: 1, height: 'auto' } : { opacity: 0, height: 0 }}
+                                        animate={
+                                            mode === 'signup'
+                                                ? { opacity: 1, height: 'auto' }
+                                                : { opacity: 0, height: 0 }
+                                        }
                                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                                         style={{ overflow: 'hidden' }}
                                         className="pt-0"
                                     >
                                         <label
                                             htmlFor="name"
-                                            className="text-contrast mb-1 block text-xs sm:text-sm font-medium"
+                                            className="text-contrast mb-1 block text-xs font-medium sm:text-sm"
                                         >
                                             Name
                                         </label>
@@ -189,8 +195,8 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                                             type="text"
                                             id="name"
                                             value={name}
-                                            onChange={e => setName(e.target.value)}
-                                            className="bg-background border-border text-contrast placeholder-contrast-subtle focus:ring-primary/20 focus:border-primary w-full rounded-md sm:rounded-xl border px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:outline-none"
+                                            onChange={(e) => setName(e.target.value)}
+                                            className="bg-background border-border text-contrast placeholder-contrast-subtle focus:ring-primary/20 focus:border-primary w-full rounded-md border px-2 py-1 text-xs focus:ring-2 focus:outline-none sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
                                             placeholder="Enter your name"
                                         />
                                     </motion.div>
@@ -198,7 +204,7 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                                     <div>
                                         <label
                                             htmlFor="password"
-                                            className="text-contrast mb-1 block text-xs sm:text-sm font-medium"
+                                            className="text-contrast mb-1 block text-xs font-medium sm:text-sm"
                                         >
                                             Password
                                         </label>
@@ -207,31 +213,41 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                                                 type={showPassword ? 'text' : 'password'}
                                                 id="password"
                                                 value={password}
-                                                onChange={e => setPassword(e.target.value)}
-                                                className="bg-background border-border text-contrast placeholder-contrast-subtle focus:ring-primary/20 focus:border-primary w-full rounded-md sm:rounded-xl border px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:outline-none pr-8"
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                className="bg-background border-border text-contrast placeholder-contrast-subtle focus:ring-primary/20 focus:border-primary w-full rounded-md border px-2 py-1 pr-8 text-xs focus:ring-2 focus:outline-none sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
                                                 placeholder="Enter your password"
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-contrast-subtle hover:text-contrast focus:outline-none"
-                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                                className="text-contrast-subtle hover:text-contrast absolute top-1/2 right-2 -translate-y-1/2 focus:outline-none"
+                                                aria-label={
+                                                    showPassword ? 'Hide password' : 'Show password'
+                                                }
                                             >
-                                                {showPassword ? <LuEyeOff size={16} /> : <LuEye size={16} />}
+                                                {showPassword ? (
+                                                    <LuEyeOff size={16} />
+                                                ) : (
+                                                    <LuEye size={16} />
+                                                )}
                                             </button>
                                         </div>
                                     </div>
 
                                     <motion.div
                                         initial={false}
-                                        animate={mode === 'signup' ? { opacity: 1, height: 'auto' } : { opacity: 0, height: 0 }}
+                                        animate={
+                                            mode === 'signup'
+                                                ? { opacity: 1, height: 'auto' }
+                                                : { opacity: 0, height: 0 }
+                                        }
                                         transition={{ duration: 0.3, ease: 'easeInOut' }}
                                         style={{ overflow: 'hidden' }}
                                         className="pt-0"
                                     >
                                         <label
                                             htmlFor="confirmPassword"
-                                            className="text-contrast mb-1 block text-xs sm:text-sm font-medium"
+                                            className="text-contrast mb-1 block text-xs font-medium sm:text-sm"
                                         >
                                             Confirm Password
                                         </label>
@@ -240,19 +256,27 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                                                 type={showConfirmPassword ? 'text' : 'password'}
                                                 id="confirmPassword"
                                                 value={confirmPassword}
-                                                onChange={e =>
-                                                    setConfirmPassword(e.target.value)
-                                                }
-                                                className="bg-background border-border text-contrast placeholder-contrast-subtle focus:ring-primary/20 focus:border-primary w-full rounded-md sm:rounded-xl border px-2 sm:px-4 py-1 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:outline-none pr-8"
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                className="bg-background border-border text-contrast placeholder-contrast-subtle focus:ring-primary/20 focus:border-primary w-full rounded-md border px-2 py-1 pr-8 text-xs focus:ring-2 focus:outline-none sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm"
                                                 placeholder="Confirm your password"
                                             />
                                             <button
                                                 type="button"
-                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-contrast-subtle hover:text-contrast focus:outline-none"
-                                                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                                                onClick={() =>
+                                                    setShowConfirmPassword(!showConfirmPassword)
+                                                }
+                                                className="text-contrast-subtle hover:text-contrast absolute top-1/2 right-2 -translate-y-1/2 focus:outline-none"
+                                                aria-label={
+                                                    showConfirmPassword
+                                                        ? 'Hide password'
+                                                        : 'Show password'
+                                                }
                                             >
-                                                {showConfirmPassword ? <LuEyeOff size={16} /> : <LuEye size={16} />}
+                                                {showConfirmPassword ? (
+                                                    <LuEyeOff size={16} />
+                                                ) : (
+                                                    <LuEye size={16} />
+                                                )}
                                             </button>
                                         </div>
                                     </motion.div>
@@ -261,27 +285,41 @@ export function AuthScreen({ onSignIn, onSignUp, isOpen, onClose }: AuthScreenPr
                                         <motion.p
                                             initial={{ opacity: 0, y: -10 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="flex items-center gap-2 text-primary text-xs sm:text-sm"
+                                            className="text-primary flex items-center gap-2 text-xs sm:text-sm"
                                         >
-                                            <span><FaCircleExclamation className="text-red-500" /></span>
+                                            <span>
+                                                <FaCircleExclamation className="text-red-500" />
+                                            </span>
                                             <span>{error}</span>
                                         </motion.p>
                                     )}
 
                                     <button
                                         type="submit"
-                                        className="flex items-center justify-center gap-2 from-primary to-primary/80 hover:from-primary-dark hover:to-primary focus:ring-primary/20 mt-2 w-full rounded-md sm:rounded-xl bg-gradient-to-r py-2 text-sm sm:text-base font-semibold text-white shadow-md transition-colors focus:ring-2 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                                        disabled={isSubmitting || !email || !password || (mode === 'signup' && (!name || !confirmPassword || password !== confirmPassword))}
+                                        className="from-primary to-primary/80 hover:from-primary-dark hover:to-primary focus:ring-primary/20 mt-2 flex w-full items-center justify-center gap-2 rounded-md bg-gradient-to-r py-2 text-sm font-semibold text-white shadow-md transition-colors focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:rounded-xl sm:text-base"
+                                        disabled={
+                                            isSubmitting ||
+                                            !email ||
+                                            !password ||
+                                            (mode === 'signup' &&
+                                                (!name ||
+                                                    !confirmPassword ||
+                                                    password !== confirmPassword))
+                                        }
                                     >
-                                        {isSubmitting && <span><LuLoader className="h-4 w-4 animate-spin" /></span>}
+                                        {isSubmitting && (
+                                            <span>
+                                                <LuLoader className="h-4 w-4 animate-spin" />
+                                            </span>
+                                        )}
                                         <span>
-                                        {isSubmitting
-                                            ? mode === 'signin'
-                                                ? 'Signing in...'
-                                                : 'Signing up...'
-                                            : mode === 'signin'
-                                              ? 'Sign in'
-                                              : 'Sign up'}
+                                            {isSubmitting
+                                                ? mode === 'signin'
+                                                    ? 'Signing in...'
+                                                    : 'Signing up...'
+                                                : mode === 'signin'
+                                                  ? 'Sign in'
+                                                  : 'Sign up'}
                                         </span>
                                     </button>
                                 </form>

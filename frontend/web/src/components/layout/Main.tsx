@@ -6,7 +6,13 @@ import { WelcomeScreen } from '@/components/layout/WelcomeScreen';
 import { RecipePanel } from '@/components/recipes/RecipePanel';
 import { useThreadsApiClient, useUserAccessManager } from '@/context/app-context';
 import { useAuth, useAuthModal } from '@/context/auth-context';
-import { useChatContext, useChatStateManager, useConnectionStateManager, useMessageManager, useRecipeManager } from '@/context/chat-context';
+import {
+    useChatContext,
+    useChatStateManager,
+    useConnectionStateManager,
+    useMessageManager,
+    useRecipeManager,
+} from '@/context/chat-context';
 import type { ChatState } from '@/data/schemas/chat-state';
 import type { ConnectionState } from '@/data/schemas/connection-state';
 import type { ChatLimitMessage, ChatSessionError } from '@/data/schemas/errors';
@@ -26,16 +32,21 @@ export function Main() {
     const userAccessManager = useUserAccessManager();
     const { isAuthModalOpen, openAuthModal, closeAuthModal } = useAuthModal();
     const { signin, signup } = useAuth();
-    
+
     const connectionState = useConnectionState();
-    
+
     const { sendMessage } = useChatContext();
-    const { isLoadingMoreMessages, errorLoadingMoreMessages, loadingMessage, loadMorePreviousMessages } = useLoadChatPreviousMessages();
+    const {
+        isLoadingMoreMessages,
+        errorLoadingMoreMessages,
+        loadingMessage,
+        loadMorePreviousMessages,
+    } = useLoadChatPreviousMessages();
 
     const scrollRef = useRef<HTMLDivElement | null>(null);
 
     const scrollToBottom = useCallback(() => {
-        const container = scrollRef.current
+        const container = scrollRef.current;
         if (!container) return;
         requestAnimationFrame(() => {
             container.scrollTo({
@@ -45,9 +56,10 @@ export function Main() {
         });
     }, []);
 
-
     // TODO: Auto scroll to bottom should happens once at the beginning and message change when no manual scroll happens
-    const { currentChatState, chatSessionErrorMessage, resetChatState } = useChatState({ onThreadResumed: scrollToBottom });
+    const { currentChatState, chatSessionErrorMessage, resetChatState } = useChatState({
+        onThreadResumed: scrollToBottom,
+    });
     const { threadTitle, threadTitleState } = useThreadTitle();
     const { chatLimitMessage } = useChatLimit();
 
@@ -62,32 +74,34 @@ export function Main() {
             } else {
                 setScrollToBottomMessage(null);
             }
-        }, [])
+        }, []),
     });
 
-    const { messageGroups } = useChatMessageGroups({ onMessageChange: useCallback(() => {
-        const container = scrollRef.current;
-        if (!container) return;
-        const distanceFromBottom =
-            container.scrollHeight - container.scrollTop - container.clientHeight;
+    const { messageGroups } = useChatMessageGroups({
+        onMessageChange: useCallback(() => {
+            const container = scrollRef.current;
+            if (!container) return;
+            const distanceFromBottom =
+                container.scrollHeight - container.scrollTop - container.clientHeight;
 
-        if (distanceFromBottom <= 250) {
-            scrollToBottom();
-        } else {
-            setScrollToBottomMessage("New message");
-        }
-    }, [scrollRef, scrollToBottom]) });
-        
+            if (distanceFromBottom <= 250) {
+                scrollToBottom();
+            } else {
+                setScrollToBottomMessage('New message');
+            }
+        }, [scrollRef, scrollToBottom]),
+    });
+
     return (
-        <div className="bg-background min-h-screen px-safe pb-safe pt-safe">
-            <Sidebar 
-                isOpen={isSidebarOpen} 
-                openSidebar={() => setIsSidebarOpen(true)} 
-                closeSidebar={() => setIsSidebarOpen(false)} 
-                showRecipeListView={() => setShowRecipeListView(true)} 
-                hideRecipeListView={() => setShowRecipeListView(false)} 
+        <div className="bg-background px-safe pb-safe pt-safe min-h-screen">
+            <Sidebar
+                isOpen={isSidebarOpen}
+                openSidebar={() => setIsSidebarOpen(true)}
+                closeSidebar={() => setIsSidebarOpen(false)}
+                showRecipeListView={() => setShowRecipeListView(true)}
+                hideRecipeListView={() => setShowRecipeListView(false)}
             />
-            
+
             <div
                 className={`bg-background grid min-h-screen overflow-hidden transition-all duration-300 ${
                     selectedRecipeId ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
@@ -100,35 +114,44 @@ export function Main() {
                         onSelectRecipe={setSelectedRecipeId}
                     />
                 ) : (
-                <ChatLayout
-                    scrollRef={scrollRef}
-                    selectedRecipeId={selectedRecipeId}
-                    scrollToBottomMessage={scrollToBottomMessage}
-                    onScrollToBottom={scrollToBottom}
-                    onSendMessage={sendMessage}
-                    connectionState={connectionState}
-                    isAuthenticated={userAccessManager.isAuthenticated() ?? false}
-                    chatLimitMessage={chatLimitMessage ?? undefined}
-                    chatSessionErrorMessage={chatSessionErrorMessage ?? undefined}
-                    disableSendButton={!currentChatState || isLoadingMoreMessages || !connectionState.isConnected}
-                    onSignIn={openAuthModal}
-                    threadTitle={threadTitle}
-                    threadTitleState={threadTitleState}
-                >
-                    {messageGroups.length > 0 ? (
-                        <MessageList
-                            messageGroups={messageGroups}
-                            isLoadingMoreMessages={isLoadingMoreMessages}
-                            isAssistantThinking={currentChatState?.isAssistantThinking ?? false}
-                            isAssistantResponding={currentChatState?.isAssistantResponding ?? false}
-                            selectedRecipeId={selectedRecipeId}
-                            onSelectRecipe={setSelectedRecipeId}
-                            errorLoadingMoreMessages={errorLoadingMoreMessages}
-                            loadingMessage={loadingMessage}
-                        />
-                    ) : (
-                        <WelcomeScreen onSendMessage={sendMessage} disabled={connectionState.status !== 'connected'} />
-                    )}
+                    <ChatLayout
+                        scrollRef={scrollRef}
+                        selectedRecipeId={selectedRecipeId}
+                        scrollToBottomMessage={scrollToBottomMessage}
+                        onScrollToBottom={scrollToBottom}
+                        onSendMessage={sendMessage}
+                        connectionState={connectionState}
+                        isAuthenticated={userAccessManager.isAuthenticated() ?? false}
+                        chatLimitMessage={chatLimitMessage ?? undefined}
+                        chatSessionErrorMessage={chatSessionErrorMessage ?? undefined}
+                        disableSendButton={
+                            !currentChatState ||
+                            isLoadingMoreMessages ||
+                            !connectionState.isConnected
+                        }
+                        onSignIn={openAuthModal}
+                        threadTitle={threadTitle}
+                        threadTitleState={threadTitleState}
+                    >
+                        {messageGroups.length > 0 ? (
+                            <MessageList
+                                messageGroups={messageGroups}
+                                isLoadingMoreMessages={isLoadingMoreMessages}
+                                isAssistantThinking={currentChatState?.isAssistantThinking ?? false}
+                                isAssistantResponding={
+                                    currentChatState?.isAssistantResponding ?? false
+                                }
+                                selectedRecipeId={selectedRecipeId}
+                                onSelectRecipe={setSelectedRecipeId}
+                                errorLoadingMoreMessages={errorLoadingMoreMessages}
+                                loadingMessage={loadingMessage}
+                            />
+                        ) : (
+                            <WelcomeScreen
+                                onSendMessage={sendMessage}
+                                disabled={connectionState.status !== 'connected'}
+                            />
+                        )}
                     </ChatLayout>
                 )}
                 <RecipePanel
@@ -155,7 +178,11 @@ export function Main() {
 }
 
 // TODO: Fix this. Distinguish user scroll and programmatic scroll with onWheel deltas.
-function useScrollHandler({ scrollRef, onLoadMore, onDistanceFromBottomChange }: {
+function useScrollHandler({
+    scrollRef,
+    onLoadMore,
+    onDistanceFromBottomChange,
+}: {
     scrollRef: React.RefObject<HTMLDivElement | null>;
     onDistanceFromBottomChange: (distance: number) => void;
     onLoadMore?: () => void;
@@ -173,7 +200,7 @@ function useScrollHandler({ scrollRef, onLoadMore, onDistanceFromBottomChange }:
             onDistanceFromBottomChange(distanceFromBottom);
 
             if (container.scrollTop === 0 && onLoadMore) {
-                clearTimeout(loadMoreTimeout);  
+                clearTimeout(loadMoreTimeout);
                 loadMoreTimeout = setTimeout(() => {
                     onLoadMore();
                 }, 1000);
@@ -182,16 +209,14 @@ function useScrollHandler({ scrollRef, onLoadMore, onDistanceFromBottomChange }:
 
         container.addEventListener('scroll', handleScroll);
         return () => {
-            clearTimeout(loadMoreTimeout);      
+            clearTimeout(loadMoreTimeout);
             container.removeEventListener('scroll', handleScroll);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [onLoadMore, onDistanceFromBottomChange]);
 }
 
-function useChatState({ onThreadResumed }: {
-    onThreadResumed: () => void;
-}) {
+function useChatState({ onThreadResumed }: { onThreadResumed: () => void }) {
     const chatStateManager = useChatStateManager();
 
     const [currentChatState, setCurrentChatState] = useState(chatStateManager.getState());
@@ -206,15 +231,15 @@ function useChatState({ onThreadResumed }: {
         };
         const threadResumedListener = () => {
             onThreadResumed();
-        }
+        };
         const chatSessionErrorOccurredListener = (error: ChatSessionError) => {
             if (error.type === 'over_message_limit') {
                 // We handle this in the useMessageLimit hook
-                setChatSessionErrorMessage(null); 
+                setChatSessionErrorMessage(null);
             } else {
                 setChatSessionErrorMessage(error.message);
             }
-        }
+        };
 
         chatStateManager.subscribe('chatStateReady', chatStateReadyListener);
         chatStateManager.subscribe('chatStateChanged', chatStateChangedListener);
@@ -224,7 +249,10 @@ function useChatState({ onThreadResumed }: {
             chatStateManager.unsubscribe('chatStateReady', chatStateReadyListener);
             chatStateManager.unsubscribe('chatStateChanged', chatStateChangedListener);
             chatStateManager.unsubscribe('threadResumed', threadResumedListener);
-            chatStateManager.unsubscribe('chatSessionErrorOccurred', chatSessionErrorOccurredListener);
+            chatStateManager.unsubscribe(
+                'chatSessionErrorOccurred',
+                chatSessionErrorOccurredListener,
+            );
         };
     }, [chatStateManager, onThreadResumed]);
 
@@ -233,12 +261,14 @@ function useChatState({ onThreadResumed }: {
     }, [chatStateManager]);
 
     return { currentChatState, chatSessionErrorMessage, resetChatState };
-}   
+}
 
 function useThreadTitle() {
     const chatStateManager = useChatStateManager();
     const [threadTitle, setThreadTitle] = useState<string | null>(null);
-    const [threadTitleState, setThreadTitleState] = useState<'empty' | 'loading' | 'complete'>('empty');
+    const [threadTitleState, setThreadTitleState] = useState<'empty' | 'loading' | 'complete'>(
+        'empty',
+    );
 
     useEffect(() => {
         const updateTitle = (thread: Thread | null) => {
@@ -260,12 +290,12 @@ function useThreadTitle() {
                     setThreadTitleState('empty');
                 }
             }
-        }
+        };
         const firstMessageSentListener = () => {
             // Show loading immediately when user starts conversation
             // (Title generation happens async, so we need optimistic UI)
             setThreadTitleState('loading');
-        }
+        };
         const chatStateListener = (state: ChatState) => {
             // Preserve loading state during async title generation
             // (Thread might appear empty briefly while title is being generated)
@@ -288,24 +318,24 @@ function useThreadTitle() {
     }, [chatStateManager, threadTitleState]);
 
     return { threadTitle, threadTitleState };
-}   
+}
 
-function useChatMessageGroups({ onMessageChange }: {
-    onMessageChange: () => void;
-}) {
+function useChatMessageGroups({ onMessageChange }: { onMessageChange: () => void }) {
     const messageManager = useMessageManager();
-    const [messageGroups, setMessageGroups] = useState<RoleMessageGroup[]   >(groupMessagesByRole(messageManager.getMessages()));
+    const [messageGroups, setMessageGroups] = useState<RoleMessageGroup[]>(
+        groupMessagesByRole(messageManager.getMessages()),
+    );
 
     useEffect(() => {
         const messageAddedListener = () => {
             onMessageChange();
-        }
+        };
         const messageUpdatedListener = () => {
             onMessageChange();
-        }
+        };
         const messagesUpdatedListener = (messages: Message[]) => {
             setMessageGroups(groupMessagesByRole(messages));
-        }
+        };
         messageManager.subscribe('messageAdded', messageAddedListener);
         messageManager.subscribe('messageUpdated', messageUpdatedListener);
         messageManager.subscribe('messagesUpdated', messagesUpdatedListener);
@@ -315,7 +345,7 @@ function useChatMessageGroups({ onMessageChange }: {
             messageManager.unsubscribe('messagesUpdated', messagesUpdatedListener);
         };
     }, [messageManager, onMessageChange]);
-    
+
     return { messageGroups };
 }
 
@@ -332,9 +362,13 @@ function useChatLimit() {
                     message: error.message,
                 });
             }
-        }
+        };
 
-        const createLimitMessage = (limit: number, messageCount: number, isAuthenticated: boolean) => {
+        const createLimitMessage = (
+            limit: number,
+            messageCount: number,
+            isAuthenticated: boolean,
+        ) => {
             if (messageCount >= limit) {
                 return `You've reached your limit of ${limit} messages.${isAuthenticated ? ' Paid plans with higher limits are coming soon.' : ''}`;
             } else if (isAuthenticated && messageCount > 0 && Math.abs(messageCount - limit) < 10) {
@@ -343,8 +377,8 @@ function useChatLimit() {
                 return `You have ${limit - messageCount} messages left.`;
             }
             return null;
-        }
-        
+        };
+
         const accessEnsuredListener = (userAccessData: UserAccessData) => {
             const limit = userAccessManager.getMessageLimit();
             const isAuthenticated = userAccessData.is_authenticated;
@@ -355,7 +389,7 @@ function useChatLimit() {
             } else {
                 setChatLimitMessage(null);
             }
-        }
+        };
         const accessChangedListener = (userAccessData: UserAccessData | null) => {
             if (userAccessData) {
                 const limit = userAccessManager.getMessageLimit();
@@ -370,7 +404,7 @@ function useChatLimit() {
             } else {
                 setChatLimitMessage(null);
             }
-        }
+        };
 
         userAccessManager.subscribe('accessEnsured', accessEnsuredListener);
         userAccessManager.subscribe('accessChanged', accessChangedListener);
@@ -387,7 +421,9 @@ function useChatLimit() {
 
 function useConnectionState() {
     const connectionStateManager = useConnectionStateManager();
-    const [connectionState, setConnectionState] = useState<ConnectionState>(connectionStateManager.getState());
+    const [connectionState, setConnectionState] = useState<ConnectionState>(
+        connectionStateManager.getState(),
+    );
 
     useEffect(() => {
         const stateChangedListener = (state: ConnectionState) => setConnectionState(state);
@@ -408,7 +444,7 @@ const getRetryDelay = (retryCount: number) => {
     // Exponential backoff with jitter: 2^retryCount * INITIAL_RETRY_DELAY_MS
     const exponentialDelay = Math.min(
         INITIAL_RETRY_DELAY_MS * Math.pow(2, retryCount),
-        MAX_RETRY_DELAY_MS
+        MAX_RETRY_DELAY_MS,
     );
     // Add some random jitter (±20%) to prevent thundering herd
     const jitter = exponentialDelay * 0.2;
@@ -420,7 +456,7 @@ function useLoadChatPreviousMessages() {
     const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
     const [errorLoadingMoreMessages, setErrorLoadingMoreMessages] = useState<string | null>(null);
-    
+
     const retryCountRef = useRef(0);
 
     const userAccessManager = useUserAccessManager();
@@ -456,16 +492,19 @@ function useLoadChatPreviousMessages() {
         setErrorLoadingMoreMessages(null);
 
         try {
-            const result = await threadsClient.getThreadMessages({
-                thread_id: threadId,
-                limit: 50,
-                from_timestamp: chatStateManager.getNextMessageTimestamp(),
-                sort_by: 'created_at',
-                sort_order: 'desc',
-            }, accessToken);
+            const result = await threadsClient.getThreadMessages(
+                {
+                    thread_id: threadId,
+                    limit: 50,
+                    from_timestamp: chatStateManager.getNextMessageTimestamp(),
+                    sort_by: 'created_at',
+                    sort_order: 'desc',
+                },
+                accessToken,
+            );
 
             messageManager.prependMessages(result.paginated_messages.messages);
-            chatStateManager.updateState(draft => {
+            chatStateManager.updateState((draft) => {
                 draft.nextMessageTimestamp = result.paginated_messages.next_timestamp;
                 draft.hasMoreMessages = result.paginated_messages.has_more;
             });
@@ -478,21 +517,32 @@ function useLoadChatPreviousMessages() {
         } catch (error) {
             console.error('Failed to load more messages:', error);
             retryCountRef.current += 1;
-            
+
             if (retryCountRef.current < MAX_RETRIES) {
                 const delay = getRetryDelay(retryCountRef.current);
                 const delaySeconds = Math.round(delay / 1000);
-                setLoadingMessage(`Failed to load messages. Retrying in ${delaySeconds} seconds...`);
+                setLoadingMessage(
+                    `Failed to load messages. Retrying in ${delaySeconds} seconds...`,
+                );
                 setTimeout(() => {
                     loadMorePreviousMessages();
                 }, delay);
             } else {
                 setLoadingMessage(null);
-                setErrorLoadingMoreMessages('Failed to load messages after multiple attempts. Please try again later.');
+                setErrorLoadingMoreMessages(
+                    'Failed to load messages after multiple attempts. Please try again later.',
+                );
                 setIsLoadingMoreMessages(false);
             }
         }
-    }, [threadsClient, chatStateManager, messageManager, userAccessManager, recipeManager, isChatStateReady]);
+    }, [
+        threadsClient,
+        chatStateManager,
+        messageManager,
+        userAccessManager,
+        recipeManager,
+        isChatStateReady,
+    ]);
 
     useEffect(() => {
         const resetState = () => {

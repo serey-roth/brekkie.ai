@@ -17,7 +17,7 @@ export default tseslint.config(
         plugins: {
             'react-hooks': reactHooks,
             'react-refresh': reactRefresh,
-            'import': importPlugin,
+            import: importPlugin,
         },
         rules: {
             ...reactHooks.configs.recommended.rules,
@@ -33,29 +33,29 @@ export default tseslint.config(
                         'parent',
                         'sibling',
                         'index',
-                        'object'
+                        'object',
                     ],
                     pathGroups: [
                         {
                             pattern: 'react',
                             group: 'builtin',
-                            position: 'before'
+                            position: 'before',
                         },
                         {
                             pattern: '@/**',
                             group: 'internal',
-                            position: 'after'
-                        }
+                            position: 'after',
+                        },
                     ],
                     'newlines-between': 'never',
                     alphabetize: {
                         order: 'asc',
-                        caseInsensitive: true
-                    }
-                }
+                        caseInsensitive: true,
+                    },
+                },
             ],
             'import/no-unresolved': 'off', // TypeScript handles this
-            'import/no-duplicates': 'error'
+            'import/no-duplicates': 'error',
         },
-    }
+    },
 );

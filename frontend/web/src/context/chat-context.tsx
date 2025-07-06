@@ -6,7 +6,7 @@ import { RecipeManager } from '@/managers/recipe-manager';
 
 export type ChatContextType = {
     connectionStateManager: ConnectionStateManager;
-    chatStateManager: ChatStateManager; 
+    chatStateManager: ChatStateManager;
     recipeManager: RecipeManager; // TODO: Should we expose this through the chat state manager?
     messageManager: MessageManager;
     sendMessage: (content: string) => void;
@@ -38,4 +38,4 @@ export const useRecipeManager = () => {
 export const useMessageManager = () => {
     const ctx = useChatContext();
     return ctx.messageManager;
-};  
+};

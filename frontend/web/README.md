@@ -70,27 +70,27 @@ src/
 
 1. Install dependencies:
 
-   ```bash
-   pnpm install
-   ```
+    ```bash
+    pnpm install
+    ```
 
 2. Start development server:
 
-   ```bash
-   pnpm dev
-   ```
+    ```bash
+    pnpm dev
+    ```
 
 3. Run tests:
 
-   ```bash
-   pnpm test
-   ```
+    ```bash
+    pnpm test
+    ```
 
 4. Build for production:
 
-   ```bash
-   pnpm build
-   ```
+    ```bash
+    pnpm build
+    ```
 
 ### Available Scripts
 

@@ -41,16 +41,20 @@ export function ChatLayout({
     onScrollToBottom,
     onSendMessage,
 }: ChatLayoutProps) {
-    const { messageInputGapRef } = useMessageInputGapResize({ onResize: ({ height }) => {
-        if (scrollRef.current) {
-            scrollRef.current.style.paddingBottom = `${height}px`;
-        }
-    }});
-    const { inputContainerRef } = useChatInputResize({ onResize: ({ height }) => {
-        if (messageInputGapRef.current) {
-            messageInputGapRef.current.style.bottom = `${height}px`;
-        }
-    }});
+    const { messageInputGapRef } = useMessageInputGapResize({
+        onResize: ({ height }) => {
+            if (scrollRef.current) {
+                scrollRef.current.style.paddingBottom = `${height}px`;
+            }
+        },
+    });
+    const { inputContainerRef } = useChatInputResize({
+        onResize: ({ height }) => {
+            if (messageInputGapRef.current) {
+                messageInputGapRef.current.style.bottom = `${height}px`;
+            }
+        },
+    });
 
     return (
         <motion.div
@@ -62,13 +66,15 @@ export function ChatLayout({
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         >
             <ConnectionStatus connectionState={connectionState} />
-            <div className={`absolute top-0 left-0 right-0 bottom-0 z-10 h-20 bg-background transition-all duration-300 ease-in-out w-full ${threadTitle || threadTitleState !== 'empty' ? 'border-b border-border shadow-sm' : 'border-b border-transparent shadow-none'}`}>
+            <div
+                className={`bg-background absolute top-0 right-0 bottom-0 left-0 z-10 h-20 w-full transition-all duration-300 ease-in-out ${threadTitle || threadTitleState !== 'empty' ? 'border-border border-b shadow-sm' : 'border-b border-transparent shadow-none'}`}
+            >
                 {/* TODO: The title is sandwiched between absolute-positioned icons on smaller devices, making for awkward alignment */}
-                <div className="w-full flex pl-16 md:pl-4 mt-[1.15rem] h-8">
-                    <ThreadTitle 
+                <div className="mt-[1.15rem] flex h-8 w-full pl-16 md:pl-4">
+                    <ThreadTitle
                         title={threadTitle}
                         state={threadTitleState}
-                        className="truncate text-ellipsis max-w-[350px] md:max-w-none"
+                        className="max-w-[350px] truncate text-ellipsis md:max-w-none"
                         speed={30}
                     />
                 </div>
@@ -77,16 +83,22 @@ export function ChatLayout({
                 layout
                 className="mx-auto flex h-screen max-w-3xl flex-col items-center overflow-hidden"
             >
-                <div className="w-full flex-1 overflow-y-auto px-4 pb-4 pt-[100px] custom-scrollbar transition-all duration-300" ref={scrollRef}>
+                <div
+                    className="custom-scrollbar w-full flex-1 overflow-y-auto px-4 pt-[100px] pb-4 transition-all duration-300"
+                    ref={scrollRef}
+                >
                     {children}
                 </div>
-                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 flex flex-col items-center gap-2" ref={messageInputGapRef}>
+                <div
+                    className="absolute bottom-0 left-1/2 flex w-full max-w-3xl -translate-x-1/2 flex-col items-center gap-2 px-4"
+                    ref={messageInputGapRef}
+                >
                     <motion.div
                         layout
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.2 }}
-                        className="w-full flex flex-col items-center justify-center"
+                        className="flex w-full flex-col items-center justify-center"
                     >
                         <AnimatePresence>
                             {chatLimitMessage && (
@@ -97,25 +109,31 @@ export function ChatLayout({
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.2 }}
-                                    className="flex gap-2 items-center justify-center mb-2  text-center"
+                                    className="mb-2 flex items-center justify-center gap-2 text-center"
                                 >
-                                    <div className="flex items-center justify-center max-w-xl">
-                                        <div className="bg-background border border-primary/50 shadow-md text-contrast px-3 text-base leading-relaxed sm:text-sm py-2 rounded-xl backdrop-blur-sm">
-                                            <div className="flex flex-wrap justify-center items-center gap-1">
-                                                <div className="flex items-center gap-2 flex-nowrap text-sm">
-                                                    {chatLimitMessage.type === 'warning' && <FaTriangleExclamation className="w-4 h-4 text-yellow-500" />}
-                                                    {chatLimitMessage.type === 'error' && <FaCircleExclamation className="w-4 h-4 text-red-500" />}
+                                    <div className="flex max-w-xl items-center justify-center">
+                                        <div className="bg-background border-primary/50 text-contrast rounded-xl border px-3 py-2 text-base leading-relaxed shadow-md backdrop-blur-sm sm:text-sm">
+                                            <div className="flex flex-wrap items-center justify-center gap-1">
+                                                <div className="flex flex-nowrap items-center gap-2 text-sm">
+                                                    {chatLimitMessage.type === 'warning' && (
+                                                        <FaTriangleExclamation className="h-4 w-4 text-yellow-500" />
+                                                    )}
+                                                    {chatLimitMessage.type === 'error' && (
+                                                        <FaCircleExclamation className="h-4 w-4 text-red-500" />
+                                                    )}
                                                     <span>{chatLimitMessage.message}</span>
                                                 </div>
-                                                {!isAuthenticated && onSignIn && <div className="flex items-center gap-1 text-sm">
-                                                    <button 
-                                                        onClick={onSignIn}
-                                                        className="text-primary-dark hover:text-primary font-medium underline text-sm"
-                                                    >
-                                                        Sign in
-                                                    </button>
-                                                    <span> to unlock a higher limit.</span>
-                                                </div>}
+                                                {!isAuthenticated && onSignIn && (
+                                                    <div className="flex items-center gap-1 text-sm">
+                                                        <button
+                                                            onClick={onSignIn}
+                                                            className="text-primary-dark hover:text-primary text-sm font-medium underline"
+                                                        >
+                                                            Sign in
+                                                        </button>
+                                                        <span> to unlock a higher limit.</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -129,12 +147,12 @@ export function ChatLayout({
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.2 }}
-                                    className="flex gap-2 items-center justify-center max-w-xl mb-4 w-full text-center"
+                                    className="mb-4 flex w-full max-w-xl items-center justify-center gap-2 text-center"
                                 >
-                                    <div className="flex items-center justify-center w-full">
-                                        <div className="bg-background border border-red-300 shadow-md text-red-700 px-4 text-base leading-relaxed sm:text-sm py-3 rounded-2xl">
+                                    <div className="flex w-full items-center justify-center">
+                                        <div className="bg-background rounded-2xl border border-red-300 px-4 py-3 text-base leading-relaxed text-red-700 shadow-md sm:text-sm">
                                             <div className="flex items-center gap-2">
-                                                <FaCircleExclamation className="w-4 h-4" />
+                                                <FaCircleExclamation className="h-4 w-4" />
                                                 <span>{chatSessionErrorMessage}</span>
                                             </div>
                                         </div>
@@ -147,35 +165,45 @@ export function ChatLayout({
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
-                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                    transition={{ duration: 0.2, ease: 'easeOut' }}
                                     onClick={onScrollToBottom}
-                                    className="bg-background text-contrast/80 hover:text-contrast mb-3 flex items-center justify-center gap-2 rounded-full px-4 py-2 shadow-sm border border-border shadow-background transition-all"
+                                    className="bg-background text-contrast/80 hover:text-contrast border-border shadow-background mb-3 flex items-center justify-center gap-2 rounded-full border px-4 py-2 shadow-sm transition-all"
                                 >
                                     <motion.div
                                         animate={{ y: [0, 4, 0] }}
                                         transition={{
                                             duration: 1.5,
                                             repeat: Infinity,
-                                            ease: "easeInOut"
+                                            ease: 'easeInOut',
                                         }}
                                     >
                                         <FaArrowDown />
                                     </motion.div>
-                                    <span className="text-contrast text-sm">{scrollToBottomMessage}</span>
+                                    <span className="text-contrast text-sm">
+                                        {scrollToBottomMessage}
+                                    </span>
                                 </motion.button>
                             )}
                         </AnimatePresence>
                     </motion.div>
                 </div>
-                <div className='w-full'>
-                    <ChatInput onSend={onSendMessage} disabled={disableSendButton} inputContainerRef={inputContainerRef} />
+                <div className="w-full">
+                    <ChatInput
+                        onSend={onSendMessage}
+                        disabled={disableSendButton}
+                        inputContainerRef={inputContainerRef}
+                    />
                 </div>
             </motion.div>
         </motion.div>
     );
-} 
+}
 
-function useChatInputResize({ onResize }: { onResize: (args: { height: number, width: number }) => void }) {
+function useChatInputResize({
+    onResize,
+}: {
+    onResize: (args: { height: number; width: number }) => void;
+}) {
     const inputContainerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
@@ -194,7 +222,11 @@ function useChatInputResize({ onResize }: { onResize: (args: { height: number, w
     return { inputContainerRef };
 }
 
-function useMessageInputGapResize({ onResize }: { onResize: (args: { height: number, width: number }) => void }) {
+function useMessageInputGapResize({
+    onResize,
+}: {
+    onResize: (args: { height: number; width: number }) => void;
+}) {
     const messageInputGapRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {

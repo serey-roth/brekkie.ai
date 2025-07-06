@@ -4,9 +4,9 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                'heading': ['Fredoka', 'sans-serif'],
-                'body': ['Nunito', 'sans-serif'],
-                'sans': ['Nunito', 'sans-serif'],
+                heading: ['Fredoka', 'sans-serif'],
+                body: ['Nunito', 'sans-serif'],
+                sans: ['Nunito', 'sans-serif'],
             },
         },
     },

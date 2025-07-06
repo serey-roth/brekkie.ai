@@ -8,7 +8,7 @@ import { UserAccessDataSchema } from './user-access';
 export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('thread_started'),
-        data: z.object({ 
+        data: z.object({
             user_access_data: UserAccessDataSchema,
             thread: ThreadSchema,
         }),
@@ -74,7 +74,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
         }),
     }),
     z.object({
-        event: z.literal("search_started"), 
+        event: z.literal('search_started'),
         data: z.object({
             user_access_data: UserAccessDataSchema,
             thread: ThreadSchema,
@@ -82,7 +82,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
         }),
     }),
     z.object({
-        event: z.literal("search_completed"),
+        event: z.literal('search_completed'),
         data: z.object({
             user_access_data: UserAccessDataSchema,
             thread: ThreadSchema,
@@ -90,25 +90,27 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
         }),
     }),
     z.object({
-        event: z.literal("summary_updated"),
+        event: z.literal('summary_updated'),
         data: z.object({
             user_access_data: UserAccessDataSchema,
             thread: ThreadSchema,
         }),
     }),
     z.object({
-        event: z.literal("thread_title_updated"),
+        event: z.literal('thread_title_updated'),
         data: z.object({
             user_access_data: UserAccessDataSchema,
             thread: ThreadSchema,
         }),
     }),
     z.object({
-        event: z.literal("ai_agent_error"),
-        data: z.object({
-            user_access_data: UserAccessDataSchema,
-            thread: ThreadSchema,
-        }).extend(AiAgentErrorSchema.shape),
+        event: z.literal('ai_agent_error'),
+        data: z
+            .object({
+                user_access_data: UserAccessDataSchema,
+                thread: ThreadSchema,
+            })
+            .extend(AiAgentErrorSchema.shape),
     }),
     z.object({
         event: z.literal('chat_session_error'),

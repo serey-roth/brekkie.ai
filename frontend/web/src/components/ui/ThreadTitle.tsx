@@ -8,12 +8,7 @@ interface ThreadTitleProps {
     speed?: number;
 }
 
-export const ThreadTitle = ({ 
-    title, 
-    state,
-    className = "",
-    speed = 50,
-}: ThreadTitleProps) => {
+export const ThreadTitle = ({ title, state, className = '', speed = 50 }: ThreadTitleProps) => {
     const [displayedText, setDisplayedText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [showShimmer, setShowShimmer] = useState(false);
@@ -25,13 +20,13 @@ export const ThreadTitle = ({
                 setIsTyping(false);
                 setShowShimmer(false);
                 break;
-                
+
             case 'loading':
                 setDisplayedText('');
                 setIsTyping(false);
                 setShowShimmer(true);
                 break;
-                
+
             case 'complete':
                 if (title) {
                     setShowShimmer(false);
@@ -65,23 +60,24 @@ export const ThreadTitle = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="relative h-8 flex items-center"
+                        className="relative flex h-8 items-center"
                     >
-                        <div className="text-xl font-semibold text-contrast/60 leading-none">
+                        <div className="text-contrast/60 text-xl leading-none font-semibold">
                             {state === 'loading' ? 'New chat' : ''}
                         </div>
                         <motion.div
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-contrast/20 to-transparent"
+                            className="via-contrast/20 absolute inset-0 bg-gradient-to-r from-transparent to-transparent"
                             animate={{
-                                x: ['-100%', '100%']
+                                x: ['-100%', '100%'],
                             }}
                             transition={{
                                 duration: 1.5,
                                 repeat: Infinity,
-                                ease: "easeInOut"
+                                ease: 'easeInOut',
                             }}
                             style={{
-                                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)'
+                                background:
+                                    'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
                             }}
                         />
                     </motion.div>
@@ -92,18 +88,18 @@ export const ThreadTitle = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="h-8 flex items-center"
+                        className="flex h-8 items-center"
                     >
-                        <span className="text-xl font-semibold text-contrast leading-none">
+                        <span className="text-contrast text-xl leading-none font-semibold">
                             {displayedText}
                             <motion.span
                                 animate={{ opacity: isTyping ? [1, 0] : 0 }}
-                                transition={{ 
-                                    duration: 0.6, 
+                                transition={{
+                                    duration: 0.6,
                                     repeat: isTyping ? Infinity : 0,
-                                    ease: "easeInOut" 
+                                    ease: 'easeInOut',
                                 }}
-                                className="inline-block w-0.5 h-6 bg-current ml-0.5"
+                                className="ml-0.5 inline-block h-6 w-0.5 bg-current"
                             />
                         </span>
                     </motion.div>
@@ -111,4 +107,4 @@ export const ThreadTitle = ({
             </AnimatePresence>
         </div>
     );
-}; 
+};

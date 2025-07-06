@@ -1,6 +1,6 @@
-import { produce } from "immer";
-import type { ConnectionState, ConnectionStatus } from "@/data/schemas/connection-state";
-import { EventManager } from "@/utils/event-manager";
+import { produce } from 'immer';
+import type { ConnectionState, ConnectionStatus } from '@/data/schemas/connection-state';
+import { EventManager } from '@/utils/event-manager';
 
 type ConnectionEvents = {
     stateChanged: Readonly<ConnectionState>;
@@ -15,18 +15,16 @@ export const MAX_RECONNECT_ATTEMPTS = 10;
 export const INITIAL_RECONNECT_INTERVAL = 1000;
 export const MAX_RECONNECT_INTERVAL = 30000;
 
-
 function getInitialConnectionState(): ConnectionState {
     return {
         status: 'idle',
         errorMessage: null,
         isConnecting: false,
         isConnected: false,
-        isReconnecting: false,  
+        isReconnecting: false,
         reconnectAttempts: 0,
     };
 }
-
 
 export class ConnectionStateManager {
     private _state: ConnectionState;
@@ -48,11 +46,17 @@ export class ConnectionStateManager {
         return this._state.reconnectAttempts;
     }
 
-    subscribe<K extends keyof ConnectionEvents>(event: K, callback: (payload: ConnectionEvents[K]) => void) {
+    subscribe<K extends keyof ConnectionEvents>(
+        event: K,
+        callback: (payload: ConnectionEvents[K]) => void,
+    ) {
         this._eventManager.subscribe(event, callback);
     }
 
-    unsubscribe<K extends keyof ConnectionEvents>(event: K, callback: (payload: ConnectionEvents[K]) => void) {
+    unsubscribe<K extends keyof ConnectionEvents>(
+        event: K,
+        callback: (payload: ConnectionEvents[K]) => void,
+    ) {
         this._eventManager.unsubscribe(event, callback);
     }
 
@@ -114,14 +118,17 @@ export class ConnectionStateManager {
             draft.errorMessage = `Maximum number of reconnect attempts (${numAttempts}) reached. Please refresh the page.`;
             draft.reconnectAttempts = numAttempts;
         });
-        this._eventManager.publish('error', `Maximum number of reconnect attempts (${numAttempts}) reached. Please refresh the page.`);
+        this._eventManager.publish(
+            'error',
+            `Maximum number of reconnect attempts (${numAttempts}) reached. Please refresh the page.`,
+        );
     }
 
     getReconnectInterval(): number {
         // Implement exponential backoff with jitter
         const baseDelay = Math.min(
             INITIAL_RECONNECT_INTERVAL * Math.pow(2, this._state.reconnectAttempts),
-            MAX_RECONNECT_INTERVAL
+            MAX_RECONNECT_INTERVAL,
         );
         // Add jitter to prevent thundering herd problem
         const jitter = Math.random() * 1000;

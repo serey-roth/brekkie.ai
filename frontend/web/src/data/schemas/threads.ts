@@ -17,7 +17,7 @@ export const PaginatedThreadsSchema = z.object({
     threads: z.array(ThreadSchema),
     total_count: z.number(),
     has_more: z.boolean(),
-    next_timestamp: z.string().nullable(),  
+    next_timestamp: z.string().nullable(),
 });
 export type PaginatedThreads = z.infer<typeof PaginatedThreadsSchema>;
 

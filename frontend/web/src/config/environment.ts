@@ -64,12 +64,22 @@ export function getEnvironmentConfig(): EnvironmentConfig {
 
 export function getConfigWithOverrides(): EnvironmentConfig {
     const baseConfig = getEnvironmentConfig();
-    
+
     return {
         ...baseConfig,
         apiBaseUrl: getEnvVar('VITE_API_BASE_URL', baseConfig.apiBaseUrl),
         wsBaseUrl: getEnvVar('VITE_WEBSOCKET_URL', baseConfig.wsBaseUrl),
-        maxMessageCountAnonymous: parseInt(getEnvVar('VITE_MAX_MESSAGE_COUNT_ANONYMOUS', baseConfig.maxMessageCountAnonymous.toString())),
-        maxMessageCountAuthenticated: parseInt(getEnvVar('VITE_MAX_MESSAGE_COUNT_AUTHENTICATED', baseConfig.maxMessageCountAuthenticated.toString())),
+        maxMessageCountAnonymous: parseInt(
+            getEnvVar(
+                'VITE_MAX_MESSAGE_COUNT_ANONYMOUS',
+                baseConfig.maxMessageCountAnonymous.toString(),
+            ),
+        ),
+        maxMessageCountAuthenticated: parseInt(
+            getEnvVar(
+                'VITE_MAX_MESSAGE_COUNT_AUTHENTICATED',
+                baseConfig.maxMessageCountAuthenticated.toString(),
+            ),
+        ),
     };
-} 
+}

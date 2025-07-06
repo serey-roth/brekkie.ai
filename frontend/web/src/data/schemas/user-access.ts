@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const UserAccessDataSchema = z.object({
     access_token: z.string(),
@@ -10,5 +10,9 @@ export const UserAccessDataSchema = z.object({
 });
 export type UserAccessData = z.infer<typeof UserAccessDataSchema>;
 
-export const UserAccessDataWithoutAccessTokenSchema = UserAccessDataSchema.omit({ access_token: true });
-export type UserAccessDataWithoutAccessToken = z.infer<typeof UserAccessDataWithoutAccessTokenSchema>;
+export const UserAccessDataWithoutAccessTokenSchema = UserAccessDataSchema.omit({
+    access_token: true,
+});
+export type UserAccessDataWithoutAccessToken = z.infer<
+    typeof UserAccessDataWithoutAccessTokenSchema
+>;

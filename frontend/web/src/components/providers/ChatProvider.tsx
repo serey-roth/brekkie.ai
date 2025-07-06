@@ -9,10 +9,12 @@ import { RecipeManager } from '@/managers/recipe-manager';
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
     const userAccessManager = useUserAccessManager();
-    const messageManager = useRef(new MessageManager());    
+    const messageManager = useRef(new MessageManager());
     const recipeManagerRef = useRef(new RecipeManager());
     const connectionStateManager = useRef(new ConnectionStateManager());
-    const chatStateManagerRef = useRef(new ChatStateManager(messageManager.current, recipeManagerRef.current));
+    const chatStateManagerRef = useRef(
+        new ChatStateManager(messageManager.current, recipeManagerRef.current),
+    );
 
     const { sendMessage: sendMessageToAssistant } = useChatWebSocket({
         userAccessManager,
@@ -20,20 +22,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         connectionStateManager: connectionStateManager.current,
     });
 
-    const sendMessage = useCallback((content: string) => {
-        const cleanedContent = content.trim();
-        if (cleanedContent.length === 0) {
-            return;
-        }
-        sendMessageToAssistant(cleanedContent);
-    }, [sendMessageToAssistant]);
+    const sendMessage = useCallback(
+        (content: string) => {
+            const cleanedContent = content.trim();
+            if (cleanedContent.length === 0) {
+                return;
+            }
+            sendMessageToAssistant(cleanedContent);
+        },
+        [sendMessageToAssistant],
+    );
 
     return (
         <ChatContext.Provider
             value={{
                 chatStateManager: chatStateManagerRef.current,
                 connectionStateManager: connectionStateManager.current,
-                messageManager: messageManager.current, 
+                messageManager: messageManager.current,
                 recipeManager: recipeManagerRef.current,
                 sendMessage,
             }}

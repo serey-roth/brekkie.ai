@@ -1,23 +1,29 @@
-import { produce } from "immer";
-import { type AssistantMessage, type Message, type UserMessage } from "@/data/schemas/messages";
-import { EventManager } from "@/utils/event-manager";
-import { isAssistantMessage, isUserMessage } from "@/utils/message-utils";
+import { produce } from 'immer';
+import { type AssistantMessage, type Message, type UserMessage } from '@/data/schemas/messages';
+import { EventManager } from '@/utils/event-manager';
+import { isAssistantMessage, isUserMessage } from '@/utils/message-utils';
 
 type MessageEvents = {
     messageAdded: Message;
     messageUpdated: Message;
     messagesUpdated: Message[];
-}
+};
 
 export class MessageManager {
     private _messages: Message[] = [];
     private _eventManager = new EventManager<MessageEvents>();
 
-    subscribe<K extends keyof MessageEvents>(event: K, callback: (payload: MessageEvents[K]) => void) {
+    subscribe<K extends keyof MessageEvents>(
+        event: K,
+        callback: (payload: MessageEvents[K]) => void,
+    ) {
         this._eventManager.subscribe(event, callback);
     }
 
-    unsubscribe<K extends keyof MessageEvents>(event: K, callback: (payload: MessageEvents[K]) => void) {
+    unsubscribe<K extends keyof MessageEvents>(
+        event: K,
+        callback: (payload: MessageEvents[K]) => void,
+    ) {
         this._eventManager.unsubscribe(event, callback);
     }
 
@@ -28,8 +34,8 @@ export class MessageManager {
     }
 
     addMessages(messages: Message[]) {
-        this._messages = produce(this._messages, draft => {
-            messages.forEach(message => {
+        this._messages = produce(this._messages, (draft) => {
+            messages.forEach((message) => {
                 draft.push(message);
             });
         });
@@ -37,8 +43,8 @@ export class MessageManager {
     }
 
     prependMessages(messages: Message[]) {
-        this._messages = produce(this._messages, draft => {
-            messages.forEach(message => {
+        this._messages = produce(this._messages, (draft) => {
+            messages.forEach((message) => {
                 draft.unshift(message);
             });
         });
@@ -46,7 +52,7 @@ export class MessageManager {
     }
 
     updateLastMessage(updater: (draft: Message) => void) {
-        this._messages = produce(this._messages, draft => {
+        this._messages = produce(this._messages, (draft) => {
             const lastMessage = draft[draft.length - 1];
             if (lastMessage) {
                 updater(lastMessage);
@@ -57,7 +63,7 @@ export class MessageManager {
     }
 
     updateAssistantMessage(id: string, newMessage: AssistantMessage) {
-        const index = this._messages.findIndex(m => m.id === id);
+        const index = this._messages.findIndex((m) => m.id === id);
         if (index === -1) {
             return;
         }
@@ -66,7 +72,7 @@ export class MessageManager {
             return;
         }
 
-        this._messages = produce(this._messages, draft => {
+        this._messages = produce(this._messages, (draft) => {
             draft[index] = newMessage;
         });
         this._eventManager.publish('messageUpdated', newMessage);

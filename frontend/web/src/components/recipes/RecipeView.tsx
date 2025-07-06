@@ -23,30 +23,60 @@ export function RecipeView({ recipe, isOpen }: RecipeViewProps) {
     const name = useMemo(() => recipe?.name ?? '', [recipe?.name]);
     const description = useMemo(() => recipe?.description ?? '', [recipe?.description]);
     const categories = useMemo(() => recipe?.categories ?? [], [recipe?.categories]);
-    const prep_time_minutes = useMemo(() => recipe?.prep_time_minutes ?? 0, [recipe?.prep_time_minutes]);
-    const cook_time_minutes = useMemo(() => recipe?.cook_time_minutes ?? 0, [recipe?.cook_time_minutes]);
+    const prep_time_minutes = useMemo(
+        () => recipe?.prep_time_minutes ?? 0,
+        [recipe?.prep_time_minutes],
+    );
+    const cook_time_minutes = useMemo(
+        () => recipe?.cook_time_minutes ?? 0,
+        [recipe?.cook_time_minutes],
+    );
     const servings = useMemo(() => recipe?.servings ?? '', [recipe?.servings]);
     const ingredients = useMemo(() => recipe?.ingredients ?? [], [recipe?.ingredients]);
     const instructions = useMemo(() => recipe?.instructions ?? [], [recipe?.instructions]);
-    const notes: RecipeNote[] = useMemo(() => [
-        { key: 'chef_notes', label: "Chef's Notes", content: recipe?.chef_notes },
-        { key: 'make_ahead_tips', label: 'Make Ahead Tips', content: recipe?.make_ahead_tips },
-        { key: 'equipment_alternatives', label: 'Equipment Alternatives', content: recipe?.equipment_alternatives },
-        { key: 'coordination_timeline', label: 'Timeline', content: recipe?.coordination_timeline },
-        { key: 'scaling_guidance', label: 'Scaling Guidance', content: recipe?.scaling_guidance },
-        { key: 'storage_notes', label: 'Storage Notes', content: recipe?.storage_notes },
-        { key: 'serving_suggestions', label: 'Serving Suggestions', content: recipe?.serving_suggestions },
-        { key: 'substitutions', label: 'Substitutions', content: recipe?.substitutions },
-    ].filter(note => !!note.content), [
-        recipe?.chef_notes,
-        recipe?.make_ahead_tips,
-        recipe?.equipment_alternatives,
-        recipe?.coordination_timeline,
-        recipe?.scaling_guidance,
-        recipe?.storage_notes,
-        recipe?.serving_suggestions,
-        recipe?.substitutions,
-    ]);
+    const notes: RecipeNote[] = useMemo(
+        () =>
+            [
+                { key: 'chef_notes', label: "Chef's Notes", content: recipe?.chef_notes },
+                {
+                    key: 'make_ahead_tips',
+                    label: 'Make Ahead Tips',
+                    content: recipe?.make_ahead_tips,
+                },
+                {
+                    key: 'equipment_alternatives',
+                    label: 'Equipment Alternatives',
+                    content: recipe?.equipment_alternatives,
+                },
+                {
+                    key: 'coordination_timeline',
+                    label: 'Timeline',
+                    content: recipe?.coordination_timeline,
+                },
+                {
+                    key: 'scaling_guidance',
+                    label: 'Scaling Guidance',
+                    content: recipe?.scaling_guidance,
+                },
+                { key: 'storage_notes', label: 'Storage Notes', content: recipe?.storage_notes },
+                {
+                    key: 'serving_suggestions',
+                    label: 'Serving Suggestions',
+                    content: recipe?.serving_suggestions,
+                },
+                { key: 'substitutions', label: 'Substitutions', content: recipe?.substitutions },
+            ].filter((note) => !!note.content),
+        [
+            recipe?.chef_notes,
+            recipe?.make_ahead_tips,
+            recipe?.equipment_alternatives,
+            recipe?.coordination_timeline,
+            recipe?.scaling_guidance,
+            recipe?.storage_notes,
+            recipe?.serving_suggestions,
+            recipe?.substitutions,
+        ],
+    );
 
     const [activeTab, setActiveTab] = useState<Tab>('ingredients');
 
@@ -60,7 +90,7 @@ export function RecipeView({ recipe, isOpen }: RecipeViewProps) {
 
     const handleTabChange = useCallback((tab: Tab) => {
         setActiveTab(tab);
-    }, [])  ;
+    }, []);
 
     return (
         <AnimatePresence mode="wait">
@@ -69,10 +99,10 @@ export function RecipeView({ recipe, isOpen }: RecipeViewProps) {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ 
+                    transition={{
                         duration: 0.4,
                         ease: [0.4, 0, 0.2, 1],
-                        opacity: { duration: 0.3 }
+                        opacity: { duration: 0.3 },
                     }}
                     className="overflow-hidden"
                 >
@@ -80,10 +110,10 @@ export function RecipeView({ recipe, isOpen }: RecipeViewProps) {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ 
+                        transition={{
                             duration: 0.3,
                             delay: 0.15,
-                            ease: [0.4, 0, 0.2, 1]
+                            ease: [0.4, 0, 0.2, 1],
                         }}
                     >
                         <RecipeHeader name={name} description={description} />
@@ -100,9 +130,9 @@ export function RecipeView({ recipe, isOpen }: RecipeViewProps) {
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -8 }}
-                                transition={{ 
+                                transition={{
                                     duration: 0.3,
-                                    ease: [0.4, 0, 0.2, 1]
+                                    ease: [0.4, 0, 0.2, 1],
                                 }}
                             >
                                 {activeTab === 'ingredients' ? (
@@ -124,7 +154,13 @@ export function RecipeView({ recipe, isOpen }: RecipeViewProps) {
 // Memoized Subcomponents
 // -----------------------------
 
-const RecipeHeader = React.memo(function RecipeHeader({ name, description }: { name?: string; description?: string }) {
+const RecipeHeader = React.memo(function RecipeHeader({
+    name,
+    description,
+}: {
+    name?: string;
+    description?: string;
+}) {
     return (
         <motion.header
             initial="hidden"
@@ -139,7 +175,7 @@ const RecipeHeader = React.memo(function RecipeHeader({ name, description }: { n
             }}
             className="mb-6"
         >
-            <motion.h1 
+            <motion.h1
                 variants={{
                     hidden: { opacity: 0, y: 20 },
                     visible: { opacity: 1, y: 0 },
@@ -150,7 +186,7 @@ const RecipeHeader = React.memo(function RecipeHeader({ name, description }: { n
                 <Markdown>{name ?? ''}</Markdown>
             </motion.h1>
             {description && (
-                <motion.div 
+                <motion.div
                     variants={{
                         hidden: { opacity: 0, y: 20 },
                         visible: { opacity: 1, y: 0 },
@@ -165,7 +201,11 @@ const RecipeHeader = React.memo(function RecipeHeader({ name, description }: { n
     );
 });
 
-const RecipeCategories = React.memo(function RecipeCategories({ categories }: { categories: RecipeCategory[] }) {
+const RecipeCategories = React.memo(function RecipeCategories({
+    categories,
+}: {
+    categories: RecipeCategory[];
+}) {
     return (
         <motion.div
             initial="hidden"
@@ -198,11 +238,10 @@ const RecipeCategories = React.memo(function RecipeCategories({ categories }: { 
 });
 
 const RECIPE_META_ICONS = {
-    prep_time: <FaClock className="text-primary-dark" />,    
+    prep_time: <FaClock className="text-primary-dark" />,
     cook_time: <FaFire className="text-primary-dark" />,
     servings: <FaUserFriends className="text-primary-dark" />,
 } as const;
-
 
 const RecipeMeta = React.memo(function RecipeMeta({
     prep_time_minutes,
@@ -213,13 +252,26 @@ const RecipeMeta = React.memo(function RecipeMeta({
     cook_time_minutes?: number;
     servings?: string;
 }) {
-    const metaItems: { icon: ReactElement; prefix?: string; suffix?: string; text: string | undefined }[] = useMemo(() => {
+    const metaItems: {
+        icon: ReactElement;
+        prefix?: string;
+        suffix?: string;
+        text: string | undefined;
+    }[] = useMemo(() => {
         return [
-            { icon: RECIPE_META_ICONS.prep_time, prefix: 'Prep', text: prep_time_minutes ? formatRecipeTime(prep_time_minutes) : undefined },
-            { icon: RECIPE_META_ICONS.cook_time, prefix: 'Cook', text: cook_time_minutes ? formatRecipeTime(cook_time_minutes) : undefined },
+            {
+                icon: RECIPE_META_ICONS.prep_time,
+                prefix: 'Prep',
+                text: prep_time_minutes ? formatRecipeTime(prep_time_minutes) : undefined,
+            },
+            {
+                icon: RECIPE_META_ICONS.cook_time,
+                prefix: 'Cook',
+                text: cook_time_minutes ? formatRecipeTime(cook_time_minutes) : undefined,
+            },
             { icon: RECIPE_META_ICONS.servings, suffix: 'servings', text: servings },
-        ].filter(item => !!item.text);
-    }, [prep_time_minutes, cook_time_minutes, servings]);   
+        ].filter((item) => !!item.text);
+    }, [prep_time_minutes, cook_time_minutes, servings]);
 
     return (
         <motion.section
@@ -265,7 +317,7 @@ const RecipeTabs = React.memo(function RecipeTabs({
     const tabs: Tab[] = ['ingredients', 'instructions'];
     return (
         <nav className="border-border mb-6 flex border-b">
-            {tabs.map(tab => (
+            {tabs.map((tab) => (
                 <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -282,7 +334,11 @@ const RecipeTabs = React.memo(function RecipeTabs({
     );
 });
 
-const IngredientsList = React.memo(function IngredientsList({ ingredients }: { ingredients: RecipeIngredient[] }) {
+const IngredientsList = React.memo(function IngredientsList({
+    ingredients,
+}: {
+    ingredients: RecipeIngredient[];
+}) {
     return (
         <ul className="space-y-2">
             {ingredients.map((ingredient, i) => (
@@ -291,10 +347,10 @@ const IngredientsList = React.memo(function IngredientsList({ ingredients }: { i
                     key={`${ingredient.name}-${i}`}
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ 
+                    transition={{
                         duration: 0.25,
                         delay: i * 0.03,
-                        ease: [0.4, 0, 0.2, 1]
+                        ease: [0.4, 0, 0.2, 1],
                     }}
                     className="text-contrast flex items-baseline text-base"
                 >
@@ -313,7 +369,11 @@ const IngredientsList = React.memo(function IngredientsList({ ingredients }: { i
     );
 });
 
-const InstructionsList = React.memo(function InstructionsList({ instructions }: { instructions: RecipeInstruction[] }) {
+const InstructionsList = React.memo(function InstructionsList({
+    instructions,
+}: {
+    instructions: RecipeInstruction[];
+}) {
     const [openSteps, setOpenSteps] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
@@ -325,7 +385,7 @@ const InstructionsList = React.memo(function InstructionsList({ instructions }: 
     }, [instructions]);
 
     const toggleStep = (step: string) => {
-        setOpenSteps(prev => ({ ...prev, [step]: !prev[step] }));
+        setOpenSteps((prev) => ({ ...prev, [step]: !prev[step] }));
     };
 
     return (
@@ -339,12 +399,12 @@ const InstructionsList = React.memo(function InstructionsList({ instructions }: 
                         key={`${title}`}
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ 
+                        transition={{
                             duration: 0.25,
                             delay: i * 0.04,
-                            ease: [0.4, 0, 0.2, 1]
+                            ease: [0.4, 0, 0.2, 1],
                         }}
-                        className="group bg-background cursor-pointer rounded-lg transition-all duration-200 border border-transparent hover:border-primary/50"
+                        className="group bg-background hover:border-primary/50 cursor-pointer rounded-lg border border-transparent transition-all duration-200"
                         onClick={() => hasContent && toggleStep(title)}
                     >
                         <div className="flex items-center justify-between px-4 py-3">
@@ -361,7 +421,7 @@ const InstructionsList = React.memo(function InstructionsList({ instructions }: 
                                     className={`text-primary-dark transition-transform duration-200 ${
                                         isOpen ? 'rotate-180' : ''
                                     } group-hover:text-primary`}
-                                    onClick={e => {
+                                    onClick={(e) => {
                                         e.stopPropagation();
                                         toggleStep(title);
                                     }}
@@ -375,10 +435,10 @@ const InstructionsList = React.memo(function InstructionsList({ instructions }: 
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: 'auto' }}
                                     exit={{ opacity: 0, height: 0 }}
-                                    transition={{ 
+                                    transition={{
                                         duration: 0.3,
                                         ease: [0.4, 0, 0.2, 1],
-                                        opacity: { duration: 0.25 }
+                                        opacity: { duration: 0.25 },
                                     }}
                                     className="overflow-hidden"
                                 >
@@ -427,23 +487,28 @@ export const GroupedRecipeNotesTabs = ({
     const [activeTab, setActiveTab] = useState<NotesTab>('prep');
     const [openNotes, setOpenNotes] = useState<Record<string, boolean>>({});
 
-    const toggleNote = (key: string) =>
-        setOpenNotes(prev => ({ ...prev, [key]: !prev[key] }));
+    const toggleNote = (key: string) => setOpenNotes((prev) => ({ ...prev, [key]: !prev[key] }));
 
     const notesMap = useMemo(() => {
-        return notes.reduce((map, note) => {
-            map[note.key] = note;
-            return map;
-        }, {} as Record<string, { key: string; label: string; content: string | null | undefined }>);
+        return notes.reduce(
+            (map, note) => {
+                map[note.key] = note;
+                return map;
+            },
+            {} as Record<
+                string,
+                { key: string; label: string; content: string | null | undefined }
+            >,
+        );
     }, [notes]);
 
-    const currentGroup = groupedNotes.find(g => g.id === activeTab);
-    const groupNotes = (currentGroup?.keys ?? []).map(k => notesMap[k]).filter(Boolean);
+    const currentGroup = groupedNotes.find((g) => g.id === activeTab);
+    const groupNotes = (currentGroup?.keys ?? []).map((k) => notesMap[k]).filter(Boolean);
 
     useEffect(() => {
-        const hasAllPrepNotes = groupedNotes[0].keys.every(k => notesMap[k]?.content);
-        const hasAllServingNotes = groupedNotes[1].keys.every(k => notesMap[k]?.content);
-        const hasAllStorageNotes = groupedNotes[2].keys.every(k => notesMap[k]?.content);
+        const hasAllPrepNotes = groupedNotes[0].keys.every((k) => notesMap[k]?.content);
+        const hasAllServingNotes = groupedNotes[1].keys.every((k) => notesMap[k]?.content);
+        const hasAllStorageNotes = groupedNotes[2].keys.every((k) => notesMap[k]?.content);
 
         if (hasAllPrepNotes && !hasAllServingNotes) {
             setActiveTab('serving');
@@ -458,9 +523,11 @@ export const GroupedRecipeNotesTabs = ({
 
     return (
         <section className="mt-10 w-full">
-            <h2 className="text-contrast mb-4 font-serif text-2xl font-semibold">Additional Notes</h2>
+            <h2 className="text-contrast mb-4 font-serif text-2xl font-semibold">
+                Additional Notes
+            </h2>
             <nav className="border-border mb-6 flex border-b">
-                {groupedNotes.map(tab => (
+                {groupedNotes.map((tab) => (
                     <button
                         key={`${tab.id}-${tab.label}`}
                         onClick={() => setActiveTab(tab.id as NotesTab)}
@@ -481,9 +548,9 @@ export const GroupedRecipeNotesTabs = ({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    transition={{ 
+                    transition={{
                         duration: 0.3,
-                        ease: [0.4, 0, 0.2, 1]
+                        ease: [0.4, 0, 0.2, 1],
                     }}
                 >
                     <ul className="space-y-1">
@@ -496,28 +563,30 @@ export const GroupedRecipeNotesTabs = ({
                                     key={`${note.key}-${note.label}`}
                                     initial={{ opacity: 0, y: 4 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ 
+                                    transition={{
                                         duration: 0.25,
                                         delay: i * 0.04,
-                                        ease: [0.4, 0, 0.2, 1]
+                                        ease: [0.4, 0, 0.2, 1],
                                     }}
-                                    className="group bg-background cursor-pointer rounded-lg transition-all duration-200 border border-transparent hover:border-primary/50"
+                                    className="group bg-background hover:border-primary/50 cursor-pointer rounded-lg border border-transparent transition-all duration-200"
                                     onClick={() => hasContent && toggleNote(note.key)}
                                 >
                                     <div className="flex items-center justify-between px-4 py-3">
                                         <div className="flex items-center gap-4">
-                                            <h3 className={`text-base font-medium transition-colors duration-200 ${
-                                                isOpen ? 'text-primary' : 'text-contrast'
-                                            }`}>
+                                            <h3
+                                                className={`text-base font-medium transition-colors duration-200 ${
+                                                    isOpen ? 'text-primary' : 'text-contrast'
+                                                }`}
+                                            >
                                                 {note.label}
                                             </h3>
                                         </div>
                                         {hasContent && (
                                             <FaChevronDown
                                                 className={`text-primary-dark transition-all duration-200 ${
-                                                    isOpen ? 'rotate-180 text-primary' : ''
+                                                    isOpen ? 'text-primary rotate-180' : ''
                                                 } group-hover:text-primary`}
-                                                onClick={e => {
+                                                onClick={(e) => {
                                                     e.stopPropagation();
                                                     toggleNote(note.key);
                                                 }}
@@ -531,14 +600,14 @@ export const GroupedRecipeNotesTabs = ({
                                                 initial={{ opacity: 0, height: 0 }}
                                                 animate={{ opacity: 1, height: 'auto' }}
                                                 exit={{ opacity: 0, height: 0 }}
-                                                transition={{ 
+                                                transition={{
                                                     duration: 0.3,
                                                     ease: [0.4, 0, 0.2, 1],
-                                                    opacity: { duration: 0.25 }
+                                                    opacity: { duration: 0.25 },
                                                 }}
                                                 className="overflow-hidden"
                                             >
-                                                <div className="text-contrast px-4 pt-1 pb-4 text-sm border-t border-border">
+                                                <div className="text-contrast border-border border-t px-4 pt-1 pb-4 text-sm">
                                                     <Markdown>{note.content ?? ''}</Markdown>
                                                 </div>
                                             </motion.div>

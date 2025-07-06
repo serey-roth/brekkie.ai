@@ -1,9 +1,9 @@
 import { createContext, useContext } from 'react';
 import type { UserSigninPayload, UserSignupPayload } from '@/data/schemas/users';
-    
+
 interface AuthContextType {
     isSubmitting: boolean;
-    error: string | null;   
+    error: string | null;
     signin: (payload: UserSigninPayload) => Promise<void>;
     signup: (payload: UserSignupPayload) => Promise<void>;
     signout: () => Promise<void>;
@@ -31,7 +31,7 @@ export const useAuthModal = () => {
     const openAuthModal = ctx.openAuthModal;
     const closeAuthModal = ctx.closeAuthModal;
     return { isAuthModalOpen, authModalMode, openAuthModal, closeAuthModal };
-}   
+};
 
 export const useAuth = () => {
     const ctx = useAuthContext();
@@ -41,4 +41,4 @@ export const useAuth = () => {
     const signup = ctx.signup;
     const signout = ctx.signout;
     return { isSubmitting, error, signin, signup, signout };
-}
+};

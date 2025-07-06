@@ -13,33 +13,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const authClient = useAuthApiClient();
     const userAccessManager = useUserAccessManager();
 
-    const signin = useCallback(async (payload: UserSigninPayload) => {
-        setIsSubmitting(true);
-        setError(null);
-        try {
-            const accessData = await authClient.signin(payload);
-            userAccessManager.setUserAccessData(accessData);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to sign in');
-            throw err;
-        } finally {
-            setIsSubmitting(false);
-        }
-    }, [authClient, userAccessManager]);
+    const signin = useCallback(
+        async (payload: UserSigninPayload) => {
+            setIsSubmitting(true);
+            setError(null);
+            try {
+                const accessData = await authClient.signin(payload);
+                userAccessManager.setUserAccessData(accessData);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to sign in');
+                throw err;
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        [authClient, userAccessManager],
+    );
 
-    const signup = useCallback(async (payload: UserSignupPayload) => {
-        setIsSubmitting(true);
-        setError(null);
-        try {
-            const accessData = await authClient.signup(payload, userAccessManager.getAccessToken());
-            userAccessManager.setUserAccessData(accessData);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to sign up');
-            throw err;
-        } finally {
-            setIsSubmitting(false);
-        }
-    }, [authClient, userAccessManager]);
+    const signup = useCallback(
+        async (payload: UserSignupPayload) => {
+            setIsSubmitting(true);
+            setError(null);
+            try {
+                const accessData = await authClient.signup(
+                    payload,
+                    userAccessManager.getAccessToken(),
+                );
+                userAccessManager.setUserAccessData(accessData);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to sign up');
+                throw err;
+            } finally {
+                setIsSubmitting(false);
+            }
+        },
+        [authClient, userAccessManager],
+    );
 
     const signout = useCallback(async () => {
         const accessData = await authClient.signout(userAccessManager.getAccessToken());
@@ -55,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAuthModalOpen(false);
         setAuthModalMode('login');
     }, []);
-        
+
     return (
         <AuthContext.Provider
             value={{

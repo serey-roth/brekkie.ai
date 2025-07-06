@@ -6,7 +6,6 @@ import { HttpThreadsClient } from '@/api-clients/threads-client';
 import { type EnvironmentConfig } from '@/config/environment';
 import type { UserAccessManager } from '@/managers/user-access-manager';
 
-
 interface ApiClients {
     authClient: HttpAuthClient;
     threadsClient: HttpThreadsClient;
@@ -62,7 +61,7 @@ export function useAccessTokenApiClient() {
 export function useRecipesApiClient() {
     const { apiClients } = useAppContext();
     return apiClients.recipesClient;
-}   
+}
 
 export function useUserAccessManager() {
     const { managers } = useAppContext();

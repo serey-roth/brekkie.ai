@@ -125,31 +125,37 @@
 
 /* Custom scrollbar that only appears on hover */
 .custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-primary) transparent;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary) transparent;
 }
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  background: transparent;
-  opacity: 0;
-  transition: opacity 0.2s;
+    width: 8px;
+    background: transparent;
+    opacity: 0;
+    transition: opacity 0.2s;
 }
 .custom-scrollbar:hover::-webkit-scrollbar {
-  opacity: 1;
+    opacity: 1;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--color-primary-light);
-  border-radius: 9999px;
-  transition: background 0.2s;
+    background: var(--color-primary-light);
+    border-radius: 9999px;
+    transition: background 0.2s;
 }
 .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-  background: var(--color-primary);
+    background: var(--color-primary);
 }
 
-html, body {
-  font-family: 'Nunito', sans-serif;
+html,
+body {
+    font-family: 'Nunito', sans-serif;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Fredoka', sans-serif;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Fredoka', sans-serif;
 }

@@ -55,7 +55,6 @@ const TRANSITIONS = {
     slow: { duration: 0.4, ease: easeInOut },
 };
 
-
 interface SidebarProps {
     isOpen: boolean;
     openSidebar: () => void;
@@ -64,13 +63,22 @@ interface SidebarProps {
     hideRecipeListView: () => void;
 }
 
-export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView, hideRecipeListView }: SidebarProps) {
+export function Sidebar({
+    isOpen,
+    openSidebar,
+    closeSidebar,
+    showRecipeListView,
+    hideRecipeListView,
+}: SidebarProps) {
     const { openAuthModal } = useAuthModal();
     const { signout } = useAuth();
 
     const userAccessData = useUserAccessData();
     const { currentThreadId, startThread, resumeThread, resetCurrentThread } = useCurrentThread();
-    const { threadGroups, isFetching, error, fetchMoreObserverTarget } = useFetchThreads(isOpen, userAccessData);
+    const { threadGroups, isFetching, error, fetchMoreObserverTarget } = useFetchThreads(
+        isOpen,
+        userAccessData,
+    );
 
     return (
         <>
@@ -88,7 +96,7 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={openSidebar}
-                            className="text-contrast hover:text-primary bg-background/95 focus:ring-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border border-border shadow-lg backdrop-blur-sm transition-colors duration-200 focus:ring-2 focus:outline-none"
+                            className="text-contrast hover:text-primary bg-background/95 focus:ring-primary/20 border-border flex h-10 w-10 items-center justify-center rounded-xl border shadow-lg backdrop-blur-sm transition-colors duration-200 focus:ring-2 focus:outline-none"
                         >
                             <LuPanelLeftClose size={20} />
                         </motion.button>
@@ -105,7 +113,7 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                         exit="closed"
                         transition={TRANSITIONS.fast}
                         onClick={closeSidebar}
-                        className="fixed inset-0 z-40 bg-contrast/20 backdrop-blur-[1px] md:hidden"
+                        className="bg-contrast/20 fixed inset-0 z-40 backdrop-blur-[1px] md:hidden"
                     />
                 )}
             </AnimatePresence>
@@ -117,22 +125,28 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                 transition={TRANSITIONS.medium}
                 className={`bg-background/95 border-border fixed top-0 left-0 z-40 flex h-screen flex-col border-r shadow-lg backdrop-blur-sm transition-transform duration-200 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
             >
-                <div
-                    className={`mt-4 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}
-                >
+                <div className={`mt-4 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
                     {isOpen && (
-                        <div className="flex flex-row items-center flex-1 gap-2">
-                            <span className="text-contrast ml-3 text-xl font-bold whitespace-nowrap">brekkie.ai</span>
-                            <span className="text-contrast-subtle   bg-primary/20 px-2 py-0.5 rounded-full text-xs font-semibold">beta</span>
+                        <div className="flex flex-1 flex-row items-center gap-2">
+                            <span className="text-contrast ml-3 text-xl font-bold whitespace-nowrap">
+                                brekkie.ai
+                            </span>
+                            <span className="text-contrast-subtle bg-primary/20 rounded-full px-2 py-0.5 text-xs font-semibold">
+                                beta
+                            </span>
                         </div>
                     )}
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={isOpen ? closeSidebar : openSidebar}
-                        className={`p-2 text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border border-transparent hover:border-primary/20 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
+                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border border-transparent p-2 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
                     >
-                        {isOpen ? <LuArrowLeftFromLine size={20} /> : <LuArrowRightFromLine size={20} />}
+                        {isOpen ? (
+                            <LuArrowLeftFromLine size={20} />
+                        ) : (
+                            <LuArrowRightFromLine size={20} />
+                        )}
                     </motion.button>
                 </div>
 
@@ -150,11 +164,11 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                         animate={{
                             width: isOpen ? '100%' : '2.5rem',
                         }}
-                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent hover:border-primary/20 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
+                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
                         style={{ minWidth: '2.5rem', maxWidth: '100%' }}
                         tabIndex={0}
                     >
-                        <div className="flex w-10 h-10 items-center justify-center">
+                        <div className="flex h-10 w-10 items-center justify-center">
                             <LuUtensils size={20} />
                         </div>
                         {isOpen && <span className="whitespace-nowrap">Recipes</span>}
@@ -173,11 +187,11 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                         animate={{
                             width: isOpen ? '100%' : '2.5rem',
                         }}
-                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent hover:border-primary/20 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
+                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
                         style={{ minWidth: '2.5rem', maxWidth: '100%' }}
                         tabIndex={0}
                     >
-                        <div className="flex w-10 h-10 items-center justify-center">
+                        <div className="flex h-10 w-10 items-center justify-center">
                             <LuMessageSquarePlus size={20} />
                         </div>
                         {isOpen && <span className="whitespace-nowrap">New Chat</span>}
@@ -193,9 +207,7 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                 >
                     {isOpen && threadGroups.length > 0 && (
                         <div className="mt-2 flex flex-row items-center justify-between px-6">
-                            <h2 className="text-contrast text-sm tracking-wider">
-                                Recent chats
-                            </h2>
+                            <h2 className="text-contrast text-sm tracking-wider">Recent chats</h2>
                             <div className="text-contrast-subtle text-xs opacity-80">
                                 Sorted by last activity
                             </div>
@@ -210,7 +222,7 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                                         className="text-primary/60 mx-auto"
                                     />
                                 </div>
-                                <p className="max-w-[240px] mx-auto font-medium">
+                                <p className="mx-auto max-w-[240px] font-medium">
                                     No chats yet. Milo's waiting whenever you're ready.
                                 </p>
                             </div>
@@ -226,7 +238,10 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                                 <p className="max-w-[240px] font-medium">
                                     <span className="text-sm">Hmm, something went wrong...</span>
                                     <br />
-                                    <span className="text-xs">We're currently working on it. Please come back a little bit later.</span>
+                                    <span className="text-xs">
+                                        We're currently working on it. Please come back a little bit
+                                        later.
+                                    </span>
                                 </p>
                             </div>
                         )}
@@ -239,11 +254,13 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                                 transition={TRANSITIONS.medium}
                                 className={`${index < threadGroups.length - 1 ? 'mb-3' : ''}`}
                             >
-                                <h3 className={`text-contrast-subtle mb-2 mx-2 text-sm tracking-wider`}>
+                                <h3
+                                    className={`text-contrast-subtle mx-2 mb-2 text-sm tracking-wider`}
+                                >
                                     {group.label}
                                 </h3>
                                 <div className="space-y-0.5">
-                                    {group.items.map(thread => (
+                                    {group.items.map((thread) => (
                                         <motion.button
                                             key={thread.id}
                                             whileHover={{ scale: 1.01 }}
@@ -254,9 +271,9 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                                                 }
                                                 hideRecipeListView();
                                             }}
-                                            className={`hover:bg-primary/10 flex w-full items-center gap-2 rounded-xl p-1 text-left text-sm transition-colors duration-200 border border-transparent hover:border-primary/20 sm:p-2 ${currentThreadId === thread.id ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : ''}`}
+                                            className={`hover:bg-primary/10 hover:border-primary/20 flex w-full items-center gap-2 rounded-xl border border-transparent p-1 text-left text-sm transition-colors duration-200 sm:p-2 ${currentThreadId === thread.id ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : ''}`}
                                         >
-                                            <div className="flex h-8 w-8 items-center justify-center bg-primary/10 rounded-full">
+                                            <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
                                                 <LuMessageSquare
                                                     size={16}
                                                     className="text-primary/80"
@@ -275,14 +292,17 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                                 </div>
                             </motion.div>
                         ))}
-                        <div ref={fetchMoreObserverTarget} className="flex h-4 items-center justify-center">
+                        <div
+                            ref={fetchMoreObserverTarget}
+                            className="flex h-4 items-center justify-center"
+                        >
                             {isFetching && (
                                 <motion.div
                                     variants={ANIMATION_CONFIG.loading}
                                     initial="initial"
                                     animate="animate"
                                     exit="exit"
-                                    className="flex items-center gap-2 text-contrast-subtle text-sm"
+                                    className="text-contrast-subtle flex items-center gap-2 text-sm"
                                 >
                                     <div className="border-primary/20 border-t-primary h-4 w-4 animate-spin rounded-full border-2" />
                                     <span>Loading more chats...</span>
@@ -298,16 +318,20 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                         initial="closed"
                         animate="open"
                         transition={TRANSITIONS.medium}
-                        className="h-12 flex-shrink-0 border-t border-border/50"
+                        className="border-border/50 h-12 flex-shrink-0 border-t"
                     >
-                        <div className="flex items-center gap-2 ml-2 mr-4 px-2 sm:px-4 h-full">
+                        <div className="mr-4 ml-2 flex h-full items-center gap-2 px-2 sm:px-4">
                             <LuUser size={20} className="flex-shrink-0" />
-                            <span className="text-contrast-subtle text-sm truncate min-w-0 flex-1">{userAccessData?.name}</span>
+                            <span className="text-contrast-subtle min-w-0 flex-1 truncate text-sm">
+                                {userAccessData?.name}
+                            </span>
                         </div>
                     </motion.div>
                 )}
 
-                <div className={`mt-2 mb-4 flex gap-2 flex-shrink-0 items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
+                <div
+                    className={`mt-2 mb-4 flex flex-shrink-0 items-center gap-2 ${isOpen ? 'mx-4' : 'mx-auto'}`}
+                >
                     {!userAccessData?.is_authenticated && (
                         <motion.button
                             whileHover={{ scale: 1.01 }}
@@ -317,14 +341,18 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                             }}
                             transition={TRANSITIONS.fast}
                             onClick={() => openAuthModal('login')}
-                            className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent hover:border-primary/20 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
+                            className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
                             style={{ minWidth: '2.5rem', maxWidth: '100%' }}
                             tabIndex={0}
                         >
                             <div className="flex w-10 items-center justify-center">
                                 <LuLogIn size={20} />
                             </div>
-                            {isOpen && <span className="whitespace-nowrap">Sign in to save your chats</span>}
+                            {isOpen && (
+                                <span className="whitespace-nowrap">
+                                    Sign in to save your chats
+                                </span>
+                            )}
                         </motion.button>
                     )}
 
@@ -340,14 +368,16 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
                                 await signout();
                                 resetCurrentThread();
                             }}
-                            className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent hover:border-primary/20 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
+                            className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
                             style={{ minWidth: '2.5rem', maxWidth: '100%' }}
                             tabIndex={0}
                         >
-                        <div className="flex w-10 items-center justify-center">
+                            <div className="flex w-10 items-center justify-center">
                                 <LuLogOut size={20} />
                             </div>
-                            {isOpen && <span className="text-base whitespace-nowrap">Sign out</span>}
+                            {isOpen && (
+                                <span className="text-base whitespace-nowrap">Sign out</span>
+                            )}
                         </motion.button>
                     )}
                 </div>
@@ -358,11 +388,15 @@ export function Sidebar({ isOpen, openSidebar, closeSidebar, showRecipeListView,
 
 const useUserAccessData = () => {
     const userAccessManager = useUserAccessManager();
-    const [userAccessData, setUserAccessData] = useState<UserAccessData | null>(userAccessManager.getUserAccessData());
+    const [userAccessData, setUserAccessData] = useState<UserAccessData | null>(
+        userAccessManager.getUserAccessData(),
+    );
 
     useEffect(() => {
-        const accessEnsuredListener = (userAccessData: UserAccessData) => setUserAccessData(userAccessData);
-        const accessChangedListener = (userAccessData: UserAccessData | null) => setUserAccessData(userAccessData);
+        const accessEnsuredListener = (userAccessData: UserAccessData) =>
+            setUserAccessData(userAccessData);
+        const accessChangedListener = (userAccessData: UserAccessData | null) =>
+            setUserAccessData(userAccessData);
         userAccessManager.subscribe('accessEnsured', accessEnsuredListener);
         userAccessManager.subscribe('accessChanged', accessChangedListener);
         return () => {
@@ -372,11 +406,13 @@ const useUserAccessData = () => {
     }, [userAccessManager]);
 
     return userAccessData;
-}
+};
 
 function useCurrentThread() {
     const chatStateManager = useChatStateManager();
-    const [currentThreadId, setCurrentThreadId] = useState<string | null>(chatStateManager.getCurrentThreadId());
+    const [currentThreadId, setCurrentThreadId] = useState<string | null>(
+        chatStateManager.getCurrentThreadId(),
+    );
 
     useEffect(() => {
         const currentThreadChangedListener = (threadId: { thread_id: string } | null) => {
@@ -399,16 +435,18 @@ function useCurrentThread() {
         };
     }, [chatStateManager]);
 
-
     const startThread = useCallback(() => {
         chatStateManager.startNewThread();
         setCurrentThreadId(null);
     }, [chatStateManager]);
 
-    const resumeThread = useCallback((threadId: string) => {
-        chatStateManager.resumePreviousThread(threadId);
-        setCurrentThreadId(threadId);
-    }, [chatStateManager]);
+    const resumeThread = useCallback(
+        (threadId: string) => {
+            chatStateManager.resumePreviousThread(threadId);
+            setCurrentThreadId(threadId);
+        },
+        [chatStateManager],
+    );
 
     const resetCurrentThread = useCallback(() => {
         chatStateManager.resetState();
@@ -431,42 +469,39 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
     const chatStateManager = useChatStateManager();
     const threadsApiClient = useThreadsApiClient();
 
-    const fetchThreads = useCallback(
-        async () => {
-            if (
-                !userAccessData?.access_token ||
-                isFetching ||
-                !hasMoreThreads
-            )
-                return;
+    const fetchThreads = useCallback(async () => {
+        if (!userAccessData?.access_token || isFetching || !hasMoreThreads) return;
 
-            setIsFetching(true);
-            try {
-                const response = await threadsApiClient.getUserThreads({
+        setIsFetching(true);
+        try {
+            const response = await threadsApiClient.getUserThreads(
+                {
                     limit: 10,
                     sort_by: 'updated_at',
                     sort_order: 'desc',
                     from_timestamp: nextTimestamp,
                     exclude_empty: true,
-                }, userAccessData.access_token);
+                },
+                userAccessData.access_token,
+            );
 
-                setThreads(prev => {
-                    // The response threads should be authoritative, so we replace the existing threads with the new ones
-                    const map = new Map(prev.map(t => [t.id, t]));
-                    response.threads.forEach(thread => map.set(thread.id, thread));
-                    return Array.from(map.values()).sort((a, b) => b.updated_at.localeCompare(a.updated_at));
-                });
-                setHasMoreThreads(response.has_more);
-                setNextTimestamp(response.next_timestamp);
-            } catch (error) {
-                console.error('Error fetching threads:', error);
-                setError('Failed to load conversations.');
-            } finally {
-                setIsFetching(false);
-            }
-        },
-        [userAccessData?.access_token, isFetching, hasMoreThreads, threadsApiClient, nextTimestamp]
-    );
+            setThreads((prev) => {
+                // The response threads should be authoritative, so we replace the existing threads with the new ones
+                const map = new Map(prev.map((t) => [t.id, t]));
+                response.threads.forEach((thread) => map.set(thread.id, thread));
+                return Array.from(map.values()).sort((a, b) =>
+                    b.updated_at.localeCompare(a.updated_at),
+                );
+            });
+            setHasMoreThreads(response.has_more);
+            setNextTimestamp(response.next_timestamp);
+        } catch (error) {
+            console.error('Error fetching threads:', error);
+            setError('Failed to load conversations.');
+        } finally {
+            setIsFetching(false);
+        }
+    }, [userAccessData?.access_token, isFetching, hasMoreThreads, threadsApiClient, nextTimestamp]);
 
     useEffect(() => {
         if (!userAccessData?.access_token) {
@@ -502,9 +537,9 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
             if (!chatState.thread) {
                 return;
             }
-            setThreads(prev => {
+            setThreads((prev) => {
                 // Check if the thread already exists in the list
-                const existingIndex = prev.findIndex(t => t.id === chatState.thread?.id);
+                const existingIndex = prev.findIndex((t) => t.id === chatState.thread?.id);
                 if (existingIndex !== -1) {
                     // Thread already exists, don't add it again
                     return prev;
@@ -518,18 +553,18 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
         };
 
         const chatStateChangedListener = (chatState: ChatState) => {
-            setThreads(prev => {
+            setThreads((prev) => {
                 if (!chatState.thread) {
                     return prev;
                 }
-                const index = prev.findIndex(t => t.id === chatState.thread?.id);
+                const index = prev.findIndex((t) => t.id === chatState.thread?.id);
                 if (index !== -1) {
                     const newThreads = [...prev];
                     newThreads[index] = chatState.thread;
                     return newThreads;
                 }
                 return prev;
-            }); 
+            });
         };
 
         chatStateManager.subscribe('firstMessageSent', firstUserMessageSentListener);
@@ -542,13 +577,13 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
 
     useEffect(() => {
         const observer = new IntersectionObserver(
-            entries => {
+            (entries) => {
                 console.log('🔄 IntersectionObserver - entries:', entries);
                 if (entries[0].isIntersecting && !error && isOpen && userAccessData?.access_token) {
                     fetchThreads();
                 }
             },
-            { threshold: 1 } // 100% of the target element must be visible in the viewport
+            { threshold: 1 }, // 100% of the target element must be visible in the viewport
         );
 
         const target = fetchMoreObserverTarget.current;
@@ -573,4 +608,3 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
         fetchMoreObserverTarget,
     };
 }
-

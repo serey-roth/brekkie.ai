@@ -19,7 +19,7 @@ export class EventManager<Events extends EventsMap> {
     }
 
     publish<K extends keyof Events>(event: K, data: Events[K]) {
-        this.listeners[event]?.forEach(cb => cb(data));
+        this.listeners[event]?.forEach((cb) => cb(data));
     }
 
     dispose(event?: keyof Events) {

@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
-export const ConnectionStatusSchema = z.enum(['connecting', 'connected', 'reconnecting', 'disconnecting', 'disconnected', 'idle', 'error']);
+export const ConnectionStatusSchema = z.enum([
+    'connecting',
+    'connected',
+    'reconnecting',
+    'disconnecting',
+    'disconnected',
+    'idle',
+    'error',
+]);
 export type ConnectionStatus = z.infer<typeof ConnectionStatusSchema>;
 
 export const ConnectionStateSchema = z.object({

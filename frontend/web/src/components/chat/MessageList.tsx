@@ -30,7 +30,7 @@ export function MessageList({
             <motion.div
                 initial={false}
                 animate={{ height: isLoadingMoreMessages || errorLoadingMoreMessages ? 48 : 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
             >
                 {isLoadingMoreMessages && (
                     <motion.div
@@ -38,9 +38,9 @@ export function MessageList({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.15 }}
-                        className="flex h-12 items-center justify-center gap-2 text-sm text-contrast-subtle"
+                        className="text-contrast-subtle flex h-12 items-center justify-center gap-2 text-sm"
                     >
-                        <LuLoader className="w-4 h-4 animate-spin" />
+                        <LuLoader className="h-4 w-4 animate-spin" />
                         <span>{loadingMessage}</span>
                     </motion.div>
                 )}
@@ -50,9 +50,9 @@ export function MessageList({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.15 }}
-                        className="flex h-12 items-center justify-center gap-2 text-sm text-contrast-subtle"
+                        className="text-contrast-subtle flex h-12 items-center justify-center gap-2 text-sm"
                     >
-                        <FaCircleExclamation className="w-4 h-4 text-red-500" />
+                        <FaCircleExclamation className="h-4 w-4 text-red-500" />
                         <span>{errorLoadingMoreMessages}</span>
                     </motion.div>
                 )}
@@ -69,4 +69,4 @@ export function MessageList({
             {isAssistantThinking && <AssistantThinkingMessageBubble />}
         </AnimatePresence>
     );
-} 
+}

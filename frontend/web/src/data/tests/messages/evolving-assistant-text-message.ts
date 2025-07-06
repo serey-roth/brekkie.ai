@@ -1,10 +1,10 @@
-import type { AssistantTextMessage, Message, UserMessage } from "@/data/schemas/messages";
+import type { AssistantTextMessage, Message, UserMessage } from '@/data/schemas/messages';
 
 const message0: UserMessage = {
-    id: "0",
-    thread_id: "1",
-    role: "user",
-    content_type: "text",
+    id: '0',
+    thread_id: '1',
+    role: 'user',
+    content_type: 'text',
     text_content: "I'd like to make a Mediterranean Pasta &amp; Salad.",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -18,14 +18,14 @@ const message0: UserMessage = {
     tool_output: null,
     is_recipe_generation_started: false,
     is_recipe_generation_completed: false,
-}
+};
 
 const message1: AssistantTextMessage = {
-    id: "1",
-    thread_id: "1",
-    role: "assistant",
-    content_type: "text",
-    text_content: "",
+    id: '1',
+    thread_id: '1',
+    role: 'assistant',
+    content_type: 'text',
+    text_content: '',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     model_name: null,
@@ -38,36 +38,45 @@ const message1: AssistantTextMessage = {
     tool_input: null,
     tool_output: null,
     parent_id: message0.id,
-}
+};
 
 const message2: Message = {
     ...message1,
     text_content: message1.text_content + " I'd be happy to",
-}
+};
 
 const message3: Message = {
     ...message2,
-    text_content: message2.text_content + " help you with a recipe for a",
-}
+    text_content: message2.text_content + ' help you with a recipe for a',
+};
 
 const message4: Message = {
     ...message3,
-    text_content: message3.text_content + " Mediterranean Pasta &amp; Salad.",
-}
+    text_content: message3.text_content + ' Mediterranean Pasta &amp; Salad.',
+};
 
 const message5: Message = {
     ...message4,
-    text_content: message4.text_content + " It's going to be a quick and flavorful with"
-}
+    text_content: message4.text_content + " It's going to be a quick and flavorful with",
+};
 
 const message6: Message = {
     ...message5,
-    text_content: message5.text_content + " the garlic and olive oil that you asked for.",
-}
+    text_content: message5.text_content + ' the garlic and olive oil that you asked for.',
+};
 
 const message7: Message = {
     ...message6,
-    text_content: "I'd be happy to help you with a recipe for a Mediterranean Pasta &amp; Salad. It's going to be a quick and flavorful with the garlic and olive oil that you asked for."
-}
+    text_content:
+        "I'd be happy to help you with a recipe for a Mediterranean Pasta &amp; Salad. It's going to be a quick and flavorful with the garlic and olive oil that you asked for.",
+};
 
-export const evolvingAssistantTextMessage = [message1, message2, message3, message4, message5, message6, message7];
+export const evolvingAssistantTextMessage = [
+    message1,
+    message2,
+    message3,
+    message4,
+    message5,
+    message6,
+    message7,
+];

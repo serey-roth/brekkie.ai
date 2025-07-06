@@ -1,5 +1,5 @@
-import { DateTime } from "luxon";
-import type { Thread } from "@/data/schemas/threads";
+import { DateTime } from 'luxon';
+import type { Thread } from '@/data/schemas/threads';
 
 export function formatThreadTimestamp(ts: string) {
     const dt = DateTime.fromISO(ts);
@@ -28,7 +28,7 @@ export function getThreadGroups(threads: Thread[]) {
         older: [] as Thread[],
     };
 
-    threads.forEach(thread => {
+    threads.forEach((thread) => {
         const chatDate = DateTime.fromISO(thread.updated_at);
         const diff = now.diff(chatDate, 'days').days;
 
@@ -51,5 +51,5 @@ export function getThreadGroups(threads: Thread[]) {
         { label: 'This week', items: groups.prev7 },
         { label: 'This month', items: groups.prev30 },
         { label: 'Older', items: groups.older },
-    ].filter(group => group.items.length > 0);
+    ].filter((group) => group.items.length > 0);
 }

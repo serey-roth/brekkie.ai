@@ -6,14 +6,14 @@ export const ApiErrorSchema = z.object({
         message: z.string(),
     }),
 });
-export type ApiError = z.infer<typeof ApiErrorSchema>; 
+export type ApiError = z.infer<typeof ApiErrorSchema>;
 
 export const ChatSessionErrorTypeSchema = z.enum([
-    'access_token_not_found', 
-    'access_token_expired', 
-    'invalid_access_token', 
-    'over_message_limit', 
-    'thread_not_found', 
+    'access_token_not_found',
+    'access_token_expired',
+    'invalid_access_token',
+    'over_message_limit',
+    'thread_not_found',
     'internal_server_error',
     'invalid_payload',
     'session_closed',

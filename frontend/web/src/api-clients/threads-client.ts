@@ -1,10 +1,18 @@
-import { ApiErrorSchema } from "@/data/schemas/errors";
-import { GetThreadMessagesResponseSchema, type GetThreadMessagesPayload, type GetThreadMessagesResponse } from "@/data/schemas/messages";
-import { PaginatedThreadsSchema, type GetUserThreadsPayload, type PaginatedThreads } from "@/data/schemas/threads";
+import { ApiErrorSchema } from '@/data/schemas/errors';
+import {
+    GetThreadMessagesResponseSchema,
+    type GetThreadMessagesPayload,
+    type GetThreadMessagesResponse,
+} from '@/data/schemas/messages';
+import {
+    PaginatedThreadsSchema,
+    type GetUserThreadsPayload,
+    type PaginatedThreads,
+} from '@/data/schemas/threads';
 
 export interface IThreadsClient {
-    getUserThreads(payload: GetUserThreadsPayload, accessToken: string | null): Promise<PaginatedThreads>;
-    getThreadMessages(payload: GetThreadMessagesPayload, accessToken: string | null): Promise<GetThreadMessagesResponse>;
+    getUserThreads(payload: GetUserThreadsPayload): Promise<PaginatedThreads>;
+    getThreadMessages(payload: GetThreadMessagesPayload): Promise<GetThreadMessagesResponse>;
 }
 
 export class HttpThreadsClient implements IThreadsClient {
@@ -14,15 +22,11 @@ export class HttpThreadsClient implements IThreadsClient {
         this._baseUrl = baseUrl;
     }
 
-    async getUserThreads(payload: GetUserThreadsPayload, accessToken: string | null): Promise<PaginatedThreads> {
+    async getUserThreads(payload: GetUserThreadsPayload): Promise<PaginatedThreads> {
         const headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
         } as Record<string, string>;
-
-        if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-        }
 
         const url = new URL(`${this._baseUrl}/threads`);
         if (payload.limit) {
@@ -44,6 +48,7 @@ export class HttpThreadsClient implements IThreadsClient {
         const response = await fetch(url.toString(), {
             method: 'GET',
             headers,
+            credentials: 'include',
         });
 
         const json = await response.json();
@@ -62,17 +67,13 @@ export class HttpThreadsClient implements IThreadsClient {
         }
 
         return result.data;
-    }   
+    }
 
-    async getThreadMessages(payload: GetThreadMessagesPayload, accessToken: string | null): Promise<GetThreadMessagesResponse> {
+    async getThreadMessages(payload: GetThreadMessagesPayload): Promise<GetThreadMessagesResponse> {
         const headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
         } as Record<string, string>;
-        
-        if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-        }
 
         const url = new URL(`${this._baseUrl}/threads/${payload.thread_id}/messages`);
         if (payload.limit) {
@@ -91,6 +92,7 @@ export class HttpThreadsClient implements IThreadsClient {
         const response = await fetch(url.toString(), {
             method: 'GET',
             headers,
+            credentials: 'include',
         });
 
         const json = await response.json();

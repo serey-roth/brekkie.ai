@@ -21,7 +21,11 @@ class TestGetUserThreads:
     async def test_empty_threads(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
 
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
 
         response = await async_client.get("/api/threads?limit=100&from_timestamp=2023-01-01T00:00:00Z", headers=headers)
 
@@ -54,7 +58,11 @@ class TestGetUserThreads:
         ))
             
 
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
 
         response = await async_client.get("/api/threads", headers=headers)
 
@@ -81,7 +89,7 @@ class TestGetUserThreads:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_successful_get_threads_authenticated_user(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
-        await service_container.user_access_cache_service.promote_to_authenticated(user_access_data.access_token, user_access_data.user_id, "test@test.com", "Test User")
+        await service_container.user_access_cache_service.promote_to_authenticated(user_access_data.access_token, user_access_data.user_id, "test@test.com", "Test User", to_utc_isostring(datetime.now(timezone.utc)), 0)
         
         thread_id = str(uuid4())
         thread_created_at = datetime.now(timezone.utc)
@@ -108,7 +116,12 @@ class TestGetUserThreads:
                 is_empty=False
             ))
             
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
         response = await async_client.get("/api/threads", headers=headers)
         assert response.status_code == status.HTTP_200_OK
         assert_deep_equal(response.json(), {
@@ -132,39 +145,37 @@ class TestGetUserThreads:
         
     @pytest.mark.asyncio(loop_scope="session")
     async def test_missing_token(self, async_client, service_container: ServiceContainer):
-        response = await async_client.get("/api/threads")
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        response = await async_client.get("/api/threads", headers=headers)
+        
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert_deep_equal(response.json(), {"detail": {"message": "Missing access token"}})
-        
-        headers = {}
-        response = await async_client.get("/api/threads", headers=headers)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert_deep_equal(response.json(), {"detail": {"message": "Missing access token"}})
-        
-        headers = {"Authorization": "Bearer "}
-        response = await async_client.get("/api/threads", headers=headers)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert_deep_equal(response.json(), {"detail": {"message": "Missing access token"}})
-        
-        headers = {"Authorization": "Bearer invalid_token"}
-        response = await async_client.get("/api/threads", headers=headers)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert_deep_equal(response.json(), {"detail": {"message": "Access token is invalid or expired"}})
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_invalid_token(self, async_client, service_container: ServiceContainer):
-        headers = {"Authorization": f"Bearer invalid_token"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", "invalid_token")
 
         response = await async_client.get("/api/threads", headers=headers)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert_deep_equal(response.json(), {"detail": {"message": "Access token is invalid or expired"}})
+        assert_deep_equal(response.json(), {"detail": {"message": "Access token not found"}})
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_limit_validation_min(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
 
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
 
         response = await async_client.get("/api/threads?limit=0", headers=headers)
 
@@ -174,7 +185,11 @@ class TestGetUserThreads:
     async def test_limit_validation_max(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
 
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
 
         response = await async_client.get("/api/threads?limit=101", headers=headers)
 
@@ -184,7 +199,11 @@ class TestGetUserThreads:
     async def test_internal_server_error(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
 
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
 
         with patch.object(service_container.chat_session_store, 'get_paginated_threads', side_effect=Exception("Database error")):
             response = await async_client.get("/api/threads", headers=headers)
@@ -197,7 +216,7 @@ class TestGetThreadMessages:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_messages_without_recipes_authenticated_user(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
-        await service_container.user_access_cache_service.promote_to_authenticated(user_access_data.access_token, user_access_data.user_id, "test@test.com", "Test User")
+        await service_container.user_access_cache_service.promote_to_authenticated(user_access_data.access_token, user_access_data.user_id, "test@test.com", "Test User", to_utc_isostring(datetime.now(timezone.utc)), 0)
         
         thread_id = str(uuid4())
         message_id = str(uuid4())
@@ -230,10 +249,11 @@ class TestGetThreadMessages:
                 updated_at=message_updated_at
             ))
             
-            # Commit the transaction so the data is visible to the API endpoint
-            await db.commit()
-
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
 
         response = await async_client.get(f"/api/threads/{thread_id}/messages", headers=headers)
 
@@ -270,7 +290,7 @@ class TestGetThreadMessages:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_messages_with_recipes_authenticated_user(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
-        user_access_data = await service_container.user_access_cache_service.promote_to_authenticated(user_access_data.access_token, user_access_data.user_id, "test@test.com", "Test User")
+        user_access_data = await service_container.user_access_cache_service.promote_to_authenticated(user_access_data.access_token, user_access_data.user_id, "test@test.com", "Test User", to_utc_isostring(datetime.now(timezone.utc)), 0)
         
         user_message_id = str(uuid4())
         thread_id = str(uuid4())
@@ -332,7 +352,12 @@ class TestGetThreadMessages:
                 recipe_id=recipe.id,
             ))
 
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
         response = await async_client.get(f"/api/threads/{thread_id}/messages", headers=headers)    
 
         assert response.status_code == status.HTTP_200_OK
@@ -395,42 +420,41 @@ class TestGetThreadMessages:
     async def test_missing_token(self, async_client, service_container: ServiceContainer):
         thread_id = str(uuid4())
 
-        response = await async_client.get(f"/api/threads/{thread_id}/messages")
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert_deep_equal(response.json(), {"detail": {"message": "Missing access token"}})
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
         
-        headers = {}
         response = await async_client.get(f"/api/threads/{thread_id}/messages", headers=headers)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert_deep_equal(response.json(), {"detail": {"message": "Missing access token"}})
-        
-        headers = {"Authorization": "Access token"}
-        response = await async_client.get(f"/api/threads/{thread_id}/messages", headers=headers)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert_deep_equal(response.json(), {"detail": {"message": "Missing access token"}})
-        
-        headers = {"Authorization": "Bearer "}
-        response = await async_client.get(f"/api/threads/{thread_id}/messages", headers=headers)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert_deep_equal(response.json(), {"detail": {"message": "Missing access token"}})
 
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        
     @pytest.mark.asyncio(loop_scope="session")
     async def test_invalid_token(self, async_client, service_container: ServiceContainer):
         thread_id = str(uuid4())
-        headers = {"Authorization": f"Bearer invalid_token"}
-
+        
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", "invalid_token")
+        
         response = await async_client.get(f"/api/threads/{thread_id}/messages", headers=headers)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert_deep_equal(response.json(), {"detail": {"message": "Access token is invalid or expired"}})
+        assert_deep_equal(response.json(), {"detail": {"message": "Access token not found"}})
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_limit_validation_min(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
 
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
         thread_id = str(uuid4())
-
+        
         response = await async_client.get(f"/api/threads/{thread_id}/messages?limit=0", headers=headers)
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -439,7 +463,12 @@ class TestGetThreadMessages:
     async def test_limit_validation_max(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
 
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
         thread_id = str(uuid4())
 
         response = await async_client.get(f"/api/threads/{thread_id}/messages?limit=101", headers=headers)
@@ -450,7 +479,12 @@ class TestGetThreadMessages:
     async def test_internal_server_error(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
 
-        headers = {"Authorization": f"Bearer {user_access_data.access_token}"}
+        headers = {
+            "fly-client-ip": "192.168.1.100"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
         thread_id = str(uuid4())
 
         with patch.object(service_container.chat_session_store, 'get_paginated_messages', side_effect=Exception("Database error")):

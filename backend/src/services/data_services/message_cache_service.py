@@ -42,6 +42,10 @@ class MessageCacheService:
     
     
     async def set_message(self, user_id: str, message: Message, ttl: int | None = None, keep_ttl: bool = False) -> None:
+        if keep_ttl:
+            set_ttl = None
+        else:
+            set_ttl = ttl if ttl is not None else self.ttl
         await self.message_cache.set_json(self._get_message_key(user_id, message.thread_id, message.id), message.model_dump(mode="json"), ttl=ttl, keep_ttl=keep_ttl)
    
    
@@ -74,8 +78,7 @@ class MessageCacheService:
             updated_at=to_utc_isostring(params.updated_at),
             **params.model_dump(exclude={"created_at", "updated_at"}, exclude_unset=True, exclude_none=True)
         )
-        set_ttl = ttl if ttl is not None else self.ttl
-        await self.set_message(user_id, message, ttl=set_ttl)
+        await self.set_message(user_id, message, ttl=ttl)
         return message
     
     

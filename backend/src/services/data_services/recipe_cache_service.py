@@ -40,6 +40,10 @@ class RecipeCacheService:
     
     
     async def set_recipe(self, recipe: UserRecipe, ttl: int | None = None, keep_ttl: bool = False) -> None:
+        if keep_ttl:
+            set_ttl = None
+        else:
+            set_ttl = ttl if ttl is not None else self.ttl
         await self.recipe_cache.set_json(self._get_recipe_key(recipe.user_id, recipe.thread_id, recipe.id), recipe.model_dump(mode="json"), ttl=ttl, keep_ttl=keep_ttl)
  
     
@@ -62,8 +66,7 @@ class RecipeCacheService:
             updated_at=to_utc_isostring(params.updated_at),
             **params.model_dump(exclude={"created_at", "updated_at"}, exclude_unset=True, exclude_none=True)
         )
-        set_ttl = ttl if ttl is not None else self.ttl
-        await self.set_recipe(recipe, ttl=set_ttl)
+        await self.set_recipe(recipe, ttl=ttl)
         return recipe
     
     

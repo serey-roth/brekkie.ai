@@ -13,6 +13,7 @@ from fakeredis.aioredis import FakeRedis
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
+from services.data_services.anonymous_access_service import AnonymousAccessService
 from services.websocket_event_sender import WebSocketEventSender
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -22,6 +23,7 @@ from sqlalchemy.sql import text
 from langgraph.checkpoint.memory import InMemorySaver
 
 from dotenv import load_dotenv
+from config.settings import Settings, get_settings, set_settings, reset_settings
 
 load_dotenv()  
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY") or "mock-google-api-key"
@@ -50,6 +52,7 @@ from services.data_services.message_cache_service import MessageCacheService
 from services.data_services.recipe_cache_service import RecipeCacheService
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
+from services.data_services.anonymous_access_rate_limiter import AnonymousAccessIpAddressRateLimiter
 
 from schemas.users import User
 from schemas.user_access import UserAccessData
@@ -236,15 +239,57 @@ def sample_recipe(sample_user, sample_thread):
 
 
 @pytest_asyncio.fixture
-async def service_container(db_transaction_maker, redis_client):
+async def test_settings():
+    test_settings = Settings(
+        environment="development",
+        db_url="sqlite+aiosqlite:///:memory:",
+        redis_url="redis://localhost:6379/1",
+        google_api_key="mock-google-api-key",
+        tavily_api_key="mock-tavily-api-key",
+        checkpoint_db_url="mock-checkpoint-db-url",
+        # Test-specific settings
+        thread_cache_ttl=60 * 30,  # 30 minutes for tests
+        message_cache_ttl=60 * 30,
+        recipe_cache_ttl=60 * 30,
+        user_access_cache_ttl=60 * 30,
+        access_token_refresh_ttl=60 * 10,
+        anonymous_access_rate_limiter_ttl=60 * 30,
+        anonymous_access_rate_limiter_limit=3,
+        session_ttl=60 * 30,
+        authenticated_user_message_limit=100,
+        unauthenticated_user_message_limit=20,
+        cookie_name="bk_access_token",  # Keep the original cookie name for tests
+        cookie_max_age=60 * 60 * 24 * 3,
+        cookie_secure=False,  # Allow HTTP in tests
+        cookie_samesite="Lax",
+        cookie_httponly=True,
+        db_pool_size=5,
+        db_max_overflow=10,
+        db_pool_timeout=30,
+        db_pool_recycle=3600,
+    )
+    return test_settings
+
+
+@pytest_asyncio.fixture
+async def service_container(db_transaction_maker, redis_client, test_settings):
+    set_settings(test_settings)
+    settings = get_settings()
+    
     user_service = UserService(UserRepository())
     thread_service = ThreadService(ThreadRepository())
     message_service = MessageService(MessageRepository())
     recipe_service = RecipeService(RecipeRepository())
-    user_access_cache_service = UserAccessCacheService(redis_client, ttl=60 * 30)
-    thread_cache_service = ThreadCacheService(redis_client, ttl=60 * 30)
-    message_cache_service = MessageCacheService(redis_client, ttl=60 * 30)
-    recipe_cache_service = RecipeCacheService(redis_client, ttl=60 * 30)
+    user_access_cache_service = UserAccessCacheService(redis_client, ttl=settings.user_access_cache_ttl)
+    thread_cache_service = ThreadCacheService(redis_client, ttl=settings.thread_cache_ttl)
+    message_cache_service = MessageCacheService(redis_client, ttl=settings.message_cache_ttl)
+    recipe_cache_service = RecipeCacheService(redis_client, ttl=settings.recipe_cache_ttl)
+    anonymous_access_rate_limiter = AnonymousAccessIpAddressRateLimiter(
+        redis_client, 
+        ttl=settings.anonymous_access_rate_limiter_ttl, 
+        limit=settings.anonymous_access_rate_limiter_limit
+    )
+    anonymous_access_service = AnonymousAccessService(user_access_cache_service, anonymous_access_rate_limiter)
     websocket_event_sender = WebSocketEventSender()
 
     ai_food_agent = GoogleAIFoodAgent(checkpointer=InMemorySaver())
@@ -261,15 +306,15 @@ async def service_container(db_transaction_maker, redis_client):
 
     chat_session_limit_checker = ChatSessionLimitChecker(
         user_access_cache_service=user_access_cache_service,
-        authenticated_user_message_limit=100,
-        unauthenticated_user_message_limit=20
+        authenticated_user_message_limit=settings.authenticated_user_message_limit,
+        unauthenticated_user_message_limit=settings.unauthenticated_user_message_limit
     )
     chat_session_handlers = ChatSessionHandlers(
         db_transaction_maker=db_transaction_maker,
         chat_session_store=chat_session_store
     )
     chat_session_orchestrator = ChatSessionOrchestrator(
-        session_ttl=60 * 30,
+        session_ttl=settings.session_ttl,
         db_transaction_maker=db_transaction_maker,
         user_access_cache_service=user_access_cache_service,
         ai_food_agent=ai_food_agent,
@@ -292,7 +337,8 @@ async def service_container(db_transaction_maker, redis_client):
         ai_food_agent=ai_food_agent,
         chat_session_store=chat_session_store,
         chat_session_limit_checker=chat_session_limit_checker,
-        chat_session_orchestrator=chat_session_orchestrator
+        chat_session_orchestrator=chat_session_orchestrator,
+        anonymous_access_service=anonymous_access_service
     )
     
     app.state.service_container = container
@@ -302,16 +348,18 @@ async def service_container(db_transaction_maker, redis_client):
     
     app.dependency_overrides = {}
     app.state.service_container = None
+    reset_settings()
+    
 
 
 @pytest_asyncio.fixture
-async def async_client():
+async def async_client(service_container: ServiceContainer):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 
 @pytest.fixture
-def test_client():
+def test_client(service_container: ServiceContainer):
     return TestClient(app)
 
 

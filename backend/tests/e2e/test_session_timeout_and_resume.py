@@ -11,6 +11,7 @@ from services.service_container import ServiceContainer
 
 from schemas.messages import GetMessagesParams
 from schemas.users import CreateUserParams
+from utils.date_utils import to_utc_isostring
 
 
 class TestSessionTimeoutAndResume:
@@ -29,8 +30,11 @@ class TestSessionTimeoutAndResume:
         # Start a new thread
         print("🧵 Starting new thread...")
         
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
         # Create WebSocket connection for new thread
-        with test_client.websocket_connect(f"/ws/chat?access_token={user_access_data.access_token}") as websocket:
+        with test_client.websocket_connect("/ws/chat") as websocket:
             # Send initial message to start the thread
             websocket.send_json({
                 "id": "1",
@@ -118,8 +122,11 @@ class TestSessionTimeoutAndResume:
         # Step 2: Resume the thread
         print("🔄 Resuming the disconnected thread...")
         
+        # Set the access token as a cookie for resume
+        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
         # Create a new WebSocket connection to resume the thread
-        with test_client.websocket_connect(f"/ws/chat/{thread_id}?access_token={user_access_data.access_token}") as websocket:
+        with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
             # Wait for thread_resumed event
             event = websocket.receive_json()
             assert event["event"] == "thread_resumed"
@@ -193,6 +200,7 @@ class TestSessionTimeoutAndResume:
         
         # Create user in database
         async def create_user():
+            timestamp = datetime.now(timezone.utc)
             async with service_container.db_transaction_maker() as db:
                 user = await service_container.user_service.create_user(
                     db,
@@ -201,8 +209,8 @@ class TestSessionTimeoutAndResume:
                         email="resume@example.com",
                         name="Resume Test User",
                         password="password123",
-                        created_at=datetime.now(timezone.utc),
-                        updated_at=datetime.now(timezone.utc)
+                        created_at=timestamp,
+                        updated_at=timestamp
                     )
                 )
                 
@@ -211,7 +219,9 @@ class TestSessionTimeoutAndResume:
                     access_token=user_access_data.access_token,
                     user_id=user.id,
                     email=user.email,
-                    name=user.name
+                    name=user.name,
+                    updated_at=to_utc_isostring(timestamp),
+                    user_message_count=0,
                 )
                 return authenticated_access
         
@@ -221,7 +231,10 @@ class TestSessionTimeoutAndResume:
         # Start thread
         print("🧵 Starting thread for authenticated user...")
         
-        with test_client.websocket_connect(f"/ws/chat?access_token={authenticated_access.access_token}") as websocket:
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", authenticated_access.access_token)
+        
+        with test_client.websocket_connect("/ws/chat") as websocket:
             websocket.send_json({
                 "id": "1",
                 "content": "Hello from authenticated user!"
@@ -300,7 +313,10 @@ class TestSessionTimeoutAndResume:
         # Resume thread
         print("🔄 Resuming authenticated user thread...")
         
-        with test_client.websocket_connect(f"/ws/chat/{thread_id}?access_token={authenticated_access.access_token}") as websocket:
+        # Set the access token as a cookie for resume
+        test_client.cookies.set("bk_access_token", authenticated_access.access_token)
+        
+        with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
             event = websocket.receive_json()
             assert event["event"] == "thread_resumed"
             
@@ -384,7 +400,10 @@ class TestSessionTimeoutAndResume:
         access_token = user_access_data.access_token
         print(f"🔑 Access token: {access_token[:20]}...")
 
-        with test_client.websocket_connect(f"/ws/chat?access_token={access_token}") as websocket:
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", access_token)
+
+        with test_client.websocket_connect("/ws/chat") as websocket:
             # Send recipe generation request
             websocket.send_json({
                 "id": "1",
@@ -433,7 +452,10 @@ class TestSessionTimeoutAndResume:
         # Resume thread
         print("🔄 Resuming thread with partial recipe...")
         
-        with test_client.websocket_connect(f"/ws/chat/{thread_id}?access_token={access_token}") as websocket:
+        # Set the access token as a cookie for resume
+        test_client.cookies.set("bk_access_token", access_token)
+        
+        with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
             event = websocket.receive_json()
             assert event["event"] == "thread_resumed"
             
@@ -505,8 +527,11 @@ class TestSessionTimeoutAndResume:
         # Test 1: Try to resume a non-existent thread
         print("🔍 Testing resume of non-existent thread...")
         
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
         fake_thread_id = "non-existent-thread-id"
-        with test_client.websocket_connect(f"/ws/chat/{fake_thread_id}?access_token={user_access_data.access_token}") as websocket:
+        with test_client.websocket_connect(f"/ws/chat/{fake_thread_id}") as websocket:
             response = websocket.receive_json()
             assert response["event"] == "chat_session_error"
             assert response["data"]["type"] == "thread_not_found"
@@ -516,7 +541,10 @@ class TestSessionTimeoutAndResume:
         print("🔍 Testing resume with invalid access token...")
         
         # First create a real thread
-        with test_client.websocket_connect(f"/ws/chat?access_token={user_access_data.access_token}") as websocket:
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
+        with test_client.websocket_connect("/ws/chat") as websocket:
             websocket.send_json({
                 "id": "1",
                 "content": "Hello!"
@@ -551,7 +579,10 @@ class TestSessionTimeoutAndResume:
         
         # Now try to resume with invalid token
         invalid_token = "invalid-access-token"
-        with test_client.websocket_connect(f"/ws/chat/{thread_id}?access_token={invalid_token}") as websocket:
+        # Set the invalid access token as a cookie
+        test_client.cookies.set("bk_access_token", invalid_token)
+        
+        with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
             response = websocket.receive_json()
             assert response["event"] == "chat_session_error"
             assert response["data"]["type"] == "access_token_not_found"
@@ -570,7 +601,10 @@ class TestSessionTimeoutAndResume:
             # Wait for token to expire
             time.sleep(2)
             
-            with test_client.websocket_connect(f"/ws/chat/{thread_id}?access_token={expired_access_data.access_token}") as websocket:
+            # Set the expired access token as a cookie
+            test_client.cookies.set("bk_access_token", expired_access_data.access_token)
+            
+            with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
                 response = websocket.receive_json()
                 assert response["event"] == "chat_session_error"
                 print("✅ Correctly handled expired access token")
@@ -589,7 +623,10 @@ class TestSessionTimeoutAndResume:
         # Start thread and send multiple messages
         print("🧵 Starting thread with multiple messages...")
         
-        with test_client.websocket_connect(f"/ws/chat?access_token={user_access_data.access_token}") as websocket:
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
+        with test_client.websocket_connect("/ws/chat") as websocket:
             # Send first message
             websocket.send_json({
                 "id": "1",
@@ -675,7 +712,10 @@ class TestSessionTimeoutAndResume:
         # Resume thread and verify all data is intact
         print("🔄 Resuming thread to verify data integrity...")
         
-        with test_client.websocket_connect(f"/ws/chat/{thread_id}?access_token={user_access_data.access_token}") as websocket:
+        # Set the access token as a cookie for resume
+        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
+        with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
             event = websocket.receive_json()
             assert event["event"] == "thread_resumed"
             
@@ -746,7 +786,10 @@ class TestSessionTimeoutAndResume:
         with patch.object(service_container.chat_session_orchestrator, 'session_ttl', 10):  # 10 seconds timeout
             print("🧵 Starting thread with 10-second timeout...")
             
-            with test_client.websocket_connect(f"/ws/chat?access_token={user_access_data.access_token}") as websocket:
+            # Set the access token as a cookie
+            test_client.cookies.set("bk_access_token", user_access_data.access_token)
+            
+            with test_client.websocket_connect("/ws/chat") as websocket:
                 websocket.send_json({
                     "id": "1",
                     "content": "Hello! This is a test for session timeout."
@@ -799,7 +842,10 @@ class TestSessionTimeoutAndResume:
         # Resume the thread
         print("🔄 Resuming thread after timeout...")
         
-        with test_client.websocket_connect(f"/ws/chat/{thread_id}?access_token={user_access_data.access_token}") as websocket:
+        # Set the access token as a cookie for resume
+        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
+        with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
             event = websocket.receive_json()
             assert event["event"] == "thread_resumed"
             

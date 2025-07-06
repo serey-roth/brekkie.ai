@@ -12,7 +12,7 @@ from schemas.messages import GetMessagesParams
 from schemas.message_role import MessageRole
 from schemas.users import CreateUserParams
 
-
+from utils.date_utils import to_utc_isostring
 
 class TestRealChatFlow:
     """End-to-end tests for real chat flow with WebSocket and AI integration."""
@@ -166,7 +166,7 @@ class TestRealChatFlow:
         # Test search functionality directly
         try:
             # Create a search request that's more likely to trigger search
-            message_content = "Search for the latest cooking trends in 2024"
+            message_content = "Immediately use search tool to find the latest cooking trends in 2024"
             print(f"💬 Testing search with message: {message_content}")
             
             # Collect events to verify search is working
@@ -244,7 +244,10 @@ class TestRealChatFlow:
         access_token = user_access_data.access_token
         print(f"🔑 Access token: {access_token[:20]}...")
 
-        with test_client.websocket_connect(f"/ws/chat?access_token={access_token}") as websocket:
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", access_token)
+
+        with test_client.websocket_connect("/ws/chat") as websocket:
             # Send a user message
             message = {"id": "1", "content": "Hello! Can you help me with cooking?"}
             print(f"📤 Sending: {message}")
@@ -307,7 +310,10 @@ class TestRealChatFlow:
         access_token = user_access_data.access_token
         print(f"🔑 Access token: {access_token[:20]}...")
 
-        with test_client.websocket_connect(f"/ws/chat?access_token={access_token}") as websocket:
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", access_token)
+
+        with test_client.websocket_connect("/ws/chat") as websocket:
             # Send a recipe generation request
             message = {"id": "1", "content": "Use the create_recipe tool to create a recipe for chocolate chip cookies"}
             print(f"📤 Sending: {message}")
@@ -393,7 +399,10 @@ class TestRealChatFlow:
         access_token = user_access_data.access_token
         print(f"🔑 Access token: {access_token[:20]}...")
 
-        with test_client.websocket_connect(f"/ws/chat?access_token={access_token}") as websocket:
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", access_token)
+
+        with test_client.websocket_connect("/ws/chat") as websocket:
             # Send a search request that's more likely to trigger search
             message = {"id": "1", "content": "Use search to find the latest cooking trends in 2024"}
             print(f"📤 Sending: {message}")
@@ -491,7 +500,10 @@ class TestDataPersistence:
         print(f"🔑 Anonymous access token: {access_token[:20]}...")
         print(f"👤 Anonymous user ID: {user_id}")
 
-        with test_client.websocket_connect(f"/ws/chat?access_token={access_token}") as websocket:
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", access_token)
+
+        with test_client.websocket_connect("/ws/chat") as websocket:
             # Send a user message
             message = {"id": "1", "content": "Hello! Can you help me with cooking?"}
             print(f"📤 Sending: {message}")
@@ -583,6 +595,7 @@ class TestDataPersistence:
 
         # Create a user in the database (simulate signup)
         async def create_user():
+            timestamp = datetime.now(timezone.utc)
             async with service_container.db_transaction_maker() as db:
                 user = await service_container.user_service.create_user(
                     db=db,
@@ -591,8 +604,8 @@ class TestDataPersistence:
                         name="Test User",
                         password="hashed_password",
                         id=user_access_data.user_id,
-                        created_at=datetime.now(timezone.utc),
-                        updated_at=datetime.now(timezone.utc),
+                        created_at=timestamp,
+                        updated_at=timestamp,
                     )
                 )
                 # Update the access token to be authenticated
@@ -600,14 +613,19 @@ class TestDataPersistence:
                     access_token=access_token,
                     user_id=user.id,
                     email=user.email,
-                    name=user.name
+                    name=user.name,
+                    updated_at=to_utc_isostring(timestamp),
+                    user_message_count=0,
                 )
                 return user
         
         user = asyncio.get_event_loop().run_until_complete(create_user())
         print(f"👤 Created authenticated user: {user.id}")
 
-        with test_client.websocket_connect(f"/ws/chat?access_token={access_token}") as websocket:
+        # Set the access token as a cookie
+        test_client.cookies.set("bk_access_token", access_token)
+
+        with test_client.websocket_connect("/ws/chat") as websocket:
             # Send a user message
             message = {"id": "1", "content": "Hello! Can you help me with cooking?"}
             print(f"📤 Sending: {message}")

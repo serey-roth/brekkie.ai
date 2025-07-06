@@ -99,7 +99,7 @@ export class UserAccessManager {
             this._accessData = accessData;
             this._eventManager.publish('accessEnsured', accessData);
         } catch (error) {
-            this._eventManager.publish('errorOccurred', error as string);
+            this._eventManager.publish('errorOccurred', error instanceof Error ? error.message : 'Something went wrong. Please try again.');
         }
     }
 

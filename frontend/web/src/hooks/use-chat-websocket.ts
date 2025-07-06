@@ -143,7 +143,9 @@ const useWebsocketUrl = (args: {
     const config = useAppConfig();
 
     const [websocketUrl, setWebsocketUrl] = useState<string | null>(
-        getWebsocketUrl(config.wsBaseUrl, userAccessManager.getAccessToken() ? chatStateManager.getCurrentThreadId() : null),
+        userAccessManager.getAccessToken()
+            ? getWebsocketUrl(config.wsBaseUrl, chatStateManager.getCurrentThreadId())
+            : null,
     );
     const hasTriedReconnectingToCurrentThreadRef = useRef(false);
 

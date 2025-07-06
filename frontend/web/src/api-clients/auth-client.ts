@@ -25,6 +25,7 @@ export class HttpAuthClient implements IAuthClient {
             method: 'POST',
             headers,
             body: JSON.stringify(payload),
+            credentials: 'include',
         });
 
         const json = await response.json();

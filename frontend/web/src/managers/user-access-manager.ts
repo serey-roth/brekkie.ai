@@ -15,7 +15,6 @@ type UserAccessManagerConfig = {
 };
 
 export class UserAccessManager {
-    private _accessToken: string | null = null;
     private _accessData: UserAccessData | null = null;
     private _accessTokenClient: IAccessTokenClient;
     private _eventManager = new EventManager<UserAccessEvents>();
@@ -31,7 +30,7 @@ export class UserAccessManager {
     }
 
     getAccessToken(): string | null {
-        return this._accessToken;
+        return this._accessData?.access_token ?? null;
     }
 
     getUserId(): string | null {
@@ -58,8 +57,6 @@ export class UserAccessManager {
 
     setUserAccessData(accessData: UserAccessData) {
         this._accessData = accessData;
-        this._accessToken = accessData.access_token;
-        this.saveAccessToken(accessData.access_token);
         this._eventManager.publish('accessChanged', accessData);
     }
 
@@ -97,27 +94,16 @@ export class UserAccessManager {
     }
 
     async ensureUserAccess() {
-        const accessToken = localStorage.getItem('brekkie-access-token');
-
-        const accessData = await this._accessTokenClient.ensureUserAccess(accessToken);
-        this._accessData = accessData;
-
-        this.saveAccessToken(accessData.access_token);
-
-        this._eventManager.publish('accessEnsured', accessData);
-
-        if (this.hasReachedMessageLimit(accessData)) {
-            this._eventManager.publish('limitReached', 'Message limit reached');
+        try {
+            const accessData = await this._accessTokenClient.ensureUserAccess();
+            this._accessData = accessData;
+            this._eventManager.publish('accessEnsured', accessData);
+        } catch (error) {
+            this._eventManager.publish('errorOccurred', error as string);
         }
     }
 
-    saveAccessToken(accessToken: string) {
-        this._accessToken = accessToken;
-        localStorage.setItem('brekkie-access-token', accessToken);
-    }
-
     resetState() {
-        this._accessToken = null;
         this._accessData = null;
     }
 

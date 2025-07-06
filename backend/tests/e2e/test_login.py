@@ -11,7 +11,7 @@ from services.service_container import ServiceContainer
 from schemas.users import CreateUserParams
 from schemas.threads import CreateThreadParams
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
 
 pytestmark = pytest.mark.asyncio

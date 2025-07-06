@@ -44,10 +44,11 @@ async def ensure_access_token(
         response.set_cookie(
             settings.cookie_name,
             user_access_data.access_token,
-            secure=settings.cookie_secure,
+            secure=settings.get_cookie_secure(),
             samesite=settings.cookie_samesite,
             max_age=settings.cookie_max_age,
-            httponly=settings.cookie_httponly,
+            httponly=settings.get_cookie_httponly(),
+            path=settings.cookie_path,
         )
         
     return user_access_data

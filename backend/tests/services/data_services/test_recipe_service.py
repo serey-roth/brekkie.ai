@@ -24,7 +24,7 @@ from schemas.recipes import (
     RecipeInstruction,
 )
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 from utils.date_utils import to_utc_isostring
 
 

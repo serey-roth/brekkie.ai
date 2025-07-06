@@ -260,9 +260,7 @@ async def test_settings():
         unauthenticated_user_message_limit=20,
         cookie_name="bk_access_token",  # Keep the original cookie name for tests
         cookie_max_age=60 * 60 * 24 * 3,
-        cookie_secure=False,  # Allow HTTP in tests
         cookie_samesite="Lax",
-        cookie_httponly=True,
         db_pool_size=5,
         db_max_overflow=10,
         db_pool_timeout=30,

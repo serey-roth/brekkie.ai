@@ -124,6 +124,7 @@ async def login(
     response: Response,
     payload: UserLogin, 
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
+    access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     logger.debug(f"Login attempt for email: {payload.email}")
     
@@ -154,15 +155,18 @@ async def login(
                 updated_at=to_utc_isostring(timestamp),
             )
             
+            if access_token:
+                await service_container.user_access_cache_service.revoke_access(access_token)
+            
             settings = get_settings()
-            response.delete_cookie(settings.cookie_name) # Delete the old cookie
             response.set_cookie(
                 settings.cookie_name,
                 new_access_data.access_token,
-                secure=settings.cookie_secure,
-                httponly=settings.cookie_httponly,
-                max_age=settings.cookie_max_age,
+                secure=settings.get_cookie_secure(),
                 samesite=settings.cookie_samesite,
+                max_age=settings.cookie_max_age,
+                httponly=settings.get_cookie_httponly(),
+                path=settings.cookie_path,
             )
 
             logger.info(f"User {user.id} ({user.email}) logged in successfully")
@@ -211,7 +215,7 @@ async def signup(
             user = await user_service.create_user(
                 db, 
                 CreateUserParams(
-                    id=str(uuid4()),
+                    id=old_user_id,
                     created_at=timestamp,
                     updated_at=timestamp,
                     email=payload.email,
@@ -284,14 +288,14 @@ async def logout(
         new_access_data = await service_container.anonymous_access_service.get_or_create_user_access(ip_address, None)
         
         settings = get_settings()
-        response.delete_cookie(settings.cookie_name) # Delete the old cookie
         response.set_cookie(
             settings.cookie_name,
             new_access_data.access_token,
-            secure=settings.cookie_secure,
-            httponly=settings.cookie_httponly,
-            max_age=settings.cookie_max_age,
+            secure=settings.get_cookie_secure(),
             samesite=settings.cookie_samesite,
+            max_age=settings.cookie_max_age,
+            httponly=settings.get_cookie_httponly(),
+            path=settings.cookie_path,
         )
         
         logger.info(f"User {user_access_data.user_id} ({user_access_data.email}) logged out successfully")

@@ -13,7 +13,7 @@ from schemas.message_content_type import MessageContentType
 from schemas.recipes import CreateRecipeParams
 from schemas.users import CreateUserParams
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 from utils.date_utils import to_utc_isostring
 
 class TestGetUserThreads:

@@ -46,7 +46,7 @@ class UserAccessCacheService:
     
     
     async def create_anonymous_access(self, ttl: int | None = None) -> UserAccessData:
-        access_token = f"bk-{uuid4().hex}"
+        access_token = str(uuid4())
         user_id = str(uuid4())
         now = to_utc_isostring(datetime.now(timezone.utc))
         return await self.create_user_access(access_token, user_id, is_authenticated=False, created_at=now, updated_at=now, ttl=ttl)

@@ -13,7 +13,7 @@ from services.data_services.user_access_cache_service import UserAccessCacheServ
 
 from utils.date_utils import to_utc_isostring
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
 
 @pytest.fixture

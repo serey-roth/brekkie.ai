@@ -39,12 +39,11 @@ class Settings(BaseSettings):
     # Cookie Settings
     cookie_name: str = Field(default="bk_access_token", env="COOKIE_NAME")
     cookie_max_age: int = Field(default=60 * 60 * 24 * 3, env="COOKIE_MAX_AGE")  # 3 days
-    cookie_secure: bool = Field(default=True, env="COOKIE_SECURE")
     cookie_samesite: str = Field(default="Lax", env="COOKIE_SAMESITE")
-    cookie_httponly: bool = Field(default=True, env="COOKIE_HTTPONLY")
+    cookie_path: str = Field(default="/", env="COOKIE_PATH")
     
     # Refresh TTL
-    access_token_refresh_ttl: int = Field(default=60 * 60 * 12, env="ACCESS_TOKEN_REFRESH_TTL")  # 12 hours
+    access_token_refresh_ttl: int = Field(default=60 * 60 * 3, env="ACCESS_TOKEN_REFRESH_TTL")  # 3 hours
     
     # Database Pool Settings
     db_pool_size: int = Field(default=5, env="DB_POOL_SIZE")
@@ -57,6 +56,19 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         case_sensitive = False
 
+
+    def is_production(self) -> bool:
+        return self.environment == "production"
+    
+    def is_development(self) -> bool:
+        return self.environment == "development"
+    
+    def get_cookie_secure(self) -> bool:
+        return self.is_production()
+    
+    def get_cookie_httponly(self) -> bool:
+        return self.is_production()
+    
 
 # Global settings instance
 _settings: Optional[Settings] = None

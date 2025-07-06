@@ -14,7 +14,7 @@ from schemas.threads import Thread, GetUserThreadsParams
 from schemas.messages import Message, GetMessagesParams
 from schemas.recipes import Recipe, RecipeIngredient, RecipeInstruction, RecipeCategory
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 from utils.date_utils import to_utc_isostring
 
 
@@ -383,7 +383,7 @@ class TestSignup:
 
         assert response.status_code == status.HTTP_200_OK
         
-        new_user_id = response.json()["user_id"]
+        new_user_access_data = response.json()
         
         assert isinstance(new_user_access_data["user_id"], str)
         assert new_user_access_data["access_token"] is not None
@@ -423,14 +423,9 @@ class TestSignup:
             assert len(db_paginated_messages.messages) == 1
             assert len(db_recipes) == 1
             
-        new_user_access_data = await service_container.user_access_cache_service.get_user_access(user_access_data.access_token)
-        assert new_user_access_data is not None
-        assert new_user_access_data.user_id == new_user_id
-        assert new_user_access_data.email == payload["email"]
-        assert new_user_access_data.name == payload["name"]
-        assert new_user_access_data.is_authenticated is True
-        assert new_user_access_data.user_message_count == 1
-
+        old_user_access_data = await service_container.user_access_cache_service.get_user_access(user_access_data.access_token)
+        assert old_user_access_data is None
+        
     @pytest.mark.asyncio(loop_scope="session")
     async def test_signup_database_transaction_rollback(self, async_client, service_container):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()

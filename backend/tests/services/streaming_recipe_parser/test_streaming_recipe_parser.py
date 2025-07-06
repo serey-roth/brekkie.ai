@@ -10,7 +10,7 @@ from src.schemas.recipes import (
 
 from src.services.streaming_recipe_parser.streaming_recipe_parser import StreamingRecipeFieldParser
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
 
 def _get_results(parser: StreamingRecipeFieldParser, chunks: list[str]) -> list[RecipeField]:

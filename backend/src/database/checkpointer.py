@@ -15,5 +15,6 @@ def create_checkpointer_pool():
             "keepalives_idle": 600,
             "keepalives_interval": 30,
             "keepalives_count": 3,
+            "autocommit": True,
         }
     )

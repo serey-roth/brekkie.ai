@@ -1,4 +1,5 @@
-# tests/test_migration_parent_id.py
+"""Test that the parent_id is correctly assigned to existing assistant messages based on relatively most recent user message."""
+
 import uuid
 from datetime import datetime, timedelta, timezone
 import pytest

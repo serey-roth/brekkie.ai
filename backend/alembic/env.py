@@ -37,6 +37,24 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+# LangGraph checkpoint tables that should be excluded from migrations
+# These are automatically inserted by LangGraph and are not part of the schema
+LANGGRAPH_TABLES = {
+    'checkpoints',
+    'checkpoint_blobs', 
+    'checkpoint_writes',
+    'checkpoint_migrations'
+}
+
+def include_object(object_, name, type_, reflected, compare_to):
+    """
+    Filter function to exclude LangGraph checkpoint tables from migrations.
+    This ensures that LangGraph-managed tables are not affected by Alembic.
+    """
+    if type_ == "table" and name in LANGGRAPH_TABLES:
+        return False
+    return True
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -56,6 +74,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        # Exclude LangGraph checkpoint tables from migrations
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -77,7 +97,10 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, 
+            target_metadata=target_metadata,
+            # Exclude LangGraph checkpoint tables from migrations
+            include_object=include_object,
         )
 
         with context.begin_transaction():

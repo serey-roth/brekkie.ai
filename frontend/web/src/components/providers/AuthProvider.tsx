@@ -35,10 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsSubmitting(true);
             setError(null);
             try {
-                const accessData = await authClient.signup(
-                    payload,
-                    userAccessManager.getAccessToken(),
-                );
+                const accessData = await authClient.signup(payload);
                 userAccessManager.setUserAccessData(accessData);
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to sign up');
@@ -51,7 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     const signout = useCallback(async () => {
-        const accessData = await authClient.signout(userAccessManager.getAccessToken());
+        const accessData = await authClient.signout();
         userAccessManager.setUserAccessData(accessData);
     }, [authClient, userAccessManager]);
 

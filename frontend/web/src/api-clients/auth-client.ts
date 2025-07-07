@@ -1,11 +1,11 @@
-import { ApiErrorSchema } from "@/data/schemas/errors";
-import { UserAccessDataSchema, type UserAccessData } from "@/data/schemas/user-access";
-import { type UserSigninPayload, type UserSignupPayload } from "@/data/schemas/users";
+import { ApiErrorSchema } from '@/data/schemas/errors';
+import { UserAccessDataSchema, type UserAccessData } from '@/data/schemas/user-access';
+import { type UserSigninPayload, type UserSignupPayload } from '@/data/schemas/users';
 
 export interface IAuthClient {
-    signin(payload: UserSigninPayload, accessToken: string | null): Promise<UserAccessData>;
-    signup(payload: UserSignupPayload, accessToken: string | null): Promise<UserAccessData>;
-    signout(accessToken: string | null): Promise<UserAccessData>;
+    signin(payload: UserSigninPayload): Promise<UserAccessData>;
+    signup(payload: UserSignupPayload): Promise<UserAccessData>;
+    signout(): Promise<UserAccessData>;
 }
 
 export class HttpAuthClient implements IAuthClient {
@@ -18,18 +18,18 @@ export class HttpAuthClient implements IAuthClient {
     async signin(payload: UserSigninPayload): Promise<UserAccessData> {
         const headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
         } as Record<string, string>;
 
-        // Login no longer requires access token - it creates a new authenticated session
         const response = await fetch(`${this._baseUrl}/auth/login`, {
             method: 'POST',
             headers,
             body: JSON.stringify(payload),
+            credentials: 'include',
         });
-        
+
         const json = await response.json();
-        
+
         if (!response.ok) {
             const errorResult = await ApiErrorSchema.safeParseAsync(json);
             if (errorResult.success) {
@@ -46,24 +46,21 @@ export class HttpAuthClient implements IAuthClient {
         return result.data;
     }
 
-    async signup(payload: UserSignupPayload, accessToken: string | null): Promise<UserAccessData> {
+    async signup(payload: UserSignupPayload): Promise<UserAccessData> {
         const headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
         } as Record<string, string>;
-
-        if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-        }
 
         const response = await fetch(`${this._baseUrl}/auth/signup`, {
             method: 'POST',
             headers,
             body: JSON.stringify(payload),
+            credentials: 'include',
         });
-        
+
         const json = await response.json();
-        
+
         if (!response.ok) {
             const errorResult = await ApiErrorSchema.safeParseAsync(json);
             if (errorResult.success) {
@@ -80,20 +77,17 @@ export class HttpAuthClient implements IAuthClient {
         return result.data;
     }
 
-    async signout(accessToken: string | null): Promise<UserAccessData> {
+    async signout(): Promise<UserAccessData> {
         const headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
         } as Record<string, string>;
-
-        if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-        }
 
         // TODO: Change API to /signout
         const response = await fetch(`${this._baseUrl}/auth/logout`, {
-            method: 'POST', 
+            method: 'POST',
             headers,
+            credentials: 'include',
         });
 
         const json = await response.json();
@@ -112,5 +106,5 @@ export class HttpAuthClient implements IAuthClient {
         }
 
         return result.data;
-    }       
+    }
 }

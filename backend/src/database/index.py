@@ -3,13 +3,15 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+
+from config.settings import get_settings
+
 from utils.logger import Logger
 
 logger = Logger("database.index")
 
 load_dotenv()
-DATABASE_URL = os.getenv("DB_URL")
-is_development = os.getenv("ENVIRONMENT", "production") == "development"
+settings = get_settings()
 
 # Don't create the engine at module import time
 db_engine = None
@@ -18,21 +20,21 @@ db_session_factory = None
 def get_db_engine():
     global db_engine
     if db_engine is None:
-        if not DATABASE_URL:
+        if not settings.db_url:
             logger.error("DB_URL environment variable is not set")
             raise ValueError("DB_URL environment variable is not set")
         
         pool_config = {
-            "pool_size": 5,  # Reduced from 20 - suitable for 512MB VM
-            "max_overflow": 10,  # Reduced from 30 - max 15 total connections
-            "pool_timeout": 30,
-            "pool_recycle": 3600,
+            "pool_size": settings.db_pool_size,
+            "max_overflow": settings.db_max_overflow,
+            "pool_timeout": settings.db_pool_timeout,
+            "pool_recycle": settings.db_pool_recycle,
             "pool_pre_ping": True,
-            "echo": is_development,
+            "echo": settings.environment == "development",
         }
         
         db_engine = create_async_engine(
-            DATABASE_URL,
+            settings.db_url,
             **pool_config
         )
     return db_engine

@@ -8,6 +8,22 @@ class RedisCache(Generic[T]):
     def __init__(self, redis_client: RedisClient):
         self.redis = redis_client
         
+        
+    async def set(self, key: str, value: str, ttl: int | None = None, keep_ttl: bool = False) -> None:
+        if ttl is not None and keep_ttl:
+            raise ValueError("ttl and keep_ttl cannot be used together")
+        
+        if keep_ttl:
+            await self.redis.set(key, value, keepttl=True)
+        elif ttl is not None:
+            await self.redis.set(key, value, ex=ttl)
+        else:
+            await self.redis.set(key, value)
+            
+            
+    async def get(self, key: str) -> str | None:
+        return await self.redis.get(key)
+        
 
     async def set_json(self, key: str, value: T, ttl: int | None = None, keep_ttl: bool = False) -> None:
         if ttl is not None and keep_ttl:
@@ -79,3 +95,7 @@ class RedisCache(Generic[T]):
             if cursor == 0:
                 break
             
+    
+    async def expire(self, key: str, ttl: int) -> None:
+        await self.redis.expire(key, ttl)
+        

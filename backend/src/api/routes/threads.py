@@ -1,5 +1,5 @@
 from typing import Annotated, Literal
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Cookie
 
 from fastapi.params import Query
 
@@ -10,28 +10,12 @@ from schemas.messages import PaginatedMessages, GetMessagesParams
 from schemas.threads import PaginatedThreads, GetUserThreadsParams
 from schemas.recipes import UserRecipe
 
-from api.deps import get_service_container
+from api.deps import get_service_container, get_access_token
 from services.service_container import ServiceContainer
 
 from utils.logger import Logger
 
 logger = Logger("api.routes.threads")
-
-def _extract_access_token(access_token: Annotated[str | None, Header()] = None) -> str | None:
-    if not access_token:
-        return None
-    if not access_token.startswith("Bearer "):
-        return None
-    access_token = access_token.replace("Bearer ", "").strip()
-    if not access_token:
-        return None
-    return access_token
-
-
-async def _validate_access_token(access_token: str, service_container: ServiceContainer) -> UserAccessData:
-    user_access_cache_service = service_container.user_access_cache_service
-    user_access_data = await user_access_cache_service.get_user_access(access_token)
-    return user_access_data
 
 
 router = APIRouter()
@@ -39,20 +23,19 @@ router = APIRouter()
 @router.get("/threads")
 async def get_user_threads(
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
-    authorization: Annotated[str | None, Header()] = None,
+    access_token: Annotated[str | None, Depends(get_access_token)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 10,
     sort_by: Annotated[Literal["created_at", "updated_at"], Query()] = "updated_at",
     sort_order: Annotated[Literal["asc", "desc"], Query()] = "desc",
     from_timestamp: Annotated[str | None, Query()] = None,
     exclude_empty: Annotated[str | None, Query()] = "false",
 ) -> PaginatedThreads:
-    access_token = _extract_access_token(authorization)
     if access_token is None:
         raise HTTPException(status_code=401, detail={ "message": "Missing access token" })
     
-    user_access_data = await _validate_access_token(access_token, service_container)
+    user_access_data = await service_container.user_access_cache_service.get_user_access(access_token)
     if user_access_data is None:
-        raise HTTPException(status_code=401, detail={ "message": "Access token is invalid or expired" })
+        raise HTTPException(status_code=401, detail={ "message": "Access token not found" }) 
 
     try:
         logger.debug(f"Getting threads for user {user_access_data.user_id} with limit {limit} and from_timestamp {from_timestamp}")
@@ -77,19 +60,18 @@ class GetThreadMessagesResponse(BaseModel):
 async def get_thread_messages(
     thread_id: str,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
-    authorization: Annotated[str | None, Header()] = None,
+    access_token: Annotated[str | None, Depends(get_access_token)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     sort_by: Annotated[Literal["created_at", "updated_at"], Query()] = "created_at",
     sort_order: Annotated[Literal["asc", "desc"], Query()] = "desc",
     from_timestamp: Annotated[str | None, Query()] = None,
 ) -> GetThreadMessagesResponse:
-    access_token = _extract_access_token(authorization)
     if access_token is None:
         raise HTTPException(status_code=401, detail={ "message": "Missing access token" })
     
-    user_access_data = await _validate_access_token(access_token, service_container)
+    user_access_data = await service_container.user_access_cache_service.get_user_access(access_token)
     if user_access_data is None:
-        raise HTTPException(status_code=401, detail={ "message": "Access token is invalid or expired" })
+        raise HTTPException(status_code=401, detail={ "message": "Access token not found" })
     
     try:
         logger.debug(f"Getting messages for thread {thread_id} for user {user_access_data.user_id} with limit {limit} and from_timestamp {from_timestamp}")

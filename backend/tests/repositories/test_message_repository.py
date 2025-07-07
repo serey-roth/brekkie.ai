@@ -13,7 +13,7 @@ from schemas.messages import CreateMessageParams, UpdateMessageParams, GetDBMess
 from schemas.message_role import MessageRole
 from schemas.message_content_type import MessageContentType
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 from utils.date_utils import strip_timezone
 
 pytestmark = pytest.mark.asyncio

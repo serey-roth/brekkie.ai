@@ -1,13 +1,15 @@
 import pytest
 import asyncio
+from datetime import datetime, timezone
 
 from fakeredis.aioredis import FakeRedis
 
 from services.data_services.user_access_cache_service import UserAccessCacheService
 
 from schemas.user_access import UserAccessData
+from utils.date_utils import to_utc_isostring
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
 
 @pytest.fixture
@@ -26,7 +28,17 @@ def sample_user_id():
 
 
 @pytest.fixture
-def sample_anonymous_user_access_data(sample_access_token: str, sample_user_id: str):
+def sample_created_at():
+    return to_utc_isostring(datetime.now(timezone.utc))
+
+
+@pytest.fixture
+def sample_updated_at():
+    return to_utc_isostring(datetime.now(timezone.utc))
+
+
+@pytest.fixture
+def sample_anonymous_user_access_data(sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str):
     return UserAccessData(
         access_token=sample_access_token,
         user_id=sample_user_id,
@@ -34,10 +46,12 @@ def sample_anonymous_user_access_data(sample_access_token: str, sample_user_id: 
         name=None,
         is_authenticated=False,
         user_message_count=0,
+        created_at=sample_created_at,
+        updated_at=sample_updated_at,
     )
     
 @pytest.fixture
-def sample_authenticated_user_access_data(sample_access_token: str, sample_user_id: str):
+def sample_authenticated_user_access_data(sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str):
     return UserAccessData(
         access_token=sample_access_token,
         user_id=sample_user_id,
@@ -45,6 +59,8 @@ def sample_authenticated_user_access_data(sample_access_token: str, sample_user_
         name="test",
         is_authenticated=True,
         user_message_count=10,
+        created_at=sample_created_at,
+        updated_at=sample_updated_at,
     )
 
 
@@ -74,8 +90,8 @@ class TestUserAccessCacheService:
         
         
     @pytest.mark.asyncio
-    async def test_create_user_access(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str):
-        user_access_data = await user_access_cache_service.create_user_access(sample_access_token, sample_user_id, email="test@test.com", name="test", is_authenticated=True)
+    async def test_create_user_access(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str):
+        user_access_data = await user_access_cache_service.create_user_access(sample_access_token, sample_user_id, email="test@test.com", name="test", is_authenticated=True, created_at=sample_created_at, updated_at=sample_updated_at)
         assert_deep_equal(user_access_data, UserAccessData(
             access_token=sample_access_token,
             user_id=sample_user_id,
@@ -83,12 +99,14 @@ class TestUserAccessCacheService:
             name="test",
             is_authenticated=True,
             user_message_count=0,
+            created_at=sample_created_at,
+            updated_at=sample_updated_at,
         ))
         
         
     @pytest.mark.asyncio
-    async def test_create_user_access_with_ttl(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str):
-        user_access_data = await user_access_cache_service.create_user_access(sample_access_token, sample_user_id, email="test@test.com", name="test", is_authenticated=True, ttl=1)
+    async def test_create_user_access_with_ttl(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str):
+        user_access_data = await user_access_cache_service.create_user_access(sample_access_token, sample_user_id, email="test@test.com", name="test", is_authenticated=True, created_at=sample_created_at, updated_at=sample_updated_at, ttl=1)
         assert_deep_equal(user_access_data, UserAccessData(
             access_token=sample_access_token,
             user_id=sample_user_id,
@@ -96,6 +114,8 @@ class TestUserAccessCacheService:
             name="test",
             is_authenticated=True,
             user_message_count=0,
+            created_at=sample_created_at,
+            updated_at=sample_updated_at,
         ))
         
         await asyncio.sleep(1.1)
@@ -111,15 +131,20 @@ class TestUserAccessCacheService:
         assert user_access_data.user_id is not None
         assert user_access_data.is_authenticated is False
         assert user_access_data.user_message_count == 0
+        assert user_access_data.created_at is not None
+        assert user_access_data.updated_at is not None
         
         user_access_data = await user_access_cache_service.get_user_access(user_access_data.access_token)
         assert_deep_equal(user_access_data, user_access_data)
         
         
     @pytest.mark.asyncio
-    async def test_promote_to_authenticated(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_anonymous_user_access_data: UserAccessData):
+    async def test_promote_to_authenticated(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str, sample_anonymous_user_access_data: UserAccessData):
         await user_access_cache_service.set_user_access(sample_access_token, sample_anonymous_user_access_data)
-        await user_access_cache_service.promote_to_authenticated(sample_access_token, sample_user_id, "test@test.com", "test")
+        
+        updated_at = to_utc_isostring(datetime.now(timezone.utc))
+        await user_access_cache_service.promote_to_authenticated(sample_access_token, sample_user_id, "test@test.com", "test", updated_at, 10)
+        
         user_access_data = await user_access_cache_service.get_user_access(sample_access_token)
         assert_deep_equal(user_access_data, UserAccessData(
             access_token=sample_access_token,
@@ -127,15 +152,16 @@ class TestUserAccessCacheService:
             email="test@test.com",
             name="test",
             is_authenticated=True,
-            user_message_count=0,
+            user_message_count=10,
+            created_at=sample_created_at,
+            updated_at=updated_at,
         ))
         
         
     @pytest.mark.asyncio
-    async def test_increment_user_message_count(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_anonymous_user_access_data: UserAccessData):
+    async def test_increment_user_message_count(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str, sample_anonymous_user_access_data: UserAccessData):
         await user_access_cache_service.set_user_access(sample_access_token, sample_anonymous_user_access_data)
-        await user_access_cache_service.increment_user_message_count(sample_access_token)
-        user_access_data = await user_access_cache_service.get_user_access(sample_access_token)
+        user_access_data = await user_access_cache_service.increment_user_message_count(sample_access_token)
         assert_deep_equal(user_access_data, UserAccessData(
             access_token=sample_access_token,
             user_id=sample_user_id,
@@ -143,6 +169,8 @@ class TestUserAccessCacheService:
             name=None,
             is_authenticated=False,
             user_message_count=1,
+            created_at=sample_created_at,
+            updated_at=sample_updated_at,
         ))
         
         
@@ -153,11 +181,11 @@ class TestUserAccessCacheService:
             
             
     @pytest.mark.asyncio
-    async def test_is_authenticated(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_anonymous_user_access_data: UserAccessData):
+    async def test_is_authenticated(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_anonymous_user_access_data: UserAccessData, sample_updated_at: str):
         await user_access_cache_service.set_user_access(sample_access_token, sample_anonymous_user_access_data)
         assert not await user_access_cache_service.is_authenticated(sample_access_token)
         
-        await user_access_cache_service.promote_to_authenticated(sample_access_token, sample_user_id, "test@test.com", "test")
+        await user_access_cache_service.promote_to_authenticated(sample_access_token, sample_user_id, "test@test.com", "test", sample_updated_at, 10)
         assert await user_access_cache_service.is_authenticated(sample_access_token)
         
         

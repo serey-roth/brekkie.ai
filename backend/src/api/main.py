@@ -33,6 +33,8 @@ from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.data_services.user_access_cache_service import UserAccessCacheService
+from services.data_services.anonymous_access_rate_limiter import AnonymousAccessIpAddressRateLimiter
+from services.data_services.anonymous_access_service import AnonymousAccessService
 from services.data_services.user_service import UserService
 from services.data_services.thread_service import ThreadService
 from services.data_services.thread_cache_service import ThreadCacheService
@@ -45,32 +47,16 @@ from services.websocket_event_sender import WebSocketEventSender
 from services.redis.redis_client import create_redis_client
 
 # Load environment variables with proper precedence
-load_dotenv()  # Load .env if it exists
 load_dotenv(".env.local")  # Load .env.local (development)
 
-# Set environment with proper fallback
-environment = os.getenv("ENVIRONMENT", "development")
-os.environ["ENVIRONMENT"] = environment
-os.environ["DB_URL"] = os.getenv("DB_URL")
-os.environ["REDIS_URL"] = os.getenv("REDIS_URL")
-os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL")
-os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
-os.environ["TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY")
-
+from config.settings import get_settings
 from utils.logger import Logger
+
+settings = get_settings()
 
 logger = Logger("api.index")
 
-THREAD_CACHE_TTL = 60 * 60 * 24 # 1 day
-MESSAGE_CACHE_TTL = 60 * 60 * 24 # 1 day
-RECIPE_CACHE_TTL = 60 * 60 * 24 # 1 day
-USER_ACCESS_CACHE_TTL = 60 * 60 * 24 # 1 day
-
-SESSION_TTL = 60 * 30 # 30 minutes
-AUTHENTICATED_USER_MESSAGE_LIMIT = 50
-UNAUTHENTICATED_USER_MESSAGE_LIMIT = 10
-
-print("🚀 FastAPI app starting...")
+logger.info("🚀 FastAPI app starting...")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -84,15 +70,26 @@ async def lifespan(app: FastAPI):
     ai_food_agent = GoogleAIFoodAgent(checkpointer=checkpointer)
     
     redis_client = create_redis_client()
-    user_access_cache_service = UserAccessCacheService(redis_client=redis_client, ttl=USER_ACCESS_CACHE_TTL)
-    thread_cache_service = ThreadCacheService(redis_client=redis_client, ttl=THREAD_CACHE_TTL)
-    message_cache_service = MessageCacheService(redis_client=redis_client, ttl=MESSAGE_CACHE_TTL)
-    recipe_cache_service = RecipeCacheService(redis_client=redis_client, ttl=RECIPE_CACHE_TTL)
+    
+    user_access_cache_service = UserAccessCacheService(redis_client=redis_client, ttl=settings.user_access_cache_ttl)
+    thread_cache_service = ThreadCacheService(redis_client=redis_client, ttl=settings.thread_cache_ttl)
+    message_cache_service = MessageCacheService(redis_client=redis_client, ttl=settings.message_cache_ttl)
+    recipe_cache_service = RecipeCacheService(redis_client=redis_client, ttl=settings.recipe_cache_ttl)
     
     thread_service = ThreadService(repository=ThreadRepository())
     message_service = MessageService(repository=MessageRepository())
     user_service = UserService(repository=UserRepository())
     recipe_service = RecipeService(repository=RecipeRepository())
+    
+    anonymous_access_ip_rate_limiter = AnonymousAccessIpAddressRateLimiter(
+        redis_client=redis_client, 
+        ttl=settings.anonymous_access_rate_limiter_ttl, 
+        limit=settings.anonymous_access_rate_limiter_limit
+    )
+    anonymous_access_service = AnonymousAccessService(
+        user_access_cache_service=user_access_cache_service,
+        ip_rate_limiter=anonymous_access_ip_rate_limiter
+    )
     
     websocket_event_sender = WebSocketEventSender()
 
@@ -107,15 +104,15 @@ async def lifespan(app: FastAPI):
     )
     chat_session_limit_checker = ChatSessionLimitChecker(
         user_access_cache_service=user_access_cache_service,
-        authenticated_user_message_limit=AUTHENTICATED_USER_MESSAGE_LIMIT,
-        unauthenticated_user_message_limit=UNAUTHENTICATED_USER_MESSAGE_LIMIT
+        authenticated_user_message_limit=settings.authenticated_user_message_limit,
+        unauthenticated_user_message_limit=settings.unauthenticated_user_message_limit
     )
     chat_session_handlers = ChatSessionHandlers(
         db_transaction_maker=db_transaction_maker,
         chat_session_store=chat_session_store
     )
     chat_session_orchestrator = ChatSessionOrchestrator(
-        session_ttl=SESSION_TTL,
+        session_ttl=settings.session_ttl,
         db_transaction_maker=db_transaction_maker,
         user_access_cache_service=user_access_cache_service,
         ai_food_agent=ai_food_agent,
@@ -129,6 +126,7 @@ async def lifespan(app: FastAPI):
         db_transaction_maker=db_transaction_maker,
         ai_food_agent=ai_food_agent,
         user_access_cache_service=user_access_cache_service,
+        anonymous_access_service=anonymous_access_service,  
         user_service=user_service,
         message_service=message_service,
         message_cache_service=message_cache_service,
@@ -164,7 +162,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API routes
 app.include_router(health_router, prefix="/api")
 app.include_router(chats_router, prefix="/ws")
 app.include_router(auth_router, prefix="/api/auth")

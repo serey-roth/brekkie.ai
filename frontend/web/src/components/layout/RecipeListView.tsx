@@ -3,7 +3,7 @@ import { DateTime } from 'luxon';
 import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { FaCircleExclamation, FaUtensils } from 'react-icons/fa6';
 import { LuLoader } from 'react-icons/lu';
-import { useRecipesApiClient, useUserAccessManager } from '@/context/app-context';
+import { useRecipesApiClient } from '@/context/app-context';
 import { useRecipeManager } from '@/context/chat-context';
 import type { UserRecipe } from '@/data/schemas/recipes';
 import { RecipeCard } from '../recipes/RecipeCard';
@@ -28,7 +28,6 @@ export const RecipeListView = ({
 
     const recipeManager = useRecipeManager();
     const recipesApiClient = useRecipesApiClient();
-    const userAccessManager = useUserAccessManager();
 
     // Group recipes by month
     const groupedRecipes = useMemo(() => {
@@ -78,8 +77,7 @@ export const RecipeListView = ({
         setErrorMessage(null);
 
         try {
-            const accessToken = userAccessManager.getAccessToken();
-            const userRecipes = await recipesApiClient.getUserRecipes(accessToken);
+            const userRecipes = await recipesApiClient.getUserRecipes();
             setRecipes(userRecipes);
             recipeManager.addRecipes(userRecipes);
             setLoadingState('success');
@@ -88,7 +86,7 @@ export const RecipeListView = ({
             setErrorMessage('Failed to load your recipes. Please try again.');
             setLoadingState('error');
         }
-    }, [recipeManager, recipesApiClient, userAccessManager]);
+    }, [recipeManager, recipesApiClient]);
 
     useEffect(() => {
         fetchRecipes();

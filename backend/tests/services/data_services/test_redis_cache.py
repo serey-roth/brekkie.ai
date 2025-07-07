@@ -8,7 +8,7 @@ from typing import Any
 from fakeredis.aioredis import FakeRedis
 
 from services.redis.redis_cache import RedisCache
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
 
 pytestmark = pytest.mark.asyncio
@@ -26,6 +26,28 @@ async def redis_cache(redis_client: FakeRedis) -> RedisCache:
 
 
 class TestRedisCache:
+    async def test_set_and_get(self, redis_cache: RedisCache):
+        key = "test:set_and_get"
+        await redis_cache.set(key, "test")
+        result = await redis_cache.get(key)
+        assert result == b"test"
+        
+        await redis_cache.set(key, "test2", ttl=1)
+        result = await redis_cache.get(key)
+        assert result == b"test2"
+        
+        await asyncio.sleep(1.5)
+        result = await redis_cache.get(key)
+        assert result is None
+
+    async def test_get_ttl(self, redis_cache: RedisCache):
+        key = "test:ttl"
+        await redis_cache.set_json(key, {"id": "1", "value": "test"}, ttl=1)
+        assert await redis_cache.get_ttl(key) == 1
+        
+        await asyncio.sleep(1.5)
+        assert await redis_cache.get_ttl(key) == -2
+        
     async def test_set_and_get_json(self, redis_cache: RedisCache):
         key = "test:json"
         data = {"id": "1", "value": "test"}
@@ -33,7 +55,6 @@ class TestRedisCache:
         
         result = await redis_cache.get_json(key, dict)
         assert_deep_equal(result, data)
-
 
     async def test_set_json_with_ttl(self, redis_cache):
         key = "test:ttl"
@@ -44,7 +65,6 @@ class TestRedisCache:
         await asyncio.sleep(1.5)
         assert await redis_cache.get_json(key, dict) is None
         
-        
     async def test_set_and_get_json_with_model(self, redis_cache: RedisCache):
         key = "test:json:model"
         data = {"id": "1", "value": "test"}
@@ -52,7 +72,6 @@ class TestRedisCache:
         
         result = await redis_cache.get_json(key, DummyModel)
         assert_deep_equal(result, DummyModel(**data))
-        
         
     async def test_set_json_keep_ttl(self, redis_cache: RedisCache):
         key = "keep:ttl"
@@ -64,20 +83,17 @@ class TestRedisCache:
         await asyncio.sleep(6)
         assert await redis_cache.get_json(key, dict) is None
         
-    
     async def test_fails_if_set_json_keep_ttl_with_ttl(self, redis_cache: RedisCache):
         key = "keep:ttl"
         data = {"id": "1", "value": "test"}
         with pytest.raises(ValueError):
             await redis_cache.set_json(key, data, ttl=5, keep_ttl=True)
             
-        
     async def test_get_non_existent_key(self, redis_cache: RedisCache):
         key = "non:existent:key"
         result = await redis_cache.get_json(key, dict)
         assert result is None
-
-
+        
     async def test_get_all_json_by_keys(self, redis_cache):
         keys = ["k1", "k2", "k3"]
         
@@ -92,7 +108,6 @@ class TestRedisCache:
         assert len(results) == 3
         assert all(isinstance(r, DummyModel) for r in results)
 
-
     async def test_get_all_json_by_pattern(self, redis_cache):
         await redis_cache.set_json("p:1", {"id": "1"})
         await redis_cache.set_json("p:2", {"id": "2"})
@@ -102,14 +117,12 @@ class TestRedisCache:
         assert len(results) == 3
         assert all(isinstance(r, DummyModel) for r in results)
 
-
     async def test_exists(self, redis_cache: RedisCache):
         key = "exists:key"
         assert await redis_cache.exists(key) is False
         
         await redis_cache.set_json(key, {"id": "1", "value": "test"})
         assert await redis_cache.exists(key) is True
-
 
     async def test_delete(self, redis_cache):
         key = "delete:key"
@@ -120,7 +133,6 @@ class TestRedisCache:
         
         assert await redis_cache.exists(key) is False
 
-
     async def test_incr_and_decr(self, redis_cache: RedisCache):
         key = "counter"
         val = await redis_cache.incr(key)
@@ -129,7 +141,6 @@ class TestRedisCache:
         assert val == 2
         val = await redis_cache.decr(key)
         assert val == 1
-
 
     async def test_delete_by_pattern(self, redis_cache: RedisCache):
         keys = ["1", "2", "3"]
@@ -144,3 +155,13 @@ class TestRedisCache:
         assert await redis_cache.exists("p:1") is False
         assert await redis_cache.exists("p:2") is False
         assert await redis_cache.exists("p:3") is False
+        
+    async def test_expire(self, redis_cache: RedisCache):
+        key = "expire:key"
+        await redis_cache.set_json(key, {"id": "1", "value": "test"})
+        assert await redis_cache.exists(key) is True
+        
+        await redis_cache.expire(key, 1)
+        assert await redis_cache.exists(key) is True
+        await asyncio.sleep(1.5)
+        assert await redis_cache.exists(key) is False

@@ -1,11 +1,13 @@
 from uuid import uuid4
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, Header, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, Response
 from datetime import datetime, timezone
 
+from config.settings import get_settings
 
-from api.deps import get_service_container
+from api.deps import get_client_ip, get_service_container, get_access_token
 
+from schemas.api_error import RateLimitError
 from schemas.users import CreateUserParams, User, UserSignup, UserLogin
 from schemas.user_access import UserAccessData
 from schemas.threads import CreateThreadParams
@@ -14,26 +16,10 @@ from schemas.messages import CreateMessageParams
 
 from services.service_container import ServiceContainer
 
+from utils.date_utils import to_utc_isostring
 from utils.logger import Logger
 
 logger = Logger("api.routes.auth")
-
-
-def _extract_access_token(authorization: Annotated[str | None, Header()] = None) -> str | None:
-    if not authorization:
-        return None
-    if not authorization.startswith("Bearer "):
-        return None
-    access_token = authorization.replace("Bearer ", "").strip()
-    if not access_token:
-        return None
-    return access_token
-
-
-async def _validate_access_token(access_token: str, service_container: ServiceContainer) -> UserAccessData | None:
-    user_access_cache_service = service_container.user_access_cache_service
-    user_access_data = await user_access_cache_service.get_user_access(access_token)
-    return user_access_data   
 
 
 async def _migrate_user_data(old_user_id: str, new_user_id: str, service_container: ServiceContainer):
@@ -135,9 +121,10 @@ router = APIRouter()
 
 @router.post("/login", response_model=UserAccessData)
 async def login(
+    response: Response,
     payload: UserLogin, 
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
-    authorization: Annotated[str | None, Header()] = None,
+    access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     logger.debug(f"Login attempt for email: {payload.email}")
     
@@ -155,6 +142,8 @@ async def login(
         
             user_message_count = await service_container.message_service.count_total_messages_sent_by_user(db, user.id)
             
+            timestamp = datetime.now(timezone.utc)
+            
             new_access_data = await service_container.user_access_cache_service.create_user_access(
                 access_token=str(uuid4()),
                 user_id=user.id,
@@ -162,6 +151,22 @@ async def login(
                 name=user.name,
                 is_authenticated=True,
                 user_message_count=user_message_count,
+                created_at=to_utc_isostring(timestamp),
+                updated_at=to_utc_isostring(timestamp),
+            )
+            
+            if access_token:
+                await service_container.user_access_cache_service.revoke_access(access_token)
+            
+            settings = get_settings()
+            response.set_cookie(
+                settings.cookie_name,
+                new_access_data.access_token,
+                secure=settings.get_cookie_secure(),
+                samesite=settings.cookie_samesite,
+                max_age=settings.cookie_max_age,
+                httponly=settings.get_cookie_httponly(),
+                path=settings.cookie_path,
             )
 
             logger.info(f"User {user.id} ({user.email}) logged in successfully")
@@ -177,26 +182,28 @@ async def login(
    
 @router.post("/signup", response_model=UserAccessData)
 async def signup(
+    response: Response,
     payload: UserSignup, 
     service_container: Annotated[ServiceContainer, Depends(get_service_container)], 
     background_tasks: BackgroundTasks,
-    authorization: Annotated[str | None, Header()] = None,
+    access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     logger.debug(f"Signup attempt for email: {payload.email}")
     
     try:
-        access_token = _extract_access_token(authorization)
         if not access_token:
             raise HTTPException(status_code=401, detail={"message": "Missing access token"})
 
-        user_access_data = await _validate_access_token(access_token, service_container)
+        user_access_data = await service_container.user_access_cache_service.get_user_access(access_token)
         if user_access_data is None:
-            raise HTTPException(status_code=401, detail={"message": "Access token is invalid or expired"})
+            raise HTTPException(status_code=401, detail={"message": "Access token not found"})
         
         if user_access_data.is_authenticated:
             return user_access_data
         
         old_user_id = user_access_data.user_id
+        
+        timestamp = datetime.now(timezone.utc)
         
         user_service = service_container.user_service
         async with service_container.db_transaction_maker() as db:
@@ -208,29 +215,45 @@ async def signup(
             user = await user_service.create_user(
                 db, 
                 CreateUserParams(
-                    id=str(uuid4()),
-                    created_at=datetime.now(timezone.utc),
-                    updated_at=datetime.now(timezone.utc),
+                    id=old_user_id,
+                    created_at=timestamp,
+                    updated_at=timestamp,
                     email=payload.email,
                     name=payload.name,
                     password=payload.password
                 )
             )
-            
-            
-        old_user_message_count = await service_container.message_cache_service.count_total_messages_sent_by_user(old_user_id)
-        
-        new_access_data = await service_container.user_access_cache_service.promote_to_authenticated(
-            access_token=access_token,
-            user_id=user.id,
-            email=user.email,
-            name=user.name
-        )
-        
-        logger.info(f"User {user.id} ({user.email}) signed up successfully")
-        background_tasks.add_task(_migrate_user_data, old_user_id, user.id, service_container)
 
-        return new_access_data
+            old_user_message_count = await service_container.message_cache_service.count_total_messages_sent_by_user(old_user_id)
+            
+            new_access_data = await service_container.user_access_cache_service.create_user_access(
+                access_token=str(uuid4()),
+                user_id=user.id,
+                email=user.email,
+                name=user.name,
+                is_authenticated=True,
+                user_message_count=old_user_message_count,
+                created_at=to_utc_isostring(timestamp),
+                updated_at=to_utc_isostring(timestamp),
+            )
+            
+            await service_container.user_access_cache_service.revoke_access(access_token)
+            
+            settings = get_settings()
+            response.set_cookie(
+                settings.cookie_name,
+                new_access_data.access_token,
+                secure=settings.get_cookie_secure(),
+                samesite=settings.cookie_samesite,
+                max_age=settings.cookie_max_age,
+                httponly=settings.get_cookie_httponly(),
+                path=settings.cookie_path,
+            )
+            
+            logger.info(f"User {user.id} ({user.email}) signed up successfully")
+            background_tasks.add_task(_migrate_user_data, old_user_id, user.id, service_container)
+
+            return new_access_data
         
     except HTTPException:
         raise
@@ -242,17 +265,18 @@ async def signup(
 
 @router.post("/logout", response_model=UserAccessData)
 async def logout(
+    response: Response,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
-    authorization: Annotated[str | None, Header()] = None,
+    ip_address: Annotated[str, Depends(get_client_ip)],
+    access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     try:
-        access_token = _extract_access_token(authorization)
         if not access_token:
             raise HTTPException(status_code=401, detail={"message": "Missing access token"})
         
-        user_access_data = await _validate_access_token(access_token, service_container)
+        user_access_data = await service_container.user_access_cache_service.get_user_access(access_token)
         if user_access_data is None:
-            raise HTTPException(status_code=401, detail={"message": "Access token is invalid or expired"})
+            raise HTTPException(status_code=401, detail={"message": "Access token not found"})
         
         if not user_access_data.is_authenticated:
             raise HTTPException(status_code=400, detail={"message": "User not authenticated"})
@@ -260,8 +284,25 @@ async def logout(
         user_access_cache_service = service_container.user_access_cache_service
         await user_access_cache_service.revoke_access(access_token)
         
-        new_access_data = await user_access_cache_service.create_anonymous_access()
+        # TODO: This might change when we add OAuth
+        new_access_data = await service_container.anonymous_access_service.get_or_create_user_access(ip_address, None)
+        
+        settings = get_settings()
+        response.set_cookie(
+            settings.cookie_name,
+            new_access_data.access_token,
+            secure=settings.get_cookie_secure(),
+            samesite=settings.cookie_samesite,
+            max_age=settings.cookie_max_age,
+            httponly=settings.get_cookie_httponly(),
+            path=settings.cookie_path,
+        )
+        
+        logger.info(f"User {user_access_data.user_id} ({user_access_data.email}) logged out successfully")
         return new_access_data
+    
+    except RateLimitError:
+        raise HTTPException(status_code=429, detail={"message": "Too many anonymous requests from this device. Please try again later."})
     
     except HTTPException:
         raise

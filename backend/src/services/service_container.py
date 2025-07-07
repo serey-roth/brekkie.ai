@@ -11,6 +11,7 @@ from services.data_services.thread_service import ThreadService
 from services.data_services.thread_cache_service import ThreadCacheService
 from services.data_services.user_service import UserService
 from services.data_services.user_access_cache_service import UserAccessCacheService
+from services.data_services.anonymous_access_service import AnonymousAccessService
 
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
@@ -26,6 +27,7 @@ class ServiceContainer:
         ai_food_agent: AIFoodAgent,
         user_service: UserService,
         user_access_cache_service: UserAccessCacheService,
+        anonymous_access_service: AnonymousAccessService,
         message_service: MessageService,
         message_cache_service: MessageCacheService,
         recipe_service: RecipeService,
@@ -42,6 +44,7 @@ class ServiceContainer:
         
         self.user_service = user_service
         self.user_access_cache_service = user_access_cache_service
+        self.anonymous_access_service = anonymous_access_service
         
         self.message_service = message_service
         self.message_cache_service = message_cache_service

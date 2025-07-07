@@ -43,7 +43,6 @@ def run_auth_e2e_tests():
         "tests/e2e/test_login.py", 
         "tests/e2e/test_logout.py",
         "tests/e2e/test_ensure_access_token.py",
-        "tests/e2e/test_signup_integration.py"
     ]
     
     for test_file in auth_tests:
@@ -231,7 +230,7 @@ def main():
         print("📝 Running signup tests only...")
         result = subprocess.run([
             sys.executable, "-m", "pytest", 
-            "tests/e2e/test_signup.py", "tests/e2e/test_signup_integration.py",
+            "tests/e2e/test_signup.py",
             "-v", "--tb=short"
         ])
         if result.returncode != 0:

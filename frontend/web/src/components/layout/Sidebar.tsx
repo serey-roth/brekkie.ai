@@ -470,20 +470,18 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
     const threadsApiClient = useThreadsApiClient();
 
     const fetchThreads = useCallback(async () => {
+        // TODO: We don't fetch if there's no access token.  Better solution?
         if (!userAccessData?.access_token || isFetching || !hasMoreThreads) return;
 
         setIsFetching(true);
         try {
-            const response = await threadsApiClient.getUserThreads(
-                {
-                    limit: 10,
-                    sort_by: 'updated_at',
-                    sort_order: 'desc',
-                    from_timestamp: nextTimestamp,
-                    exclude_empty: true,
-                },
-                userAccessData.access_token,
-            );
+            const response = await threadsApiClient.getUserThreads({
+                limit: 10,
+                sort_by: 'updated_at',
+                sort_order: 'desc',
+                from_timestamp: nextTimestamp,
+                exclude_empty: true,
+            });
 
             setThreads((prev) => {
                 // The response threads should be authoritative, so we replace the existing threads with the new ones

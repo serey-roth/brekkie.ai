@@ -1,8 +1,8 @@
-import { ApiErrorSchema } from "@/data/schemas/errors";
-import { type UserAccessData, UserAccessDataSchema } from "@/data/schemas/user-access";
+import { ApiErrorSchema } from '@/data/schemas/errors';
+import { type UserAccessData, UserAccessDataSchema } from '@/data/schemas/user-access';
 
 export interface IAccessTokenClient {
-    ensureUserAccess(accessToken: string | null): Promise<UserAccessData>;
+    ensureUserAccess(): Promise<UserAccessData>;
 }
 
 export class HttpAccessTokenClient implements IAccessTokenClient {
@@ -12,19 +12,16 @@ export class HttpAccessTokenClient implements IAccessTokenClient {
         this._baseUrl = baseUrl;
     }
 
-    async ensureUserAccess(accessToken: string | null): Promise<UserAccessData> {
+    async ensureUserAccess(): Promise<UserAccessData> {
         const headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
         } as Record<string, string>;
-
-        if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-        }
 
         const response = await fetch(`${this._baseUrl}/access-token/ensure-access-token`, {
             method: 'POST',
             headers,
+            credentials: 'include',
         });
 
         const json = await response.json();

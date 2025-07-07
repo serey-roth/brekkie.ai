@@ -459,7 +459,6 @@ function useLoadChatPreviousMessages() {
 
     const retryCountRef = useRef(0);
 
-    const userAccessManager = useUserAccessManager();
     const chatStateManager = useChatStateManager();
     const messageManager = useMessageManager();
     const recipeManager = useRecipeManager();
@@ -481,9 +480,6 @@ function useLoadChatPreviousMessages() {
             return;
         }
 
-        const accessToken = userAccessManager.getAccessToken();
-        if (!accessToken) return;
-
         const threadId = chatStateManager.getCurrentThreadId();
         if (!threadId) return;
 
@@ -492,16 +488,13 @@ function useLoadChatPreviousMessages() {
         setErrorLoadingMoreMessages(null);
 
         try {
-            const result = await threadsClient.getThreadMessages(
-                {
-                    thread_id: threadId,
-                    limit: 50,
-                    from_timestamp: chatStateManager.getNextMessageTimestamp(),
-                    sort_by: 'created_at',
-                    sort_order: 'desc',
-                },
-                accessToken,
-            );
+            const result = await threadsClient.getThreadMessages({
+                thread_id: threadId,
+                limit: 50,
+                from_timestamp: chatStateManager.getNextMessageTimestamp(),
+                sort_by: 'created_at',
+                sort_order: 'desc',
+            });
 
             messageManager.prependMessages(result.paginated_messages.messages);
             chatStateManager.updateState((draft) => {
@@ -535,14 +528,7 @@ function useLoadChatPreviousMessages() {
                 setIsLoadingMoreMessages(false);
             }
         }
-    }, [
-        threadsClient,
-        chatStateManager,
-        messageManager,
-        userAccessManager,
-        recipeManager,
-        isChatStateReady,
-    ]);
+    }, [threadsClient, chatStateManager, messageManager, recipeManager, isChatStateReady]);
 
     useEffect(() => {
         const resetState = () => {
@@ -564,7 +550,7 @@ function useLoadChatPreviousMessages() {
             chatStateManager.unsubscribe('chatStateChanged', chatStateChangedListener);
             chatStateManager.unsubscribe('chatStateReady', chatStateReadyListener);
         };
-    }, [userAccessManager, chatStateManager]);
+    }, [chatStateManager]);
 
     return {
         isLoadingMoreMessages,

@@ -8,7 +8,7 @@ from repositories.thread_repository import CreateThreadParams, GetDBUserThreadsP
 
 from utils.date_utils import strip_timezone
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
 pytestmark = pytest.mark.asyncio
 

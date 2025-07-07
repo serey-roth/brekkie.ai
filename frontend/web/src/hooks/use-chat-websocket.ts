@@ -7,6 +7,7 @@ import {
     ChatSessionErrorTypesThatDontRequireReconnect,
 } from '@/data/schemas/errors';
 import { type UserMessagePayload } from '@/data/schemas/messages';
+import type { UserAccessData } from '@/data/schemas/user-access';
 import { ChatStateManager } from '@/managers/chat-state-manager';
 import {
     ConnectionStateManager,
@@ -22,16 +23,12 @@ type ChatWebSocketArgs = {
 
 const getWebsocketUrl = (
     baseWsUrl: string,
-    accessToken: string | null,
     threadId: string | null,
 ): string | null => {
-    if (accessToken === null) {
-        return null;
-    }
     const timestamp = Date.now();
     return threadId
-        ? `${baseWsUrl}/chat/${threadId}?access_token=${accessToken}&timestamp=${timestamp}`
-        : `${baseWsUrl}/chat?access_token=${accessToken}&timestamp=${timestamp}`;
+        ? `${baseWsUrl}/chat/${threadId}?timestamp=${timestamp}`
+        : `${baseWsUrl}/chat?timestamp=${timestamp}`;
 };
 
 const CLOSE_CODES_TO_NOT_RECONNECT = [
@@ -118,7 +115,7 @@ export function useChatWebSocket(args: ChatWebSocketArgs) {
             },
             retryOnError: true, // This will used the reconnectAttempts too
         },
-        !!websocketUrl,
+        websocketUrl !== null,
     );
 
     const sendMessage = useCallback(
@@ -146,26 +143,30 @@ const useWebsocketUrl = (args: {
     const config = useAppConfig();
 
     const [websocketUrl, setWebsocketUrl] = useState<string | null>(
-        getWebsocketUrl(
-            config.wsBaseUrl,
-            userAccessManager.getAccessToken(),
-            chatStateManager.getCurrentThreadId(),
-        ),
+        userAccessManager.getAccessToken()
+            ? getWebsocketUrl(config.wsBaseUrl, chatStateManager.getCurrentThreadId())
+            : null,
     );
     const hasTriedReconnectingToCurrentThreadRef = useRef(false);
 
     useEffect(() => {
-        const accessEnsuredListener = () => {
-            const accessToken = userAccessManager.getAccessToken();
+        const accessEnsuredListener = (data: UserAccessData) => {
+            const accessToken = data.access_token;
             const threadId = chatStateManager.getCurrentThreadId();
-            setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, accessToken, threadId));
+            if (accessToken) {
+                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, threadId));
+            } else {
+                setWebsocketUrl(null);
+            }
         };
 
         const currentThreadChangedListener = (data: { thread_id: string } | null) => {
             const accessToken = userAccessManager.getAccessToken();
-            setWebsocketUrl(
-                getWebsocketUrl(config.wsBaseUrl, accessToken, data?.thread_id ?? null),
-            );
+            if (accessToken) {
+                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, data?.thread_id ?? null));
+            } else {
+                setWebsocketUrl(null);
+            }
             // Reset the reconnection flag when thread changes
             hasTriedReconnectingToCurrentThreadRef.current = false;
         };
@@ -185,10 +186,10 @@ const useWebsocketUrl = (args: {
             if (hasTriedReconnectingToCurrentThreadRef.current) {
                 // First attempt to reconnect to the same thread failed due to thread not found/thread expired
                 // Start a new thread instead
-                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, accessToken, null));
+                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, null));
             } else {
                 hasTriedReconnectingToCurrentThreadRef.current = true;
-                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, accessToken, currentThreadId));
+                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, currentThreadId));
             }
         };
 
@@ -199,10 +200,8 @@ const useWebsocketUrl = (args: {
         };
 
         const chatSessionErrorListener = (error: ChatSessionError) => {
-            if (error.type === 'thread_not_found') {
-                setWebsocketUrl(
-                    getWebsocketUrl(config.wsBaseUrl, userAccessManager.getAccessToken(), null),
-                );
+            if (error.type === 'thread_not_found' && userAccessManager.getAccessToken()) {
+                setWebsocketUrl(getWebsocketUrl(config.wsBaseUrl, null));
             }
         };
 

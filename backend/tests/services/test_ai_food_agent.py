@@ -30,7 +30,7 @@ from schemas.recipes import (
 
 from src.services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 
-from tests.utils.assert_deep_equal import assert_deep_equal
+from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
 
 @pytest.fixture

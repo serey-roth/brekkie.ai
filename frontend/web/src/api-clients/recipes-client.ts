@@ -1,8 +1,8 @@
-import { ApiErrorSchema } from "@/data/schemas/errors";
-import { GetUserRecipesResponseSchema, type GetUserRecipesResponse } from "@/data/schemas/recipes";
+import { ApiErrorSchema } from '@/data/schemas/errors';
+import { GetUserRecipesResponseSchema, type GetUserRecipesResponse } from '@/data/schemas/recipes';
 
 export interface IRecipesClient {
-    getUserRecipes(accessToken: string | null): Promise<GetUserRecipesResponse>;
+    getUserRecipes(): Promise<GetUserRecipesResponse>;
 }
 
 export class HttpRecipesClient implements IRecipesClient {
@@ -12,21 +12,18 @@ export class HttpRecipesClient implements IRecipesClient {
         this._baseUrl = baseUrl;
     }
 
-    async getUserRecipes(accessToken: string | null): Promise<GetUserRecipesResponse> {
+    async getUserRecipes(): Promise<GetUserRecipesResponse> {
         const headers = {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
         } as Record<string, string>;
-
-        if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-        }
 
         const url = new URL(`${this._baseUrl}/recipes`);
 
         const response = await fetch(url.toString(), {
             method: 'GET',
             headers,
+            credentials: 'include',
         });
 
         const json = await response.json();
@@ -45,5 +42,5 @@ export class HttpRecipesClient implements IRecipesClient {
         }
 
         return result.data;
-    }   
+    }
 }

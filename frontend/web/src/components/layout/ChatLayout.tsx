@@ -44,7 +44,7 @@ export function ChatLayout({
     const { messageInputGapRef } = useMessageInputGapResize({
         onResize: ({ height }) => {
             if (scrollRef.current) {
-                scrollRef.current.style.paddingBottom = `${height}px`;
+                scrollRef.current.style.paddingBottom = `${height + 16}px`;
             }
         },
     });

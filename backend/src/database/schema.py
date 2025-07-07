@@ -17,7 +17,7 @@ class DBThread(Base):
     user_id = Column(String, ForeignKey("users.id"), index=True, nullable=False)
 
     created_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
-    updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)), onupdate=strip_timezone(datetime.now(timezone.utc)))
+    updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
     resumed_at = Column(DateTime, nullable=True)
 
     error_message = Column(Text, nullable=True) #TODO: Do we need thread-level error messages?
@@ -29,6 +29,9 @@ class DBThread(Base):
     user = relationship("DBUser", back_populates="threads")
     messages = relationship("DBMessage", back_populates="thread", cascade="all, delete-orphan")
     recipes = relationship("DBRecipe", back_populates="thread", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<DBThread(id='{self.id}', user_id='{self.user_id}', is_empty={self.is_empty})>"
 
 
 class DBMessage(Base):
@@ -44,7 +47,7 @@ class DBMessage(Base):
     content_type = Column(Enum(MessageContentType))
     text_content = Column(Text, nullable=True)
     created_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
-    updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)), onupdate=strip_timezone(datetime.now(timezone.utc)))
+    updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
 
     model_name = Column(String, nullable=True)
     input_tokens = Column(Integer, nullable=True)
@@ -70,6 +73,9 @@ class DBMessage(Base):
     thread = relationship("DBThread", back_populates="messages")
     recipe = relationship("DBRecipe", back_populates="message", uselist=False)
 
+    def __repr__(self):
+        return f"<DBMessage(id='{self.id}', role={self.role}, content_type={self.content_type})>"
+
 
 class DBUser(Base):
     __tablename__ = "users"
@@ -79,11 +85,14 @@ class DBUser(Base):
     name = Column(String, nullable=True)
     password_hash = Column(String, nullable=True)
     created_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
-    updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)), onupdate=strip_timezone(datetime.now(timezone.utc)))
+    updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
     
     messages = relationship("DBMessage", back_populates="user", cascade="all, delete-orphan")
     threads = relationship("DBThread", back_populates="user", cascade="all, delete-orphan")
     recipes = relationship("DBRecipe", back_populates="user", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<DBUser(id='{self.id}', email='{self.email}', name='{self.name}')>"
 
 
 class DBRecipe(Base):
@@ -102,7 +111,7 @@ class DBRecipe(Base):
     cook_time_minutes = Column(Integer, nullable=True)
     servings = Column(String, nullable=True)
     created_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
-    updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)), onupdate=strip_timezone(datetime.now(timezone.utc)))
+    updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
 
     chef_notes = Column(Text, nullable=True)
     substitutions = Column(Text, nullable=True)
@@ -116,3 +125,6 @@ class DBRecipe(Base):
     user = relationship("DBUser", back_populates="recipes")
     message = relationship("DBMessage", back_populates="recipe")
     thread = relationship("DBThread", back_populates="recipes")
+
+    def __repr__(self):
+        return f"<DBRecipe(id='{self.id}', name='{self.name}', user_id='{self.user_id}')>"

@@ -30,7 +30,7 @@ async def get_user_recipes(
     
     if user_access_data.is_authenticated:
         recipe_service = service_container.recipe_service
-        with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db:
             recipes = await recipe_service.get_user_recipes(db, user_access_data.user_id)
             return recipes
     else:

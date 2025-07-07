@@ -101,7 +101,12 @@ class GetDBUserThreadsParams(BaseModel):
 class UpdateThreadParams(BaseThreadParams):
     """Parameters for updating a thread."""
     id: str = Field(description="Thread ID")
-    updated_at: datetime | None = Field(default=None, description="When the thread was last modified")
+    updated_at: datetime = Field(description="When the thread was last modified")
     is_empty: bool | None = Field(default=None, description="Whether the thread is empty")
     
+    
+class ResumeThreadParams(BaseModel):
+    """Parameters for resuming a thread."""
+    id: str = Field(description="Thread ID")
+    resumed_at: datetime = Field(description="When the thread was resumed")
     

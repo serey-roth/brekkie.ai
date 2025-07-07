@@ -20,7 +20,7 @@ from schemas.user_access import UserAccessData
 from schemas.threads import (
     Thread,
     CreateThreadParams,
-    UpdateThreadParams,
+    ResumeThreadParams,
 )
 from schemas.chat_session_errors import (
     ChatSessionError,
@@ -141,14 +141,14 @@ class ChatSessionOrchestrator:
                 raise ThreadNotFoundError(thread_id)
             
             timestamp = datetime.now(timezone.utc)
-            thread = await self.chat_session_store.update_thread(db, user_access_data, UpdateThreadParams(id=thread_id, resumed_at=timestamp))
-            pagianted_messages = await self.chat_session_store.get_paginated_messages(db, user_access_data, GetMessagesParams(user_id=user_access_data.user_id, thread_id=thread_id, limit=10, sort_by='created_at', sort_order='desc'))
-            message_ids = [msg.id for msg in pagianted_messages.messages]
+            thread = await self.chat_session_store.resume_thread(db, user_access_data, ResumeThreadParams(id=thread_id, resumed_at=timestamp))
+            paginated_messages = await self.chat_session_store.get_paginated_messages(db, user_access_data, GetMessagesParams(user_id=user_access_data.user_id, thread_id=thread_id, limit=10, sort_by='created_at', sort_order='desc'))
+            message_ids = [msg.id for msg in paginated_messages.messages]
             recipes = await self.chat_session_store.get_recipes_by_message_id(db, user_access_data, thread_id, message_ids)
             
             return {
                 "thread": thread.model_dump(),
-                "paginated_messages": pagianted_messages.model_dump(),
+                "paginated_messages": paginated_messages.model_dump(),
                 "recipes": [recipe.model_dump() for recipe in recipes],
             }
 

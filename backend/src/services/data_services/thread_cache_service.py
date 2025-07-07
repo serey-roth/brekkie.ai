@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from schemas.threads import (
     CreateThreadParams, 
     GetUserThreadsParams, 
-    PaginatedThreads, 
+    PaginatedThreads,
+    ResumeThreadParams, 
     Thread, 
     UpdateThreadParams
 )
@@ -167,3 +168,12 @@ class ThreadCacheService:
             next_timestamp=next_timestamp,
         )
     
+    
+    async def resume_thread(self, user_id: str, params: ResumeThreadParams) -> Thread:
+        thread = await self.get_thread(user_id, params.id)
+        if thread is None:
+            raise ValueError(f"Thread {params.id} not found for user {user_id}")
+        
+        thread.resumed_at = to_utc_isostring(params.resumed_at)
+        await self.set_thread(thread, keep_ttl=True)
+        return thread

@@ -338,15 +338,18 @@ class TestResumeSession:
     ):
         mock_user_access_cache_service.get_user_access = AsyncMock(return_value=sample_anonymous_user_access_data)
         
-        with patch.object(orchestrator, '_resume_thread', new_callable=AsyncMock, return_value={
-            "thread": sample_thread.model_dump(),
-            "paginated_messages": sample_paginated_messages.model_dump(),
-            "recipes": [recipe.model_dump() for recipe in sample_recipes]
-        }), \
+        with patch.object(mock_chat_session_store, 'get_thread', new_callable=AsyncMock, return_value=sample_thread), \
+            patch.object(mock_chat_session_store, 'resume_thread', new_callable=AsyncMock, return_value=sample_thread), \
+            patch.object(mock_chat_session_store, 'get_paginated_messages', new_callable=AsyncMock, return_value=sample_paginated_messages), \
+            patch.object(mock_chat_session_store, 'get_recipes_by_message_id', new_callable=AsyncMock, return_value=sample_recipes), \
             patch('services.chat_services.chat_session_engine.ChatSessionEngine.run', new_callable=AsyncMock) as mock_run:
-            
+                        
             await orchestrator.resume_session(sample_access_token, sample_thread_id, mock_websocket)
             
+            mock_chat_session_store.get_thread.assert_called_once()
+            mock_chat_session_store.resume_thread.assert_called_once()
+            mock_chat_session_store.get_paginated_messages.assert_called_once()
+            mock_chat_session_store.get_recipes_by_message_id.assert_called_once()
             mock_websocket_event_sender.send_event.assert_called_once_with(
                 mock_websocket,
                 "thread_resumed",

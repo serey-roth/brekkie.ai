@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload
 
 from database.schema import DBThread
 
-from schemas.threads import CreateThreadParams, GetUserThreadsParams, UpdateThreadParams, GetDBUserThreadsParams
+from schemas.threads import CreateThreadParams, ResumeThreadParams, UpdateThreadParams, GetDBUserThreadsParams
 
 from utils.date_utils import strip_timezone
 
@@ -173,3 +173,24 @@ class ThreadRepository:
         db.add_all(db_threads)
         await db.flush()
         return db_threads
+    
+    
+    async def resume_thread(self, db: AsyncSession, params: ResumeThreadParams) -> DBThread:
+        """Resumes a thread.
+        
+        Args:
+            db: Database session for the operation
+            params: Resume parameters containing the thread id and resumed_at
+        """
+        thread_id = params.id
+        resumed_at = strip_timezone(params.resumed_at)
+        
+        thread = await db.get(DBThread, thread_id)
+        if thread is None:
+            raise ValueError(f"Thread {thread_id} not found")
+        
+        thread.resumed_at = resumed_at
+        db.add(thread)
+        await db.flush()
+        return thread
+    

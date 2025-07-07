@@ -20,7 +20,8 @@ from schemas.recipes import (
     UpdateRecipeFieldParams,
 )
 from schemas.threads import (
-    CreateThreadParams, 
+    CreateThreadParams,
+    ResumeThreadParams, 
     Thread, 
     UpdateThreadParams,
     PaginatedThreads,
@@ -110,6 +111,14 @@ class ChatSessionStore:
         )
         
     
+    async def resume_thread(self, db: AsyncSession, user_access_data: UserAccessData, params: ResumeThreadParams) -> Thread:
+        return await self._dispatch(
+            user_access_data,
+            lambda: self.thread_service.resume_thread(db, params),
+            lambda: self.thread_cache_service.resume_thread(user_access_data.user_id, params)
+        )
+        
+
     # TODO: Weird that we're passing user_access_data and including user_id in params
     async def get_paginated_threads(self, db: AsyncSession, user_access_data: UserAccessData, params: GetUserThreadsParams) -> PaginatedThreads:
         return await self._dispatch(

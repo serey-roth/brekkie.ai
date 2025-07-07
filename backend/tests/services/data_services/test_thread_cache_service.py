@@ -14,6 +14,7 @@ from schemas.threads import (
     UpdateThreadParams,
     GetUserThreadsParams,
     PaginatedThreads,
+    ResumeThreadParams,
 )
 
 from utils.date_utils import to_utc_isostring
@@ -105,7 +106,6 @@ class TestBasicThreadOperations:
         
         await thread_cache_service.update_thread("user_id", UpdateThreadParams(
             id="thread_id",
-            user_id="user_id",
             updated_at=datetime.now(timezone.utc),
             is_empty=False,
         ))
@@ -152,7 +152,6 @@ class TestBasicThreadOperations:
         
         updated_thread = await thread_cache_service.update_thread("user_id", UpdateThreadParams(
             id="thread_id",
-            user_id="user_id",
             updated_at=updated_at,
             is_empty=False,
             title="updated_title",
@@ -177,12 +176,37 @@ class TestBasicThreadOperations:
         with pytest.raises(ValueError):
             await thread_cache_service.update_thread("user_id", UpdateThreadParams(
                 id="thread_id",
-                user_id="user_id",
                 updated_at=datetime.now(timezone.utc),
                 is_empty=False,
             ))
             
+            
+    @pytest.mark.asyncio
+    async def test_resume_thread(self, thread_cache_service: ThreadCacheService):
+        thread = Thread(
+            id="thread_id",
+            user_id="user_id",
+            created_at=to_utc_isostring(datetime.now(timezone.utc)),
+            updated_at=to_utc_isostring(datetime.now(timezone.utc)),
+            resumed_at=None,
+            is_empty=True,
+            title=None,
+            summary=None,
+            error_message=None,
+        )
+        await thread_cache_service.set_thread(thread)
         
+        resumed_at = datetime.now(timezone.utc) + timedelta(seconds=1)
+        resumed_thread = await thread_cache_service.resume_thread("user_id", ResumeThreadParams(
+            id="thread_id",
+            resumed_at=resumed_at,
+        ))
+        
+        assert resumed_thread.id == "thread_id"
+        assert resumed_thread.user_id == "user_id"
+        assert resumed_thread.resumed_at == to_utc_isostring(resumed_at)
+        
+
     @pytest.mark.asyncio
     async def test_delete_threads_by_user_id(self, thread_cache_service: ThreadCacheService):
         await thread_cache_service.set_thread(Thread(

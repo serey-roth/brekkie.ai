@@ -4,7 +4,7 @@ import pytest_asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.thread_repository import CreateThreadParams, GetDBUserThreadsParams, ThreadRepository, UpdateThreadParams
+from repositories.thread_repository import CreateThreadParams, GetDBUserThreadsParams, ResumeThreadParams, ThreadRepository, UpdateThreadParams
 
 from utils.date_utils import strip_timezone
 
@@ -352,13 +352,12 @@ class TestUpdateThread:
         
         
     async def test_resume_thread(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_empty_thread_in_db, sample_empty_thread: dict, empty_thread_id: str):
-        params = UpdateThreadParams(
+        params = ResumeThreadParams(
             id=empty_thread_id,
-            updated_at=datetime.now(timezone.utc),
             resumed_at=datetime.now(timezone.utc),
         )
         
-        result = await thread_repository.update_thread(async_session, params)
+        result = await thread_repository.resume_thread(async_session, params)
         await async_session.commit()
         
         assert result is not None

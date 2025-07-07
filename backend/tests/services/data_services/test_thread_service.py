@@ -14,6 +14,7 @@ from schemas.threads import (
     Thread,
     UpdateThreadParams,
     GetUserThreadsParams,
+    ResumeThreadParams,
 )
 from utils.date_utils import to_utc_isostring
 
@@ -138,7 +139,32 @@ class TestSimpleThreadOperations:
         assert thread.summary == "test-summary"
         assert thread.error_message == "test-error-message"
         
+ 
+    async def test_resume_thread(self, async_session: AsyncSession, thread_service: ThreadService, sample_thread_id: str, sample_user_id: str, sample_timestamps: tuple[datetime, datetime]):
+        create_params = CreateThreadParams(
+            id=sample_thread_id,
+            user_id=sample_user_id,
+            created_at=sample_timestamps[0],
+            updated_at=sample_timestamps[1],
+            is_empty=True,
+        )
+        await thread_service.create_thread(async_session, create_params)
         
+        resumed_at = datetime.now(timezone.utc) + timedelta(seconds=1)
+        
+        resume_params = ResumeThreadParams(
+            id=sample_thread_id,
+            resumed_at=resumed_at,
+        )
+        thread = await thread_service.resume_thread(async_session, resume_params)
+        
+        assert isinstance(thread, Thread)
+        
+        assert thread.id == sample_thread_id
+        assert thread.user_id == sample_user_id
+        assert thread.resumed_at == to_utc_isostring(resumed_at)
+        
+
     async def test_is_thread_empty(self, async_session: AsyncSession, thread_service: ThreadService, sample_thread_id: str, sample_user_id: str, sample_timestamps: tuple[datetime, datetime]):
         create_params = CreateThreadParams(
             id=sample_thread_id,

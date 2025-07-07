@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from repositories.thread_repository import ThreadRepository
 
-from schemas.threads import Thread, PaginatedThreads, CreateThreadParams, GetUserThreadsParams, UpdateThreadParams, GetDBUserThreadsParams
+from schemas.threads import ResumeThreadParams, Thread, PaginatedThreads, CreateThreadParams, GetUserThreadsParams, UpdateThreadParams, GetDBUserThreadsParams
 
 from utils.logger import Logger
 from utils.date_utils import to_utc_isostring
@@ -67,6 +67,12 @@ class ThreadService:
     async def update_thread(self, db: AsyncSession, params: UpdateThreadParams) -> Thread:
         logger.debug(f"Updating thread {params.id} with {params}")
         thread = await self.repository.update_thread(db, params)
+        return Thread.from_db_thread(thread)
+    
+
+    async def resume_thread(self, db: AsyncSession, params: ResumeThreadParams) -> Thread:
+        logger.debug(f"Resuming thread {params.id} with {params}")
+        thread = await self.repository.resume_thread(db, params)
         return Thread.from_db_thread(thread)
     
 

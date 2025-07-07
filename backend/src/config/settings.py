@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     
     # Rate Limiting
     anonymous_access_rate_limiter_ttl: int = Field(default=60 * 60, env="ANONYMOUS_ACCESS_RATE_LIMITER_TTL")  # 1 hour
-    anonymous_access_rate_limiter_limit: int = Field(default=10, env="ANONYMOUS_ACCESS_RATE_LIMITER_LIMIT")
+    anonymous_access_rate_limiter_limit: int = Field(default=5, env="ANONYMOUS_ACCESS_RATE_LIMITER_LIMIT")
     
     # Session and Limits
     session_ttl: int = Field(default=60 * 30, env="SESSION_TTL")  # 30 minutes

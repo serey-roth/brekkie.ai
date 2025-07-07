@@ -221,7 +221,7 @@ const RecipeCategories = React.memo(function RecipeCategories({
             className="mb-6 flex flex-wrap gap-2"
         >
             {categories.map((cat) => (
-                <motion.span
+                <motion.div
                     key={cat.name}
                     variants={{
                         hidden: { opacity: 0, y: 6 },
@@ -230,8 +230,8 @@ const RecipeCategories = React.memo(function RecipeCategories({
                     transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                     className="border-primary bg-background text-primary rounded-full border px-4 py-1 text-sm font-semibold"
                 >
-                    {formatRecipeCategory(cat.name)}
-                </motion.span>
+                    <Markdown>{formatRecipeCategory(cat.name)}</Markdown>
+                </motion.div>
             ))}
         </motion.div>
     );

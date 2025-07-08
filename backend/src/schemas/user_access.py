@@ -12,4 +12,5 @@ class UserAccessData(BaseModel):
     user_message_count: int = Field(default=0, description="The number of messages the user has sent")
     created_at: str = Field(default_factory=lambda: to_utc_isostring(datetime.now(timezone.utc)), description="The timestamp when the user access was created")
     updated_at: str = Field(default_factory=lambda: to_utc_isostring(datetime.now(timezone.utc)), description="The timestamp when the user access was last updated")
+    ip_address: str | None = Field(default=None, description="The IP address of the user")
     

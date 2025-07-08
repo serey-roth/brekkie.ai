@@ -1,13 +1,13 @@
 from uuid import uuid4
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Response
 from datetime import datetime, timezone
 
 from config.settings import Settings
 
 from api.deps import get_client_ip, get_service_container, get_access_token, get_settings
 
-from schemas.users import CreateUserParams, User, UserSignup, UserLogin
+from schemas.users import CreateUserParams, UserSignup, UserLogin
 from schemas.user_access import UserAccessData
 from schemas.threads import CreateThreadParams
 from schemas.recipes import CreateRecipeParams
@@ -157,6 +157,7 @@ async def login(
                 user_message_count=user_message_count,
                 created_at=to_utc_isostring(timestamp),
                 updated_at=to_utc_isostring(timestamp),
+                ip_address=ip_address,
             )
             
             if access_token:
@@ -231,6 +232,7 @@ async def signup(
                     email=payload.email,
                     name=payload.name,
                     password=payload.password
+                    # TODO: Add ip address
                 )
             )
 
@@ -245,6 +247,7 @@ async def signup(
                 user_message_count=old_user_message_count,
                 created_at=to_utc_isostring(timestamp),
                 updated_at=to_utc_isostring(timestamp),
+                ip_address=ip_address,
             )
             
             await service_container.user_access_cache_service.revoke_access(access_token)
@@ -275,10 +278,8 @@ async def signup(
 
 @router.post("/logout")
 async def logout(
-    response: Response,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
     settings: Annotated[Settings, Depends(get_settings)],
-    ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ):
     if not settings.is_auth_enabled():
@@ -295,8 +296,7 @@ async def logout(
         if not user_access_data.is_authenticated:
             raise HTTPException(status_code=400, detail={"message": "User not authenticated"})
         
-        user_access_cache_service = service_container.user_access_cache_service
-        await user_access_cache_service.revoke_access(access_token)
+        await service_container.user_access_cache_service.revoke_access(access_token)
     
     except HTTPException:
         raise

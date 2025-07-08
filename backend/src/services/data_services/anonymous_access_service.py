@@ -25,4 +25,4 @@ class AnonymousAccessService:
         
         await self.ip_rate_limiter.increment(ip_address)
         
-        return await self.user_access_cache_service.create_anonymous_access()
+        return await self.user_access_cache_service.create_anonymous_access(ip_address)

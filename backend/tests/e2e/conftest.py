@@ -146,6 +146,11 @@ def sample_user():
         updated_at=to_utc_isostring(now)
     )
 
+@pytest.fixture
+def sample_ip_address():
+    return "192.168.1.100"
+
+
 
 @pytest.fixture
 def sample_existing_user_access_data(sample_user):
@@ -160,14 +165,17 @@ def sample_existing_user_access_data(sample_user):
 
 
 @pytest.fixture
-def sample_anonymous_user_access_data():
+def sample_anonymous_user_access_data(sample_ip_address):
     return UserAccessData(
         user_id='anon123',
         access_token="new-anonymous-token",
         email=None,
         name=None,
         is_authenticated=False,
-        user_message_count=0
+        user_message_count=0,
+        ip_address=sample_ip_address,
+        created_at=to_utc_isostring(datetime.now(timezone.utc)),
+        updated_at=to_utc_isostring(datetime.now(timezone.utc))
     )
 
 

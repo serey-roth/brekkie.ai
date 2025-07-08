@@ -32,7 +32,7 @@ class UserAccessCacheService:
         return data
     
     
-    async def create_user_access(self, access_token: str, user_id: str, *, name: str | None = None, email: str | None = None, is_authenticated: bool = False, user_message_count: int = 0, created_at: str | None = None, updated_at: str | None = None, ttl: int | None = None) -> UserAccessData:
+    async def create_user_access(self, access_token: str, user_id: str, *, name: str | None = None, email: str | None = None, is_authenticated: bool = False, user_message_count: int = 0, created_at: str | None = None, updated_at: str | None = None, ip_address: str | None = None, ttl: int | None = None) -> UserAccessData:
         return await self.set_user_access(access_token, UserAccessData(
             access_token=access_token,
             user_id=user_id,
@@ -42,14 +42,15 @@ class UserAccessCacheService:
             user_message_count=user_message_count,
             created_at=created_at,
             updated_at=updated_at,
+            ip_address=ip_address,
         ), ttl=ttl)
     
     
-    async def create_anonymous_access(self, ttl: int | None = None) -> UserAccessData:
+    async def create_anonymous_access(self, ip_address: str | None = None, ttl: int | None = None) -> UserAccessData:
         access_token = str(uuid4())
         user_id = str(uuid4())
         now = to_utc_isostring(datetime.now(timezone.utc))
-        return await self.create_user_access(access_token, user_id, is_authenticated=False, created_at=now, updated_at=now, ttl=ttl)
+        return await self.create_user_access(access_token, user_id, is_authenticated=False, created_at=now, updated_at=now, ip_address=ip_address, ttl=ttl)
     
     
     async def promote_to_authenticated(self, access_token: str, user_id: str, email: str, name: str, updated_at: str, user_message_count: int, ttl: int | None = None) -> UserAccessData:

@@ -15,8 +15,8 @@ from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
 class TestLogout:
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_successful_logout(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_successful_logout(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         await service_container.user_access_cache_service.promote_to_authenticated(
             access_token=user_access_data.access_token,
             user_id=user_access_data.user_id,
@@ -27,7 +27,7 @@ class TestLogout:
         )
         
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -40,11 +40,11 @@ class TestLogout:
         assert old_user_access_data is None
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_not_authenticated_user(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_not_authenticated_user(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
 
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -55,20 +55,16 @@ class TestLogout:
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_missing_token(self, async_client, service_container: ServiceContainer):
-        headers = {
-            "fly-client-ip": "192.168.1.100"
-        }
-        
-        response = await async_client.post("/api/auth/logout", headers=headers)
+        response = await async_client.post("/api/auth/logout")
         
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.cookies.get("bk_access_token") is None
         assert_deep_equal(response.json(), {"detail": {"message": "Missing access token"}})
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_invalid_token(self, async_client, service_container: ServiceContainer):
+    async def test_invalid_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
 
         async_client.cookies.set("bk_access_token", "invalid_token")

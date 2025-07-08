@@ -38,7 +38,12 @@ def sample_updated_at():
 
 
 @pytest.fixture
-def sample_anonymous_user_access_data(sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str):
+def sample_ip_address():
+    return "192.168.1.100"
+
+
+@pytest.fixture
+def sample_anonymous_user_access_data(sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str, sample_ip_address: str):
     return UserAccessData(
         access_token=sample_access_token,
         user_id=sample_user_id,
@@ -48,6 +53,7 @@ def sample_anonymous_user_access_data(sample_access_token: str, sample_user_id: 
         user_message_count=0,
         created_at=sample_created_at,
         updated_at=sample_updated_at,
+        ip_address=sample_ip_address,
     )
     
 @pytest.fixture
@@ -90,8 +96,8 @@ class TestUserAccessCacheService:
         
         
     @pytest.mark.asyncio
-    async def test_create_user_access(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str):
-        user_access_data = await user_access_cache_service.create_user_access(sample_access_token, sample_user_id, email="test@test.com", name="test", is_authenticated=True, created_at=sample_created_at, updated_at=sample_updated_at)
+    async def test_create_user_access(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str, sample_ip_address: str):
+        user_access_data = await user_access_cache_service.create_user_access(sample_access_token, sample_user_id, email="test@test.com", name="test", is_authenticated=True, created_at=sample_created_at, updated_at=sample_updated_at, ip_address=sample_ip_address)
         assert_deep_equal(user_access_data, UserAccessData(
             access_token=sample_access_token,
             user_id=sample_user_id,
@@ -101,12 +107,13 @@ class TestUserAccessCacheService:
             user_message_count=0,
             created_at=sample_created_at,
             updated_at=sample_updated_at,
+            ip_address=sample_ip_address,
         ))
         
         
     @pytest.mark.asyncio
-    async def test_create_user_access_with_ttl(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str):
-        user_access_data = await user_access_cache_service.create_user_access(sample_access_token, sample_user_id, email="test@test.com", name="test", is_authenticated=True, created_at=sample_created_at, updated_at=sample_updated_at, ttl=1)
+    async def test_create_user_access_with_ttl(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str, sample_ip_address: str):
+        user_access_data = await user_access_cache_service.create_user_access(sample_access_token, sample_user_id, email="test@test.com", name="test", is_authenticated=True, created_at=sample_created_at, updated_at=sample_updated_at, ip_address=sample_ip_address, ttl=1)
         assert_deep_equal(user_access_data, UserAccessData(
             access_token=sample_access_token,
             user_id=sample_user_id,
@@ -116,6 +123,7 @@ class TestUserAccessCacheService:
             user_message_count=0,
             created_at=sample_created_at,
             updated_at=sample_updated_at,
+            ip_address=sample_ip_address,
         ))
         
         await asyncio.sleep(1.1)
@@ -125,21 +133,22 @@ class TestUserAccessCacheService:
         
         
     @pytest.mark.asyncio
-    async def test_create_anonymous_access(self, user_access_cache_service: UserAccessCacheService):
-        user_access_data = await user_access_cache_service.create_anonymous_access()
+    async def test_create_anonymous_access(self, user_access_cache_service: UserAccessCacheService, sample_ip_address: str):
+        user_access_data = await user_access_cache_service.create_anonymous_access(sample_ip_address)
         assert user_access_data.access_token is not None
         assert user_access_data.user_id is not None
         assert user_access_data.is_authenticated is False
         assert user_access_data.user_message_count == 0
         assert user_access_data.created_at is not None
         assert user_access_data.updated_at is not None
+        assert user_access_data.ip_address == sample_ip_address
         
         user_access_data = await user_access_cache_service.get_user_access(user_access_data.access_token)
         assert_deep_equal(user_access_data, user_access_data)
-        
+                
         
     @pytest.mark.asyncio
-    async def test_promote_to_authenticated(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str, sample_anonymous_user_access_data: UserAccessData):
+    async def test_promote_to_authenticated(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str, sample_anonymous_user_access_data: UserAccessData, sample_ip_address: str):
         await user_access_cache_service.set_user_access(sample_access_token, sample_anonymous_user_access_data)
         
         updated_at = to_utc_isostring(datetime.now(timezone.utc))
@@ -155,11 +164,12 @@ class TestUserAccessCacheService:
             user_message_count=10,
             created_at=sample_created_at,
             updated_at=updated_at,
+            ip_address=sample_ip_address,
         ))
         
         
     @pytest.mark.asyncio
-    async def test_increment_user_message_count(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str, sample_anonymous_user_access_data: UserAccessData):
+    async def test_increment_user_message_count(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_created_at: str, sample_updated_at: str, sample_anonymous_user_access_data: UserAccessData, sample_ip_address: str):
         await user_access_cache_service.set_user_access(sample_access_token, sample_anonymous_user_access_data)
         user_access_data = await user_access_cache_service.increment_user_message_count(sample_access_token)
         assert_deep_equal(user_access_data, UserAccessData(
@@ -171,6 +181,7 @@ class TestUserAccessCacheService:
             user_message_count=1,
             created_at=sample_created_at,
             updated_at=sample_updated_at,
+            ip_address=sample_ip_address,
         ))
         
         
@@ -181,7 +192,7 @@ class TestUserAccessCacheService:
             
             
     @pytest.mark.asyncio
-    async def test_is_authenticated(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_anonymous_user_access_data: UserAccessData, sample_updated_at: str):
+    async def test_is_authenticated(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_anonymous_user_access_data: UserAccessData, sample_updated_at: str, sample_ip_address: str):
         await user_access_cache_service.set_user_access(sample_access_token, sample_anonymous_user_access_data)
         assert not await user_access_cache_service.is_authenticated(sample_access_token)
         
@@ -195,23 +206,11 @@ class TestUserAccessCacheService:
         
 
     @pytest.mark.asyncio
-    async def test_is_expired(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_anonymous_user_access_data: UserAccessData):
+    async def test_is_expired(self, user_access_cache_service: UserAccessCacheService, sample_access_token: str, sample_user_id: str, sample_anonymous_user_access_data: UserAccessData, sample_ip_address: str):
         await user_access_cache_service.set_user_access(sample_access_token, sample_anonymous_user_access_data, ttl=1)
         assert not await user_access_cache_service.is_expired(sample_access_token)
         
         await asyncio.sleep(1.1)
         
         assert await user_access_cache_service.is_expired(sample_access_token)
-    
-        
-        
-        
-        
-    
-    
-    
-        
-        
-        
-        
         

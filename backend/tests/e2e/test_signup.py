@@ -22,8 +22,8 @@ from utils.date_utils import to_utc_isostring
 
 class TestSignup:
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_successful_signup(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_successful_signup(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
 
         payload = {
             "email": "new@example.com",
@@ -32,9 +32,8 @@ class TestSignup:
             "confirm_password": "password123"
         }
         
-        ip_address = "192.168.1.100"
         headers = {
-            "fly-client-ip": ip_address
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -55,17 +54,18 @@ class TestSignup:
         assert response.json()["name"] == "New User"
         assert response.json()["is_authenticated"] is True
         assert response.json()["user_message_count"] == 0
+        assert response.json()["ip_address"] == sample_ip_address
         
         assert response.cookies.get("bk_access_token") is not None
         
-        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(ip_address) == 0
+        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(sample_ip_address) == 0
         
         old_user_access_data = await service_container.user_access_cache_service.get_user_access(user_access_data.access_token)
         assert old_user_access_data is None
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_signup_with_rate_limit_exceeded(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_signup_with_rate_limit_exceeded(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "new@example.com",
@@ -74,24 +74,28 @@ class TestSignup:
             "confirm_password": "password123"
         }
         
-        ip_address = "192.168.1.100"
         headers = {
-            "fly-client-ip": ip_address
+            "fly-client-ip": sample_ip_address
         }
         
-        await service_container.anonymous_access_service.ip_rate_limiter.increment(ip_address)
+        await service_container.anonymous_access_service.ip_rate_limiter.increment(sample_ip_address)
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
         
         response = await async_client.post("/api/auth/signup", json=payload, headers=headers)
         assert response.status_code == status.HTTP_200_OK
         
-        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(ip_address) == 0
+        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(sample_ip_address) == 0
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_signup_with_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings):
+    async def test_signup_with_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings, sample_ip_address: str):
         test_settings.enable_auth = False
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
+        
+        headers = {
+            "fly-client-ip": sample_ip_address
+        }
+        
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
         
         payload = {
@@ -100,13 +104,13 @@ class TestSignup:
             "password": "password123",
             "confirm_password": "password123"
         }
-        response = await async_client.post("/api/auth/signup", json=payload)   
+        response = await async_client.post("/api/auth/signup", json=payload, headers=headers)   
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_passwords_dont_match(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_passwords_dont_match(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "new@example.com",
@@ -115,7 +119,7 @@ class TestSignup:
             "confirm_password": "different_password"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -126,8 +130,8 @@ class TestSignup:
         assert response.cookies.get("bk_access_token") is None
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_user_already_exists(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_user_already_exists(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         async with service_container.db_transaction_maker() as db:
             await service_container.user_service.create_user(db, CreateUserParams(
@@ -146,7 +150,7 @@ class TestSignup:
             "confirm_password": "password123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -158,7 +162,7 @@ class TestSignup:
         assert_deep_equal(response.json(), {"detail": {"message": "User already exists"}})
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_missing_token(self, async_client, service_container: ServiceContainer):
+    async def test_missing_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
         payload = {
             "email": "new@example.com",
             "name": "New User",
@@ -167,7 +171,7 @@ class TestSignup:
         }
 
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         response = await async_client.post("/api/auth/signup", json=payload, headers=headers)
@@ -176,7 +180,7 @@ class TestSignup:
         assert response.cookies.get("bk_access_token") is None
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_invalid_token(self, async_client, service_container: ServiceContainer):
+    async def test_invalid_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
         payload = {
             "email": "new@example.com",
             "name": "New User",
@@ -185,7 +189,7 @@ class TestSignup:
         }
         
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", "invalid_token")
@@ -197,8 +201,8 @@ class TestSignup:
         assert_deep_equal(response.json(), {"detail": {"message": "Access token not found"}})
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_already_authenticated(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_already_authenticated(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         await service_container.user_access_cache_service.promote_to_authenticated(
             access_token=user_access_data.access_token,
             user_id=user_access_data.user_id,
@@ -215,7 +219,7 @@ class TestSignup:
             "confirm_password": "password123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -229,6 +233,7 @@ class TestSignup:
         assert "name" in response.json()
         assert "is_authenticated" in response.json()
         assert "user_message_count" in response.json()
+        assert "ip_address" in response.json()
         
         assert response.json()["user_id"] is not None
         assert response.json()["access_token"] is not None
@@ -236,12 +241,13 @@ class TestSignup:
         assert response.json()["name"] == "Test User"
         assert response.json()["is_authenticated"] is True
         assert response.json()["user_message_count"] == 0
+        assert response.json()["ip_address"] == sample_ip_address
         
         assert response.cookies.get("bk_access_token") is None
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_invalid_email_format(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_invalid_email_format(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "invalid-email",
@@ -261,14 +267,14 @@ class TestSignup:
         assert response.cookies.get("bk_access_token") is None
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_missing_required_fields(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_missing_required_fields(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "test@example.com"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -279,8 +285,8 @@ class TestSignup:
         assert response.cookies.get("bk_access_token") is None
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_weak_password(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_weak_password(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "test@example.com",
@@ -289,7 +295,7 @@ class TestSignup:
             "confirm_password": "123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -300,8 +306,8 @@ class TestSignup:
         assert response.cookies.get("bk_access_token") is None
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_empty_name(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_empty_name(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "test@example.com",
@@ -310,7 +316,7 @@ class TestSignup:
             "confirm_password": "password123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -321,8 +327,8 @@ class TestSignup:
         assert response.cookies.get("bk_access_token") is None
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_signup_with_whitespace_in_fields(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_signup_with_whitespace_in_fields(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
 
         payload = {
             "email": "  test@example.com  ",
@@ -332,7 +338,7 @@ class TestSignup:
         }
         
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)  
@@ -342,8 +348,8 @@ class TestSignup:
         assert response.cookies.get("bk_access_token") is not None
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_data_migration_successful(self, async_client, service_container: ServiceContainer):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_data_migration_successful(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         old_user_id = user_access_data.user_id
         
         sample_thread = Thread(
@@ -421,7 +427,7 @@ class TestSignup:
             "confirm_password": "password123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -440,6 +446,7 @@ class TestSignup:
         assert new_user_access_data["name"] == payload["name"]
         assert new_user_access_data["is_authenticated"] is True
         assert new_user_access_data["user_message_count"] == 1
+        assert new_user_access_data["ip_address"] == sample_ip_address
         
         new_user_id = new_user_access_data["user_id"]
         
@@ -474,8 +481,8 @@ class TestSignup:
         assert old_user_access_data is None
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_signup_database_transaction_rollback(self, async_client, service_container):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_signup_database_transaction_rollback(self, async_client, service_container, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "test_rollback@example.com",
@@ -484,7 +491,7 @@ class TestSignup:
             "confirm_password": "password123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -495,8 +502,8 @@ class TestSignup:
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_signup_redis_connection_failure(self, async_client, service_container):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()  
+    async def test_signup_redis_connection_failure(self, async_client, service_container, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)  
         
         payload = {
             "email": "test_redis@example.com",
@@ -505,7 +512,7 @@ class TestSignup:
             "confirm_password": "password123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -516,8 +523,8 @@ class TestSignup:
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_signup_password_hashing_integration(self, async_client, service_container):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_signup_password_hashing_integration(self, async_client, service_container, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "test_hashing@example.com",
@@ -526,7 +533,7 @@ class TestSignup:
             "confirm_password": "password123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -542,8 +549,8 @@ class TestSignup:
             assert user.name == "Test User Hashing"
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_revoke_old_access_token(self, async_client, service_container):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_revoke_old_access_token(self, async_client, service_container, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "test_token@example.com",
@@ -552,7 +559,7 @@ class TestSignup:
             "confirm_password": "password123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
 
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -566,8 +573,8 @@ class TestSignup:
         assert old_user_access_data is None
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_signup_cleanup_on_failure(self, async_client, service_container):
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+    async def test_signup_cleanup_on_failure(self, async_client, service_container, sample_ip_address: str):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
         payload = {
             "email": "test_cleanup@example.com",
@@ -576,7 +583,7 @@ class TestSignup:
             "confirm_password": "password123"
         }
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": sample_ip_address
         }
 
         async_client.cookies.set("bk_access_token", user_access_data.access_token)

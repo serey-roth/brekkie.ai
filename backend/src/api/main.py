@@ -19,7 +19,7 @@ from api.routes.threads import router as threads_router
 from api.routes.health import router as health_router
 from api.routes.recipes import router as recipes_router
 
-from database.index import db_transaction_maker
+from database.index import create_db_transaction_maker
 from database.checkpointer import create_checkpointer_pool
 
 from repositories.thread_repository import ThreadRepository
@@ -49,10 +49,9 @@ from services.redis.redis_client import create_redis_client
 # Load environment variables with proper precedence
 load_dotenv(".env.local")  # Load .env.local (development)
 
-from config.settings import get_settings
+from config.settings import Settings
 from utils.logger import Logger
 
-settings = get_settings()
 
 logger = Logger("api.index")
 
@@ -61,7 +60,9 @@ logger.info("🚀 FastAPI app starting...")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up...")
-
+    
+    settings = Settings()
+    
     #https://github.com/langchain-ai/langgraph/discussions/1429
     checkpointer_db_pool = create_checkpointer_pool()
     await checkpointer_db_pool.open(wait=True)
@@ -76,11 +77,6 @@ async def lifespan(app: FastAPI):
     message_cache_service = MessageCacheService(redis_client=redis_client, ttl=settings.message_cache_ttl)
     recipe_cache_service = RecipeCacheService(redis_client=redis_client, ttl=settings.recipe_cache_ttl)
     
-    thread_service = ThreadService(repository=ThreadRepository())
-    message_service = MessageService(repository=MessageRepository())
-    user_service = UserService(repository=UserRepository())
-    recipe_service = RecipeService(repository=RecipeRepository())
-    
     anonymous_access_ip_rate_limiter = AnonymousAccessIpAddressRateLimiter(
         redis_client=redis_client, 
         ttl=settings.anonymous_access_rate_limiter_ttl, 
@@ -90,6 +86,14 @@ async def lifespan(app: FastAPI):
         user_access_cache_service=user_access_cache_service,
         ip_rate_limiter=anonymous_access_ip_rate_limiter
     )
+    
+    db_transaction_maker = create_db_transaction_maker(settings)
+    
+    thread_service = ThreadService(repository=ThreadRepository())
+    message_service = MessageService(repository=MessageRepository())
+    user_service = UserService(repository=UserRepository())
+    recipe_service = RecipeService(repository=RecipeRepository())
+    
     
     websocket_event_sender = WebSocketEventSender()
 
@@ -140,6 +144,7 @@ async def lifespan(app: FastAPI):
         chat_session_limit_checker=chat_session_limit_checker
     )
 
+    app.state.settings = settings
     app.state.service_container = service_container
     app.state.checkpointer_db_pool = checkpointer_db_pool
     app.state.redis_client = redis_client

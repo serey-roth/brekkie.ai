@@ -143,7 +143,7 @@ export function ChatLayout({
                                                         </button>
                                                         <span> to unlock a higher limit.</span>
                                                     </div>
-                                                ): <div className="flex items-center gap-1 text-sm">
+                                                ): chatLimitMessage.type === 'error' && <div className="flex items-center gap-1 text-sm">
                                                     <span>Please check back later.</span>
                                                 </div>}
                                             </div>

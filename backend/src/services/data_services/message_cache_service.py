@@ -46,7 +46,7 @@ class MessageCacheService:
             set_ttl = None
         else:
             set_ttl = ttl if ttl is not None else self.ttl
-        await self.message_cache.set_json(self._get_message_key(user_id, message.thread_id, message.id), message.model_dump(mode="json"), ttl=ttl, keep_ttl=keep_ttl)
+        await self.message_cache.set_json(self._get_message_key(user_id, message.thread_id, message.id), message.model_dump(mode="json"), ttl=set_ttl, keep_ttl=keep_ttl)
    
    
     async def get_messages(self, user_id: str, thread_id: str) -> list[Message]:

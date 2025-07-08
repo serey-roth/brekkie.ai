@@ -44,7 +44,7 @@ class RecipeCacheService:
             set_ttl = None
         else:
             set_ttl = ttl if ttl is not None else self.ttl
-        await self.recipe_cache.set_json(self._get_recipe_key(recipe.user_id, recipe.thread_id, recipe.id), recipe.model_dump(mode="json"), ttl=ttl, keep_ttl=keep_ttl)
+        await self.recipe_cache.set_json(self._get_recipe_key(recipe.user_id, recipe.thread_id, recipe.id), recipe.model_dump(mode="json"), ttl=set_ttl, keep_ttl=keep_ttl)
  
     
     async def get_recipes(self, user_id: str, thread_id: str) -> list[UserRecipe]:

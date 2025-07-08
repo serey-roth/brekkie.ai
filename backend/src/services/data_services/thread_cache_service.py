@@ -38,7 +38,7 @@ class ThreadCacheService:
             set_ttl = None
         else:
             set_ttl = ttl if ttl is not None else self.ttl
-        await self.thread_cache.set_json(self._get_thread_key(thread.user_id, thread.id), thread.model_dump(mode="json"), ttl=ttl, keep_ttl=keep_ttl)
+        await self.thread_cache.set_json(self._get_thread_key(thread.user_id, thread.id), thread.model_dump(mode="json"), ttl=set_ttl, keep_ttl=keep_ttl)
     
     
     async def get_threads(self, user_id: str) -> list[Thread]:

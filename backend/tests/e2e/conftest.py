@@ -23,13 +23,13 @@ from sqlalchemy.sql import text
 from langgraph.checkpoint.memory import InMemorySaver
 
 from dotenv import load_dotenv
-from config.settings import Settings, get_settings, set_settings, reset_settings
 
 load_dotenv()  
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY") or "mock-google-api-key"
 os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL") or "mock-checkpoint-db-url"
 os.environ["TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY") or "mock-tavily-api-key"
 
+from config.settings import Settings
 
 from api.main import app
 from api.deps import get_service_container
@@ -265,27 +265,25 @@ async def test_settings():
         db_max_overflow=10,
         db_pool_timeout=30,
         db_pool_recycle=3600,
+        enable_auth=True
     )
     return test_settings
 
 
 @pytest_asyncio.fixture
 async def service_container(db_transaction_maker, redis_client, test_settings):
-    set_settings(test_settings)
-    settings = get_settings()
-    
     user_service = UserService(UserRepository())
     thread_service = ThreadService(ThreadRepository())
     message_service = MessageService(MessageRepository())
     recipe_service = RecipeService(RecipeRepository())
-    user_access_cache_service = UserAccessCacheService(redis_client, ttl=settings.user_access_cache_ttl)
-    thread_cache_service = ThreadCacheService(redis_client, ttl=settings.thread_cache_ttl)
-    message_cache_service = MessageCacheService(redis_client, ttl=settings.message_cache_ttl)
-    recipe_cache_service = RecipeCacheService(redis_client, ttl=settings.recipe_cache_ttl)
+    user_access_cache_service = UserAccessCacheService(redis_client, ttl=test_settings.user_access_cache_ttl)
+    thread_cache_service = ThreadCacheService(redis_client, ttl=test_settings.thread_cache_ttl)
+    message_cache_service = MessageCacheService(redis_client, ttl=test_settings.message_cache_ttl)
+    recipe_cache_service = RecipeCacheService(redis_client, ttl=test_settings.recipe_cache_ttl)
     anonymous_access_rate_limiter = AnonymousAccessIpAddressRateLimiter(
         redis_client, 
-        ttl=settings.anonymous_access_rate_limiter_ttl, 
-        limit=settings.anonymous_access_rate_limiter_limit
+        ttl=test_settings.anonymous_access_rate_limiter_ttl, 
+        limit=test_settings.anonymous_access_rate_limiter_limit
     )
     anonymous_access_service = AnonymousAccessService(user_access_cache_service, anonymous_access_rate_limiter)
     websocket_event_sender = WebSocketEventSender()
@@ -304,15 +302,15 @@ async def service_container(db_transaction_maker, redis_client, test_settings):
 
     chat_session_limit_checker = ChatSessionLimitChecker(
         user_access_cache_service=user_access_cache_service,
-        authenticated_user_message_limit=settings.authenticated_user_message_limit,
-        unauthenticated_user_message_limit=settings.unauthenticated_user_message_limit
+        authenticated_user_message_limit=test_settings.authenticated_user_message_limit,
+        unauthenticated_user_message_limit=test_settings.unauthenticated_user_message_limit
     )
     chat_session_handlers = ChatSessionHandlers(
         db_transaction_maker=db_transaction_maker,
         chat_session_store=chat_session_store
     )
     chat_session_orchestrator = ChatSessionOrchestrator(
-        session_ttl=settings.session_ttl,
+        session_ttl=test_settings.session_ttl,
         db_transaction_maker=db_transaction_maker,
         user_access_cache_service=user_access_cache_service,
         ai_food_agent=ai_food_agent,
@@ -339,6 +337,8 @@ async def service_container(db_transaction_maker, redis_client, test_settings):
         anonymous_access_service=anonymous_access_service
     )
     
+    
+    app.state.settings = test_settings
     app.state.service_container = container
     app.dependency_overrides[get_service_container] = lambda: container
     
@@ -346,7 +346,7 @@ async def service_container(db_transaction_maker, redis_client, test_settings):
     
     app.dependency_overrides = {}
     app.state.service_container = None
-    reset_settings()
+    app.state.settings = None
     
 
 

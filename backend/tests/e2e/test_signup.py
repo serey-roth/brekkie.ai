@@ -7,6 +7,8 @@ from unittest.mock import patch
 import asyncio
 from fastapi import status
 
+from config.settings import Settings
+
 from services.service_container import ServiceContainer
 
 from schemas.users import CreateUserParams
@@ -86,6 +88,12 @@ class TestSignup:
         
         assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(ip_address) == 0
         
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_signup_with_auth_disabled(self, async_client, service_container: ServiceContainer, settings: Settings):
+        settings.enable_auth = False
+        response = await async_client.post("/api/auth/signup", json={})
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_passwords_dont_match(self, async_client, service_container: ServiceContainer):

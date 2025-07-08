@@ -1,9 +1,9 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from config.settings import get_settings
+from config.settings import Settings
 
-from api.deps import  get_service_container, get_access_token, get_client_ip
+from api.deps import  get_service_container, get_access_token, get_client_ip, get_settings
 
 from schemas.api_error import RateLimitError
 from schemas.user_access import UserAccessData
@@ -19,6 +19,7 @@ async def ensure_access_token(
     response: Response,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
     ip_address: Annotated[str, Depends(get_client_ip)],
+    settings: Annotated[Settings, Depends(get_settings)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     try:
@@ -31,7 +32,6 @@ async def ensure_access_token(
             },
         )
         
-    settings = get_settings()
         
     should_refresh = False
     if access_token is None or access_token != user_access_data.access_token:

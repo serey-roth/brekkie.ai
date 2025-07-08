@@ -1,8 +1,8 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, WebSocket, Query
+from fastapi import APIRouter, Depends, WebSocket
 from fastapi.websockets import WebSocketState
 
-from api.deps import get_access_token_from_websocket, get_websocket_service_container
+from api.deps import get_access_token_from_websocket, get_service_container_from_websocket
 from services.service_container import ServiceContainer
 from schemas.chat_session_errors import AccessTokenNotFoundError, ChatSessionError, InternalServerError
 from utils.logger import Logger
@@ -22,7 +22,7 @@ router = APIRouter()
 @router.websocket("/chat")
 async def start_chat(
     websocket: WebSocket, 
-    service_container: Annotated[ServiceContainer, Depends(get_websocket_service_container)],
+    service_container: Annotated[ServiceContainer, Depends(get_service_container_from_websocket)],
     access_token: Annotated[str | None, Depends(get_access_token_from_websocket)] = None,
 ):
     try:
@@ -48,7 +48,7 @@ async def start_chat(
 async def resume_chat(
     websocket: WebSocket, 
     thread_id: str, 
-    service_container: Annotated[ServiceContainer, Depends(get_websocket_service_container)],
+    service_container: Annotated[ServiceContainer, Depends(get_service_container_from_websocket)],
     access_token: Annotated[str | None, Depends(get_access_token_from_websocket)] = None,
 ):
     try:

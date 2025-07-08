@@ -13,6 +13,7 @@ from schemas.threads import CreateThreadParams
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
+from config.settings import Settings
 
 pytestmark = pytest.mark.asyncio
 
@@ -133,7 +134,6 @@ class TestLogin:
             
         assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(ip_address) == 0
         
-        
     @pytest.mark.asyncio(loop_scope="session")
     async def test_login_with_rate_limit_exceeded(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
@@ -190,7 +190,15 @@ class TestLogin:
         
         assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(ip_address) == 0
         
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_login_with_auth_disabled(self, async_client, service_container: ServiceContainer, settings: Settings):
+        settings.enable_auth = False
+        response = await async_client.post("/api/auth/login", json={})
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.cookies.get("bk_access_token") is None
+        assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
         
+            
     @pytest.mark.asyncio(loop_scope="session")
     async def test_user_does_not_exist(self, async_client, service_container: ServiceContainer):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access()

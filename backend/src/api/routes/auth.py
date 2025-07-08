@@ -3,9 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, Response
 from datetime import datetime, timezone
 
-from config.settings import get_settings
+from config.settings import Settings
 
-from api.deps import get_client_ip, get_service_container, get_access_token
+from api.deps import get_client_ip, get_service_container, get_access_token, get_settings
 
 from schemas.users import CreateUserParams, User, UserSignup, UserLogin
 from schemas.user_access import UserAccessData
@@ -123,10 +123,14 @@ async def login(
     response: Response,
     payload: UserLogin, 
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
+    settings: Annotated[Settings, Depends(get_settings)],
     ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     logger.debug(f"Login attempt for email: {payload.email}")
+    
+    if not settings.is_auth_enabled():
+        raise HTTPException(status_code=403, detail={"message": "Feature temporarily unavailable. Please check back later."})
     
     try:
         user_service = service_container.user_service
@@ -160,7 +164,6 @@ async def login(
             
             await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
             
-            settings = get_settings()
             response.set_cookie(
                 settings.cookie_name,
                 new_access_data.access_token,
@@ -187,11 +190,15 @@ async def signup(
     response: Response,
     payload: UserSignup, 
     service_container: Annotated[ServiceContainer, Depends(get_service_container)], 
+    settings: Annotated[Settings, Depends(get_settings)],
     background_tasks: BackgroundTasks,
     ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     logger.debug(f"Signup attempt for email: {payload.email}")
+    
+    if not settings.is_auth_enabled():
+        raise HTTPException(status_code=403, detail={"message": "Feature temporarily unavailable. Please check back later."})
     
     try:
         if not access_token:
@@ -243,7 +250,6 @@ async def signup(
             await service_container.user_access_cache_service.revoke_access(access_token)
             await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
             
-            settings = get_settings()
             response.set_cookie(
                 settings.cookie_name,
                 new_access_data.access_token,
@@ -271,9 +277,13 @@ async def signup(
 async def logout(
     response: Response,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
+    settings: Annotated[Settings, Depends(get_settings)],
     ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ):
+    if not settings.is_auth_enabled():
+        raise HTTPException(status_code=403, detail={"message": "Feature temporarily unavailable. Please check back later."})
+    
     try:
         if not access_token:
             raise HTTPException(status_code=401, detail={"message": "Missing access token"})

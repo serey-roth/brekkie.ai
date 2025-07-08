@@ -1,6 +1,8 @@
 from typing import Annotated
 from fastapi import Request, WebSocket, Cookie
 
+from config.settings import Settings
+
 from services.service_container import ServiceContainer
 
 async def get_service_container(request: Request) -> ServiceContainer:
@@ -10,7 +12,7 @@ async def get_service_container(request: Request) -> ServiceContainer:
     return container
 
 
-async def get_websocket_service_container(websocket: WebSocket) -> ServiceContainer:
+async def get_service_container_from_websocket(websocket: WebSocket) -> ServiceContainer:
     container = getattr(websocket.app.state, "service_container", None)
     if container is None:
         raise RuntimeError("ServiceContainer is not initialized")
@@ -31,3 +33,11 @@ def get_client_ip(request: Request) -> str:
         or request.headers.get("x-forwarded-for", "").split(",")[0].strip() # generic proxy
         or request.client.host
     )
+
+
+def get_settings(request: Request) -> Settings:
+    return request.app.state.settings
+
+
+def get_settings_from_websocket(websocket: WebSocket) -> Settings:
+    return websocket.app.state.settings

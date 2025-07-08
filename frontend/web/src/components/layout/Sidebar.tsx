@@ -13,7 +13,7 @@ import {
     LuMessageSquareX,
     LuUtensils,
 } from 'react-icons/lu';
-import { useThreadsApiClient, useUserAccessManager } from '@/context/app-context';
+import { useAppConfig, useThreadsApiClient, useUserAccessManager } from '@/context/app-context';
 import { useAuthModal, useAuth } from '@/context/auth-context';
 import { useChatStateManager } from '@/context/chat-context';
 import type { ChatState } from '@/data/schemas/chat-state';
@@ -70,10 +70,12 @@ export function Sidebar({
     showRecipeListView,
     hideRecipeListView,
 }: SidebarProps) {
+    const { featureFlags } = useAppConfig();
+
     const { openAuthModal } = useAuthModal();
     const { signout } = useAuth();
-
     const userAccessData = useUserAccessData();
+    
     const { currentThreadId, startThread, resumeThread, resetCurrentThread } = useCurrentThread();
     const { threadGroups, isFetching, error, fetchMoreObserverTarget } = useFetchThreads(
         isOpen,
@@ -329,7 +331,7 @@ export function Sidebar({
                     </motion.div>
                 )}
 
-                <div
+                {featureFlags.enableAuth && <div
                     className={`mt-2 mb-4 flex flex-shrink-0 items-center gap-2 ${isOpen ? 'mx-4' : 'mx-auto'}`}
                 >
                     {!userAccessData?.is_authenticated && (
@@ -380,7 +382,7 @@ export function Sidebar({
                             )}
                         </motion.button>
                     )}
-                </div>
+                </div>}
             </motion.div>
         </>
     );

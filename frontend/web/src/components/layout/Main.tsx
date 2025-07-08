@@ -4,7 +4,7 @@ import { MessageList } from '@/components/chat/MessageList';
 import { ChatLayout } from '@/components/layout/ChatLayout';
 import { WelcomeScreen } from '@/components/layout/WelcomeScreen';
 import { RecipePanel } from '@/components/recipes/RecipePanel';
-import { useThreadsApiClient, useUserAccessManager } from '@/context/app-context';
+import { useAppConfig, useThreadsApiClient, useUserAccessManager } from '@/context/app-context';
 import { useAuth, useAuthModal } from '@/context/auth-context';
 import {
     useChatContext,
@@ -29,6 +29,7 @@ export function Main() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [scrollToBottomMessage, setScrollToBottomMessage] = useState<string | null>(null);
 
+    const { featureFlags } = useAppConfig();
     const userAccessManager = useUserAccessManager();
     const { isAuthModalOpen, openAuthModal, closeAuthModal } = useAuthModal();
     const { signin, signup } = useAuth();
@@ -163,18 +164,20 @@ export function Main() {
                 />
             </div>
 
-            <AuthScreen
-                isOpen={isAuthModalOpen}
-                onClose={closeAuthModal}
-                onSignIn={async (payload) => {
-                    await signin(payload);
-                    resetChatState();
-                }}
-                onSignUp={async (payload) => {
-                    await signup(payload);
-                    resetChatState();
-                }}
-            />
+            {featureFlags.enableAuth && (
+                <AuthScreen
+                    isOpen={isAuthModalOpen}
+                    onClose={closeAuthModal}
+                    onSignIn={async (payload) => {
+                        await signin(payload);
+                        resetChatState();
+                    }}
+                    onSignUp={async (payload) => {
+                        await signup(payload);
+                        resetChatState();
+                    }}
+                />
+            )}
         </div>
     );
 }
@@ -356,6 +359,8 @@ function useChatLimit() {
     const userAccessManager = useUserAccessManager();
     const [chatLimitMessage, setChatLimitMessage] = useState<ChatLimitMessage | null>(null);
 
+    const { featureFlags } = useAppConfig();
+    
     useEffect(() => {
         const limitReachedListener = (error: ChatSessionError) => {
             if (error.type === 'over_message_limit') {
@@ -372,7 +377,7 @@ function useChatLimit() {
             isAuthenticated: boolean,
         ) => {
             if (messageCount >= limit) {
-                return `You've reached your limit of ${limit} messages.${isAuthenticated ? ' Paid plans with higher limits are coming soon.' : ''}`;
+                return `You've reached your limit of ${limit} messages.${featureFlags.enableAuth && isAuthenticated ? ' Paid plans with higher limits are coming soon.' : ''}`;
             } else if (isAuthenticated && messageCount > 0 && Math.abs(messageCount - limit) < 10) {
                 return `You have ${limit - messageCount} messages left.`;
             } else if (!isAuthenticated && messageCount > 0) {
@@ -416,7 +421,7 @@ function useChatLimit() {
             userAccessManager.unsubscribe('accessChanged', accessChangedListener);
             chatStateManager.unsubscribe('chatSessionErrorOccurred', limitReachedListener);
         };
-    }, [userAccessManager, chatStateManager]);
+    }, [userAccessManager, chatStateManager, featureFlags]);
 
     return { chatLimitMessage };
 }

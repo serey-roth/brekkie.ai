@@ -6,6 +6,7 @@ import ChatInput from '@/components/chat/ChatInput';
 import { ConnectionStatusNotification } from '@/components/chat/ConnectionStatusNotification';
 import { ErrorNotification } from '@/components/ui/ErrorNotification';
 import { ThreadTitle } from '@/components/ui/ThreadTitle';
+import { useAppConfig } from '@/context/app-context';
 import type { ConnectionStatus  } from '@/data/schemas/connection-state';
 import type { ChatLimitMessage } from '@/data/schemas/errors';
 
@@ -44,6 +45,7 @@ export function ChatLayout({
     onScrollToBottom,
     onSendMessage,
 }: ChatLayoutProps) {
+    const { featureFlags } = useAppConfig();
     const { messageInputGapRef } = useMessageInputGapResize({
         onResize: ({ height }) => {
             if (scrollRef.current) {
@@ -131,7 +133,7 @@ export function ChatLayout({
                                                     )}
                                                     <span>{chatLimitMessage.message}</span>
                                                 </div>
-                                                {!isAuthenticated && onSignIn && (
+                                                {featureFlags.enableAuth && !isAuthenticated && onSignIn ? (
                                                     <div className="flex items-center gap-1 text-sm">
                                                         <button
                                                             onClick={onSignIn}
@@ -141,7 +143,9 @@ export function ChatLayout({
                                                         </button>
                                                         <span> to unlock a higher limit.</span>
                                                     </div>
-                                                )}
+                                                ): <div className="flex items-center gap-1 text-sm">
+                                                    <span>Please check back later.</span>
+                                                </div>}
                                             </div>
                                         </div>
                                     </div>

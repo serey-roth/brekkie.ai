@@ -9,6 +9,9 @@ export interface EnvironmentConfig {
     enableAnalytics?: boolean;
     maxMessageCountAnonymous: number;
     maxMessageCountAuthenticated: number;
+    featureFlags: {
+        enableAuth: boolean;
+    };
 }
 
 function getEnvVar(key: string, fallback: string): string {
@@ -25,6 +28,9 @@ const developmentConfig: EnvironmentConfig = {
     enableAnalytics: false,
     maxMessageCountAnonymous: 10,
     maxMessageCountAuthenticated: 50,
+    featureFlags: {
+        enableAuth: false,
+    },
 };
 
 const productionConfig: EnvironmentConfig = {
@@ -37,6 +43,9 @@ const productionConfig: EnvironmentConfig = {
     enableAnalytics: true,
     maxMessageCountAnonymous: 10,
     maxMessageCountAuthenticated: 50,
+    featureFlags: {
+        enableAuth: false,
+    },
 };
 
 // Test configuration
@@ -50,6 +59,9 @@ const testConfig: EnvironmentConfig = {
     enableAnalytics: false,
     maxMessageCountAnonymous: 10,
     maxMessageCountAuthenticated: 50,
+    featureFlags: {
+        enableAuth: false,
+    },
 };
 
 export function getEnvironmentConfig(): EnvironmentConfig {

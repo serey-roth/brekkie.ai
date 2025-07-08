@@ -89,9 +89,18 @@ class TestSignup:
         assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(ip_address) == 0
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_signup_with_auth_disabled(self, async_client, service_container: ServiceContainer, settings: Settings):
-        settings.enable_auth = False
-        response = await async_client.post("/api/auth/signup", json={})
+    async def test_signup_with_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings):
+        test_settings.enable_auth = False
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
+        payload = {
+            "email": "test@example.com",
+            "name": "Test User",
+            "password": "password123",
+            "confirm_password": "password123"
+        }
+        response = await async_client.post("/api/auth/signup", json=payload)   
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
 

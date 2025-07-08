@@ -28,7 +28,7 @@ from schemas.conversation_stream_events import (
 
 from utils.logger import Logger
 
-logger = Logger("google_ai_food_agent", level="WARNING")
+logger = Logger("google_ai_food_agent")
 
 
 class GoogleAIFoodAgent(AIFoodAgent):
@@ -151,7 +151,10 @@ class GoogleAIFoodAgent(AIFoodAgent):
         state: ConversationStreamState,
         on_event: Callable[[ConversationStreamEvent], Awaitable[None]],
     ):
+        logger.debug(f"Handling custom event: {data['event']}, message_stream_started: {state.has_message_stream_started()}")
+        
         if state.has_message_stream_started():
+            logger.debug("Completing message stream due to custom event")
             await on_event(ConversationStreamEvent(
                 event="text_message_completed",
                 payload=TextMessageCompletedPayload(full_message=state.get_full_response())
@@ -240,9 +243,12 @@ class GoogleAIFoodAgent(AIFoodAgent):
             input_state = {"messages": [HumanMessage(content=user_input)]}
 
             async for event, data in agent.astream(input_state, config, stream_mode=["messages", "custom"]):
+                logger.debug(f"Received event: {event}, data type: {type(data)}")
+                
                 if event == "messages" and isinstance(data, tuple):
                     chunk = data[0]
                     metadata = data[1]
+                    logger.debug(f"Processing message chunk: {type(chunk)}, metadata: {metadata}")
 
                     if isinstance(chunk, ToolMessage) and chunk.status == "success":
                         await self._handle_tool_message(chunk, metadata, recipe_parser, state, on_event)
@@ -252,6 +258,7 @@ class GoogleAIFoodAgent(AIFoodAgent):
                         continue
                     
                     if self._should_ignore_ai_text_message_chunk(metadata):
+                        logger.debug(f"Ignoring AI chunk from node: {metadata.get('langgraph_node')}")
                         continue
 
                     if not state.has_recipe_generation_started() and not state.has_message_stream_started():
@@ -266,6 +273,7 @@ class GoogleAIFoodAgent(AIFoodAgent):
                 else:
                     logger.error(f"Unexpected event: {event}")
 
+            logger.debug("Agent stream completed, checking if message stream needs to be ended")
             if state.has_message_stream_started():
                 await self._handle_message_stream_end(state, on_event)
 

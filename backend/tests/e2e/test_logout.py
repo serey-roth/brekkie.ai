@@ -79,8 +79,8 @@ class TestLogout:
         assert_deep_equal(response.json(), {"detail": {"message": "Access token not found"}})
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_logout_with_auth_disabled(self, async_client, service_container: ServiceContainer, settings: Settings):
-        settings.enable_auth = False
+    async def test_logout_with_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings):
+        test_settings.enable_auth = False
         response = await async_client.post("/api/auth/logout", headers={})
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})

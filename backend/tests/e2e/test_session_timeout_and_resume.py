@@ -407,7 +407,7 @@ class TestSessionTimeoutAndResume:
             # Send recipe generation request
             websocket.send_json({
                 "id": "1",
-                "content": "Use create_recipe tool to create a recipe for chocolate chip cookies"
+                "content": "I want to make chocolate chip cookies. Can you create a recipe for me?"
             })
             
             # Collect events until recipe generation completes

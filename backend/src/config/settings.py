@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     user_access_cache_ttl: int = Field(default=60 * 60 * 24 * 3, env="USER_ACCESS_CACHE_TTL")  # 3 days
     
     # Rate Limiting
-    anonymous_access_rate_limiter_ttl: int = Field(default=60 * 60, env="ANONYMOUS_ACCESS_RATE_LIMITER_TTL")  # 1 hour
-    anonymous_access_rate_limiter_limit: int = Field(default=5, env="ANONYMOUS_ACCESS_RATE_LIMITER_LIMIT")
+    anonymous_access_rate_limiter_ttl: int = Field(default=60 * 60 * 24 * 3, env="ANONYMOUS_ACCESS_RATE_LIMITER_TTL")  # 3 days
+    anonymous_access_rate_limiter_limit: int = Field(default=1, env="ANONYMOUS_ACCESS_RATE_LIMITER_LIMIT")
     
     # Session and Limits
     session_ttl: int = Field(default=60 * 30, env="SESSION_TTL")  # 30 minutes

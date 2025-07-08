@@ -33,8 +33,6 @@ class TestLogout:
         response = await async_client.post("/api/auth/logout", headers=headers)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.cookies.get("bk_access_token") is not None
-        assert response.json()["is_authenticated"] is False
         
         old_user_access_data = await service_container.user_access_cache_service.get_user_access(user_access_data.access_token)
         assert old_user_access_data is None
@@ -52,8 +50,6 @@ class TestLogout:
         response = await async_client.post("/api/auth/logout", headers=headers)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.cookies.get("bk_access_token") is None
-        assert_deep_equal(response.json(), {"detail": {"message": "User not authenticated"}})
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_missing_token(self, async_client, service_container: ServiceContainer):

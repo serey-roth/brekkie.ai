@@ -27,7 +27,7 @@ async def ensure_access_token(
         raise HTTPException(
             status_code=429,
             detail={
-                "message": "Too many anonymous requests from this device. Please try again later.",
+                "message": "Rate limit exceeded. Please try again later.",
             },
         )
         

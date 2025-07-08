@@ -29,8 +29,10 @@ class TestSignup:
             "password": "password123",
             "confirm_password": "password123"
         }
+        
+        ip_address = "192.168.1.100"
         headers = {
-            "fly-client-ip": "192.168.1.100"
+            "fly-client-ip": ip_address
         }
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
@@ -54,8 +56,36 @@ class TestSignup:
         
         assert response.cookies.get("bk_access_token") is not None
         
+        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(ip_address) == 0
+        
         old_user_access_data = await service_container.user_access_cache_service.get_user_access(user_access_data.access_token)
         assert old_user_access_data is None
+        
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_signup_with_rate_limit_exceeded(self, async_client, service_container: ServiceContainer):
+        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
+        
+        payload = {
+            "email": "new@example.com",
+            "name": "New User",
+            "password": "password123",  
+            "confirm_password": "password123"
+        }
+        
+        ip_address = "192.168.1.100"
+        headers = {
+            "fly-client-ip": ip_address
+        }
+        
+        await service_container.anonymous_access_service.ip_rate_limiter.increment(ip_address)
+        
+        async_client.cookies.set("bk_access_token", user_access_data.access_token)
+        
+        response = await async_client.post("/api/auth/signup", json=payload, headers=headers)
+        assert response.status_code == status.HTTP_200_OK
+        
+        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(ip_address) == 0
+        
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_passwords_dont_match(self, async_client, service_container: ServiceContainer):

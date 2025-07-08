@@ -7,7 +7,6 @@ from config.settings import get_settings
 
 from api.deps import get_client_ip, get_service_container, get_access_token
 
-from schemas.api_error import RateLimitError
 from schemas.users import CreateUserParams, User, UserSignup, UserLogin
 from schemas.user_access import UserAccessData
 from schemas.threads import CreateThreadParams
@@ -124,6 +123,7 @@ async def login(
     response: Response,
     payload: UserLogin, 
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
+    ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     logger.debug(f"Login attempt for email: {payload.email}")
@@ -158,6 +158,8 @@ async def login(
             if access_token:
                 await service_container.user_access_cache_service.revoke_access(access_token)
             
+            await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
+            
             settings = get_settings()
             response.set_cookie(
                 settings.cookie_name,
@@ -186,6 +188,7 @@ async def signup(
     payload: UserSignup, 
     service_container: Annotated[ServiceContainer, Depends(get_service_container)], 
     background_tasks: BackgroundTasks,
+    ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     logger.debug(f"Signup attempt for email: {payload.email}")
@@ -238,6 +241,7 @@ async def signup(
             )
             
             await service_container.user_access_cache_service.revoke_access(access_token)
+            await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
             
             settings = get_settings()
             response.set_cookie(
@@ -263,13 +267,13 @@ async def signup(
         raise HTTPException(status_code=500, detail={"message": "Internal server error"})
 
 
-@router.post("/logout", response_model=UserAccessData)
+@router.post("/logout")
 async def logout(
     response: Response,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
     ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
-) -> UserAccessData:
+):
     try:
         if not access_token:
             raise HTTPException(status_code=401, detail={"message": "Missing access token"})
@@ -283,26 +287,6 @@ async def logout(
         
         user_access_cache_service = service_container.user_access_cache_service
         await user_access_cache_service.revoke_access(access_token)
-        
-        # TODO: This might change when we add OAuth
-        new_access_data = await service_container.anonymous_access_service.get_or_create_user_access(ip_address, None)
-        
-        settings = get_settings()
-        response.set_cookie(
-            settings.cookie_name,
-            new_access_data.access_token,
-            secure=settings.get_cookie_secure(),
-            samesite=settings.cookie_samesite,
-            max_age=settings.cookie_max_age,
-            httponly=settings.get_cookie_httponly(),
-            path=settings.cookie_path,
-        )
-        
-        logger.info(f"User {user_access_data.user_id} ({user_access_data.email}) logged out successfully")
-        return new_access_data
-    
-    except RateLimitError:
-        raise HTTPException(status_code=429, detail={"message": "Too many anonymous requests from this device. Please try again later."})
     
     except HTTPException:
         raise

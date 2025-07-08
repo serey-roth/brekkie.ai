@@ -3,9 +3,10 @@ import { useEffect, useRef } from 'react';
 import { FaArrowDown } from 'react-icons/fa';
 import { FaCircleExclamation, FaTriangleExclamation } from 'react-icons/fa6';
 import ChatInput from '@/components/chat/ChatInput';
-import { ConnectionStatus } from '@/components/chat/ConnectionStatus';
+import { ConnectionStatusNotification } from '@/components/chat/ConnectionStatusNotification';
+import { ErrorNotification } from '@/components/ui/ErrorNotification';
 import { ThreadTitle } from '@/components/ui/ThreadTitle';
-import type { ConnectionState } from '@/data/schemas/connection-state';
+import type { ConnectionStatus  } from '@/data/schemas/connection-state';
 import type { ChatLimitMessage } from '@/data/schemas/errors';
 
 interface ChatLayoutProps {
@@ -15,13 +16,14 @@ interface ChatLayoutProps {
     onScrollToBottom: () => void;
     onSendMessage: (message: string) => void;
     scrollRef: React.RefObject<HTMLDivElement | null>;
-    connectionState: ConnectionState;
+    connectionStatus: ConnectionStatus;
     isAuthenticated: boolean;
     threadTitle: string | null;
     threadTitleState: 'empty' | 'loading' | 'complete';
+    appErrorMessage: string | null;
+    chatSessionErrorMessage: string | null;
+    chatLimitMessage: ChatLimitMessage | null;
     disableSendButton?: boolean;
-    chatSessionErrorMessage?: string;
-    chatLimitMessage?: ChatLimitMessage;
     onSignIn?: () => void;
 }
 
@@ -31,7 +33,8 @@ export function ChatLayout({
     scrollToBottomMessage,
     scrollRef,
     disableSendButton,
-    connectionState,
+    connectionStatus,
+    appErrorMessage,
     threadTitle,
     threadTitleState,
     chatSessionErrorMessage,
@@ -65,7 +68,12 @@ export function ChatLayout({
             }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         >
-            <ConnectionStatus connectionState={connectionState} />
+            <div className={`absolute top-5 right-4 z-50 flex flex-col items-end gap-1`}>
+                <ConnectionStatusNotification status={connectionStatus} />
+                {appErrorMessage && (
+                    <ErrorNotification errorMessage={appErrorMessage} />
+                )}
+            </div>
             <div
                 className={`bg-background absolute top-0 right-0 bottom-0 left-0 z-10 h-20 w-full transition-all duration-300 ease-in-out ${threadTitle || threadTitleState !== 'empty' ? 'border-border border-b shadow-sm' : 'border-b border-transparent shadow-none'}`}
             >

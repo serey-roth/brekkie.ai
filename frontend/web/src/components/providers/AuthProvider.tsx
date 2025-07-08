@@ -48,8 +48,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     const signout = useCallback(async () => {
-        const accessData = await authClient.signout();
-        userAccessManager.setUserAccessData(accessData);
+        await authClient.signout();
+        await userAccessManager.ensureUserAccess();
     }, [authClient, userAccessManager]);
 
     const openAuthModal = useCallback((mode?: 'login' | 'register') => {

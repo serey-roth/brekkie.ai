@@ -5,7 +5,7 @@ import { type UserSigninPayload, type UserSignupPayload } from '@/data/schemas/u
 export interface IAuthClient {
     signin(payload: UserSigninPayload): Promise<UserAccessData>;
     signup(payload: UserSignupPayload): Promise<UserAccessData>;
-    signout(): Promise<UserAccessData>;
+    signout(): Promise<void>;
 }
 
 export class HttpAuthClient implements IAuthClient {
@@ -77,7 +77,7 @@ export class HttpAuthClient implements IAuthClient {
         return result.data;
     }
 
-    async signout(): Promise<UserAccessData> {
+    async signout(): Promise<void> {
         const headers = {
             'Content-Type': 'application/json',
             Accept: 'application/json',
@@ -100,11 +100,6 @@ export class HttpAuthClient implements IAuthClient {
             throw new Error(`${json.detail.message || response.statusText}`);
         }
 
-        const result = await UserAccessDataSchema.safeParseAsync(json);
-        if (!result.success) {
-            throw new Error(`Invalid response from server: ${JSON.stringify(json)}`);
-        }
-
-        return result.data;
+        return;
     }
 }

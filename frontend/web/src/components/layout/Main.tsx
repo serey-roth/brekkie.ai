@@ -62,6 +62,7 @@ export function Main() {
     });
     const { threadTitle, threadTitleState } = useThreadTitle();
     const { chatLimitMessage } = useChatLimit();
+    const { accessErrorMessage } = useAccessErrorMessage();
 
     useScrollHandler({
         scrollRef,
@@ -120,10 +121,11 @@ export function Main() {
                         scrollToBottomMessage={scrollToBottomMessage}
                         onScrollToBottom={scrollToBottom}
                         onSendMessage={sendMessage}
-                        connectionState={connectionState}
+                        connectionStatus={connectionState.status}
                         isAuthenticated={userAccessManager.isAuthenticated() ?? false}
-                        chatLimitMessage={chatLimitMessage ?? undefined}
-                        chatSessionErrorMessage={chatSessionErrorMessage ?? undefined}
+                        appErrorMessage={accessErrorMessage ?? connectionState.errorMessage}
+                        chatLimitMessage={chatLimitMessage ?? null}
+                        chatSessionErrorMessage={chatSessionErrorMessage ?? null}
                         disableSendButton={
                             !currentChatState ||
                             isLoadingMoreMessages ||
@@ -417,6 +419,29 @@ function useChatLimit() {
     }, [userAccessManager, chatStateManager]);
 
     return { chatLimitMessage };
+}
+
+function useAccessErrorMessage() {
+    const userAccessManager = useUserAccessManager();
+    const [accessErrorMessage, setAccessErrorMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        const updateError = (error: string) => {
+            setAccessErrorMessage(error);
+        };
+        const resetError = () => {
+            setAccessErrorMessage(null);
+        };
+        userAccessManager.subscribe('accessEnsured', resetError);
+        userAccessManager.subscribe('accessChanged', resetError);
+        userAccessManager.subscribe('errorOccurred', updateError);
+        return () => {
+            userAccessManager.unsubscribe('accessChanged', resetError);
+            userAccessManager.unsubscribe('errorOccurred', updateError);
+        };
+    }, [userAccessManager]);
+
+    return { accessErrorMessage };
 }
 
 function useConnectionState() {

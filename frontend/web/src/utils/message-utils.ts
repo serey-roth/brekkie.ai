@@ -26,7 +26,7 @@ export function isAssistantRecipeMessage(message: Message): message is Assistant
 export function groupMessagesByRole(messages: Message[]): RoleMessageGroup[] {
     if (messages.length === 0) return [];
 
-    const sortedMessages = messages.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const sortedMessages = [...messages].sort((a, b) => a.created_at.localeCompare(b.created_at));
     const groups: RoleMessageGroup[] = [];
     let currentGroup: RoleMessageGroup | null = null;
 

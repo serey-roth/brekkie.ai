@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import _AsyncGeneratorContextManager
+from typing import List
 from pydantic import ValidationError
 from datetime import datetime, timedelta, timezone
 
@@ -14,10 +15,12 @@ from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_message_processor import ChatSessionMessageProcessor, MessageProcessingResult
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from services.data_services.user_access_cache_service import UserAccessCacheService
 
-
-from schemas.messages import UserMessagePayload
+from schemas.threads import Thread
+from schemas.messages import Message, UserMessagePayload
+from schemas.recipes import UserRecipe
 from schemas.user_access import UserAccessData
 from schemas.chat_session_errors import (
     AccessTokenNotFoundError,
@@ -27,6 +30,7 @@ from schemas.chat_session_errors import (
     OverMessageLimitError, 
     SessionClosedError
 )
+from schemas.safety_guards import SafetyIssue
 
 from utils.logger import Logger
 
@@ -75,6 +79,7 @@ class ChatSessionEngine:
         chat_session_store: ChatSessionStore,
         chat_session_handlers: ChatSessionHandlers,
         chat_session_limit_checker: ChatSessionLimitChecker,
+        chat_session_message_guard: ChatSessionMessageGuard,
     ):
         self.access_token = access_token
         self.thread_id = thread_id
@@ -86,8 +91,9 @@ class ChatSessionEngine:
         self.user_access_cache_service = user_access_cache_service
         self.session_store = chat_session_store
         self.session_handlers = chat_session_handlers
-        self.chat_session_limit_checker = chat_session_limit_checker
-        
+        self.limit_checker = chat_session_limit_checker
+        self.message_guard = chat_session_message_guard
+
         self.state = ChatSessionEngineState(session_ttl=session_ttl)
         self.message_processor = ChatSessionMessageProcessor(
             ai_food_agent=ai_food_agent,
@@ -150,15 +156,15 @@ class ChatSessionEngine:
         user_access_data = await self._get_user_access_data()
         payload = { "user_access_data": user_access_data.model_dump() }
         
-        if handler_result.get("thread", None) is not None:
+        if handler_result.get("thread", None) is not None and isinstance(handler_result["thread"], Thread):
             thread = handler_result["thread"]
             payload["thread"] = thread.model_dump()
             
-        if handler_result.get("message", None) is not None:
+        if handler_result.get("message", None) is not None and isinstance(handler_result["message"], Message):
             message = handler_result["message"]
-            payload["message"] = message.model_dump()
+            payload["message"] = message.model_dump(exclude={"ip_address", "safety_guard_result"})
             
-        if handler_result.get("recipe", None) is not None:
+        if handler_result.get("recipe", None) is not None and isinstance(handler_result["recipe"], UserRecipe):
             recipe = handler_result["recipe"]
             payload["recipe"] = recipe.model_dump()
             
@@ -206,9 +212,9 @@ class ChatSessionEngine:
     
     async def _check_message_limit(self) -> None:
         try:
-            has_reached_limit = await self.chat_session_limit_checker.has_message_limit_reached(self.access_token)
+            has_reached_limit = await self.limit_checker.has_message_limit_reached(self.access_token)
             if has_reached_limit:
-                limit = await self.chat_session_limit_checker.get_message_limit(self.access_token)
+                limit = await self.limit_checker.get_message_limit(self.access_token)
                 raise OverMessageLimitError(limit)
             
         except OverMessageLimitError as e:
@@ -217,6 +223,7 @@ class ChatSessionEngine:
         except Exception as e:
             logger.error(f"Error checking message limit for access token {self.access_token}: {e}")
             raise InternalServerError()
+    
     
     async def _receive_user_message(self) -> UserMessagePayload:
         try:
@@ -232,24 +239,44 @@ class ChatSessionEngine:
 
         except Exception as e:
             raise InternalServerError()
-        
-        
-    async def _handle_user_message(self, user_access_data: UserAccessData, payload: UserMessagePayload) -> None:
-        user_message_id = payload.id
-        timestamp = datetime.now(timezone.utc)
-        async with self.db_transaction_maker() as db:
-            await self.session_store.create_user_message(db, user_access_data, self.thread_id, user_message_id, payload.content, timestamp)
+    
+    
+    async def _reject_user_message(self, user_access_data: UserAccessData, user_message_id: str, user_input: str, safety_issues: List[SafetyIssue]):
+        try:
+            rejection_message = await self.message_guard.get_rejection_message(user_input, safety_issues)
+        except Exception as e:
+            logger.error(f"Error generating rejection message for access token {self.access_token}: {e}")
+            rejection_message = "I can't respond to that message. Let's keep our conversation respectful and focused on food and cooking!"
             
-        await self.message_processor.process_user_message(user_access_data, self.thread_id, user_message_id, payload.content)
-        
-        
+        await self.message_processor.reject_user_message(user_access_data, self.thread_id, user_message_id, rejection_message)
+    
     async def run(self):
         while not self.state.is_closed:
             try:
                 await self._check_message_limit()
                 user_access_data = await self._get_user_access_data()
+                
                 user_message_payload = await self._receive_user_message()
-                await self._handle_user_message(user_access_data, user_message_payload)
+                user_message_id = user_message_payload.id
+                user_message_content = user_message_payload.content
+                
+                timestamp = datetime.now(timezone.utc)
+                
+                safety_guard_result = self.message_guard.check_message_safety(user_message_content)
+                
+                async with self.db_transaction_maker() as db:
+                    await self.session_store.create_user_message(db, user_access_data, self.thread_id, user_message_id, user_message_content, timestamp, ip_address=user_access_data.ip_address, safety_guard_result=safety_guard_result)
+                    
+                should_reject_user_message = (
+                    safety_guard_result is not None 
+                    and safety_guard_result.is_blocked 
+                    and len(safety_guard_result.issues) > 0
+                )
+                if should_reject_user_message:
+                    await self._reject_user_message(user_access_data, user_message_id, user_message_content, safety_guard_result.issues)
+                    continue
+                
+                await self.message_processor.process_user_message(user_access_data, self.thread_id, user_message_id, user_message_content)
                     
             except WebSocketDisconnect:
                 break

@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import TypedDict, Union, TypeVar, Callable, Any
 import uuid
 
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from schemas.conversation_stream_events import (
@@ -19,6 +18,7 @@ from schemas.conversation_stream_events import (
     AIAgentErrorPayload,
     SummaryUpdatedPayload,
     ThreadTitleUpdatedPayload,
+    UserMessageRejectedPayload,
 )
 from schemas.messages import (
     CreateAssistantToolMessageParams,
@@ -497,7 +497,6 @@ class ChatSessionHandlers:
             raise e
         
         
-    
     @with_db_transaction
     async def handle_thread_title_updated(
         self, 
@@ -523,4 +522,42 @@ class ChatSessionHandlers:
         
         except Exception as e:
             logger.error(f"Error when handling thread title updated for user_id {user_access_data.user_id}: {e}")
+            raise e
+
+
+    @with_db_transaction
+    async def handle_user_message_rejected(
+        self, 
+        user_access_data: UserAccessData,
+        thread_id: str,
+        assistant_message_id: str,
+        payload: UserMessageRejectedPayload,
+        timestamp: datetime, 
+        *, 
+        db: AsyncSession,
+        user_message_id: str,
+    ) -> ChatSessionHandlersResult:
+        try:
+            logger.debug(f"User message rejected for user_id {user_access_data.user_id} with timestamp {timestamp}")
+            
+            thread = await self.chat_session_store.update_thread(db, user_access_data, UpdateThreadParams(
+                id=thread_id,
+                updated_at=timestamp,
+                is_empty=False,
+            ))
+            
+            message = await self.chat_session_store.create_assistant_text_message(db, user_access_data, CreateAssistantTextMessageParams(
+                id=assistant_message_id,
+                user_id=user_access_data.user_id,
+                thread_id=thread_id,
+                text_content=payload.rejection_message,
+                created_at=timestamp,
+                updated_at=timestamp,
+                parent_id=user_message_id,
+            ))      
+            
+            return { "thread": thread, "message": message }
+        
+        except Exception as e:
+            logger.error(f"Error when handling user message rejected for user_id {user_access_data.user_id}: {e}")
             raise e

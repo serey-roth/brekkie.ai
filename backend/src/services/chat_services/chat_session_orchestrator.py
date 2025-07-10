@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
 
-from schemas.messages import GetMessagesParams
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from services.websocket_event_sender import WebSocketEventSender
@@ -15,6 +14,7 @@ from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.chat_services.chat_session_engine import ChatSessionEngine
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 
 from schemas.user_access import UserAccessData
 from schemas.threads import (
@@ -22,6 +22,7 @@ from schemas.threads import (
     CreateThreadParams,
     ResumeThreadParams,
 )
+from schemas.messages import GetMessagesParams
 from schemas.chat_session_errors import (
     ChatSessionError,
     AccessTokenNotFoundError,
@@ -46,6 +47,7 @@ class ChatSessionOrchestrator:
         chat_session_store: ChatSessionStore,
         chat_session_handlers: ChatSessionHandlers,
         chat_session_limit_checker: ChatSessionLimitChecker,
+        chat_session_message_guard: ChatSessionMessageGuard,
     ):
         self.session_ttl = session_ttl
         self.db_transaction_maker = db_transaction_maker
@@ -55,7 +57,7 @@ class ChatSessionOrchestrator:
         self.chat_session_store = chat_session_store
         self.chat_session_handlers = chat_session_handlers
         self.chat_session_limit_checker = chat_session_limit_checker
-        
+        self.chat_session_message_guard = chat_session_message_guard
     
     async def _create_chat_session_engine(self, access_token: str, thread_id: str, websocket: WebSocket) -> ChatSessionEngine:
         return ChatSessionEngine(
@@ -70,6 +72,7 @@ class ChatSessionOrchestrator:
             chat_session_store=self.chat_session_store,
             chat_session_handlers=self.chat_session_handlers,
             chat_session_limit_checker=self.chat_session_limit_checker,
+            chat_session_message_guard=self.chat_session_message_guard,
         )
 
 

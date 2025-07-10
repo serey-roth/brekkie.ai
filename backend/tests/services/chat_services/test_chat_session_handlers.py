@@ -17,6 +17,7 @@ from schemas.conversation_stream_events import (
     SearchStartedPayload,
     SummaryUpdatedPayload,
     ThreadTitleUpdatedPayload,
+    UserMessageRejectedPayload,
 )
 
 from services.chat_services.chat_session_store import ChatSessionStore
@@ -1347,5 +1348,80 @@ class TestThreadTitleUpdated:
         
         assert_deep_equal(result, {
             "thread": expected_thread,
+        })
+        
+        
+class TestUserMessageRejected:
+    @pytest.mark.asyncio
+    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data, sample_user_message_id):
+        thread_id = "123"
+        assistant_message_id = "123"
+        timestamp = datetime.now(timezone.utc)
+        
+        rejection_message = "This is a test rejection message"
+        
+        expected_thread = Thread(
+            id=thread_id,
+            user_id=sample_user_access_data.user_id,
+            error_message=None,
+            is_empty=False,
+            created_at=to_utc_isostring(timestamp),
+            updated_at=to_utc_isostring(timestamp),
+        )
+        
+        expected_message = Message(
+            id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
+            thread_id=thread_id,
+            text_content=rejection_message,
+            created_at=to_utc_isostring(timestamp),
+            updated_at=to_utc_isostring(timestamp),
+            role=MessageRole.assistant,
+            content_type=MessageContentType.text,
+            parent_id=sample_user_message_id,
+        )
+        
+        mock_chat_session_store.update_thread.return_value = expected_thread
+        mock_chat_session_store.create_assistant_text_message.return_value = expected_message
+        
+        result = await chat_session_handlers.handle_user_message_rejected(
+            user_access_data=sample_user_access_data,
+            thread_id=thread_id,
+            assistant_message_id=assistant_message_id,
+            payload=UserMessageRejectedPayload(
+                rejection_message=rejection_message,
+            ),
+            timestamp=timestamp,
+            user_message_id=sample_user_message_id,
+        )
+        
+        mock_chat_session_store.update_thread.assert_called_once_with(
+            mock_async_session, 
+            sample_user_access_data,
+            UpdateThreadParams(
+                id=thread_id,
+                updated_at=timestamp,
+                error_message=None,
+                is_empty=False,
+            ),
+        )
+        
+        mock_chat_session_store.create_assistant_text_message.assert_called_once_with(      
+            mock_async_session,
+            sample_user_access_data,
+            CreateAssistantTextMessageParams(
+                id=assistant_message_id,
+                user_id=sample_user_access_data.user_id,
+                thread_id=thread_id,
+                text_content=rejection_message,
+                created_at=timestamp,
+                updated_at=timestamp,
+                parent_id=sample_user_message_id,   
+            ),
+        )
+        
+        assert_deep_equal(result, {
+            "thread": expected_thread,
+            "message": expected_message,
         })
         

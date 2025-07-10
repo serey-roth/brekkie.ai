@@ -27,6 +27,7 @@ from schemas.conversation_stream_events import (
     AIAgentErrorPayload,
     SummaryUpdatedPayload,
     ThreadTitleUpdatedPayload,
+    UserMessageRejectedPayload,
 )
 
 from utils.date_utils import to_utc_isostring 
@@ -663,3 +664,35 @@ class TestProcessUserMessage:
         assert call_args.kwargs["payload"].error_message == error_message
         assert "timestamp" in call_args.kwargs
     
+class TestRejectUserMessage:
+    @pytest.mark.asyncio
+    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_user_message_id):
+        thread_id = "123"
+        rejection_message = "I'm sorry, I can't help with that."
+        
+        await chat_session_message_processor.reject_user_message(
+            user_access_data=sample_user_access_data,
+            thread_id=thread_id,
+            user_message_id=sample_user_message_id,
+            rejection_message=rejection_message
+        )
+        
+        mock_chat_session_handlers.handle_user_message_rejected.assert_called_once()
+        call_args = mock_chat_session_handlers.handle_user_message_rejected.call_args
+        
+        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["thread_id"] == thread_id
+        assert call_args.kwargs["user_message_id"] == sample_user_message_id
+        assert call_args.kwargs["payload"] == UserMessageRejectedPayload(
+            rejection_message=rejection_message,
+        )
+        assert "timestamp" in call_args.kwargs
+        assert "user_message_id" in call_args.kwargs
+        
+        mock_on_message_processed.assert_called_once()
+        processing_result = mock_on_message_processed.call_args[0][0]
+        assert "event" in processing_result
+        assert processing_result["event"] == "user_message_rejected"
+        assert "result" in processing_result
+        assert "timestamp" in processing_result
+        

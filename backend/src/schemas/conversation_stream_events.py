@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator, Field
-from typing import Dict, Any, Literal
+from typing import Literal
 
 from schemas.recipes import Recipe, RecipeField
 
@@ -59,6 +59,10 @@ class ThreadTitleUpdatedPayload(BaseModel):
     thread_title: str
 
 
+class UserMessageRejectedPayload(BaseModel):
+    rejection_message: str
+
+
 # TODO: Replace with enum?
 ConversationStreamEventName = Literal[
     "text_message_started",
@@ -71,7 +75,8 @@ ConversationStreamEventName = Literal[
     "recipe_generation_completed",
     "ai_agent_error",
     "summary_updated",
-    "thread_title_updated"
+    "thread_title_updated",
+    "user_message_rejected",
 ]
 
 class ConversationStreamEvent(BaseModel):
@@ -88,6 +93,7 @@ class ConversationStreamEvent(BaseModel):
         | AIAgentErrorPayload
         | SummaryUpdatedPayload
         | ThreadTitleUpdatedPayload
+        | UserMessageRejectedPayload
     )
 
     @field_validator('payload')
@@ -127,4 +133,7 @@ class ConversationStreamEvent(BaseModel):
         elif event == "thread_title_updated":
             if not isinstance(v, ThreadTitleUpdatedPayload):
                 raise ValueError("thread_title_updated event should have ThreadTitleUpdatedPayload")
+        elif event == "user_message_rejected":
+            if not isinstance(v, UserMessageRejectedPayload):
+                raise ValueError("user_message_rejected event should have UserMessageRejectedPayload")
         return v

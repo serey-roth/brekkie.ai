@@ -2,7 +2,6 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# Add the src directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from fastapi import FastAPI
@@ -11,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from api.routes.chats import router as chats_router
 from api.routes.auth import router as auth_router
@@ -32,6 +32,7 @@ from services.chat_services.chat_session_limit_checker import ChatSessionLimitCh
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
 from services.chat_services.chat_session_store import ChatSessionStore
+from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from services.data_services.user_access_cache_service import UserAccessCacheService
 from services.data_services.anonymous_access_rate_limiter import AnonymousAccessIpAddressRateLimiter
 from services.data_services.anonymous_access_service import AnonymousAccessService
@@ -44,6 +45,8 @@ from services.data_services.recipe_service import RecipeService
 from services.data_services.recipe_cache_service import RecipeCacheService
 from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from services.websocket_event_sender import WebSocketEventSender
+from services.safety_guards.regex_safety_guard import RegexSafetyGuard
+from services.safety_guards.ml_classifier_safety_guard import MLClassifierSafetyGuard
 from services.redis.redis_client import create_redis_client
 
 # Load environment variables with proper precedence
@@ -94,7 +97,6 @@ async def lifespan(app: FastAPI):
     user_service = UserService(repository=UserRepository())
     recipe_service = RecipeService(repository=RecipeRepository())
     
-    
     websocket_event_sender = WebSocketEventSender()
 
     chat_session_store = ChatSessionStore(
@@ -115,6 +117,21 @@ async def lifespan(app: FastAPI):
         db_transaction_maker=db_transaction_maker,
         chat_session_store=chat_session_store
     )
+    
+    response_llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash-preview-05-20",
+        temperature=0.1,
+        api_key=os.getenv("GOOGLE_API_KEY"),
+    )
+    chat_session_message_guard = ChatSessionMessageGuard(
+        regex_safety_guard=RegexSafetyGuard(),
+        ml_classifier_safety_guard=MLClassifierSafetyGuard(
+            prompt_injection_model_id=settings.prompt_injection_model_id,
+            toxicity_model_id=settings.toxicity_model_id,
+        ),
+        response_llm=response_llm
+    )
+    
     chat_session_orchestrator = ChatSessionOrchestrator(
         session_ttl=settings.session_ttl,
         db_transaction_maker=db_transaction_maker,
@@ -123,7 +140,8 @@ async def lifespan(app: FastAPI):
         websocket_event_sender=websocket_event_sender,  
         chat_session_store=chat_session_store,
         chat_session_handlers=chat_session_handlers,
-        chat_session_limit_checker=chat_session_limit_checker
+        chat_session_limit_checker=chat_session_limit_checker,
+        chat_session_message_guard=chat_session_message_guard
     )
 
     service_container = ServiceContainer(

@@ -6,7 +6,9 @@ from schemas.conversation_stream_events import (
     AIAgentErrorPayload, 
     ConversationStreamEvent, 
     ConversationStreamEventName,
+    UserMessageRejectedPayload,
 )
+
 from schemas.user_access import UserAccessData
 
 from services.ai_food_agent.ai_food_agent import AIFoodAgent
@@ -48,6 +50,7 @@ class ChatSessionMessageProcessor:
             "summary_updated": self.chat_session_handlers.handle_summary_updated,
             "thread_title_updated": self.chat_session_handlers.handle_thread_title_updated,
             "ai_agent_error": self.chat_session_handlers.handle_ai_agent_error,
+            "user_message_rejected": self.chat_session_handlers.handle_user_message_rejected,
         }
         
     
@@ -57,6 +60,7 @@ class ChatSessionMessageProcessor:
             "text_message_started", 
             "recipe_generation_started", 
             "search_started", 
+            "user_message_rejected",
         ]
 
     
@@ -71,9 +75,10 @@ class ChatSessionMessageProcessor:
             "recipe_generation_completed", 
             "search_started",
             "search_completed",
+            "user_message_rejected",
         ]
         
-        
+
     def _requires_existing_assistant_message_id(self, event: ConversationStreamEvent) -> bool:
         event_name = event.event
         return event_name in [
@@ -84,12 +89,14 @@ class ChatSessionMessageProcessor:
             "search_completed",
         ]
     
+    
     def _should_create_assistant_message(self, event: ConversationStreamEvent) -> bool:
         event_name = event.event
         return event_name in [
             "text_message_started", 
             "recipe_generation_started", 
             "search_started", 
+            "user_message_rejected",
         ]
         
     
@@ -99,6 +106,7 @@ class ChatSessionMessageProcessor:
             "text_message_completed", 
             "recipe_generation_completed", 
             "search_completed",
+            "user_message_rejected",
         ]
         
         
@@ -200,4 +208,22 @@ class ChatSessionMessageProcessor:
                     event="ai_agent_error",
                     payload=AIAgentErrorPayload(error_message=str(e))
                 ),
-            )
+            )   
+            
+    
+    async def reject_user_message(
+        self,
+        user_access_data: UserAccessData,
+        thread_id: str,
+        user_message_id: str,
+        rejection_message: str,
+    ):
+        await self._handle_event(
+            user_access_data=user_access_data,
+            thread_id=thread_id,
+            user_message_id=user_message_id,
+            event=ConversationStreamEvent(
+                event="user_message_rejected",
+                payload=UserMessageRejectedPayload(rejection_message=rejection_message),
+            ),
+        )

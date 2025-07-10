@@ -22,7 +22,6 @@ uvicorn = { extras = ["standard"], version = "^0.27.0" }
 langchain = "^0.3.25"
 langgraph = "^0.4.1"
 langchain-google-genai = "^2.1.4"
-google-genai = "^1.13.0"
 lxml = "^5.4.0"
 aiosqlite = "^0.21.0"
 langgraph-checkpoint-postgres = "^2.0.21"
@@ -38,6 +37,9 @@ langchain-tavily = "^0.2.4"
 psycopg = {extras = ["binary", "pool"], version = "^3.1.18"}
 fastapi-health = "^0.4.0"
 greenlet = "^3.0.3"
+torch = "^2.7.1"
+transformers = "^4.52.0"
+optimum = {extras = ["onnxruntime"], version = "^1.26.1"}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
@@ -67,12 +69,12 @@ omit = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py313"
 exclude = ["tests", "migrations"]
 lint.select = ["E", "F", "I", "B"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 strict = true
 ignore_missing_imports = true
 disallow_untyped_defs = true

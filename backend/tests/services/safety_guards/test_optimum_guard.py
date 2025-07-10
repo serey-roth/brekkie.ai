@@ -15,7 +15,8 @@ load_dotenv('.env.local')
 
 from config.settings import Settings
 
-from services.safety_guards.ml_classifier_guard import MLClassifierSafetyGuard
+from services.safety_guards.ml_classifier_safety_guard import MLClassifierSafetyGuard
+
 from schemas.safety_guards import SafetyIssueType
 
 def test_optimum_guard():

@@ -28,6 +28,7 @@ from schemas.threads import (
     GetUserThreadsParams,
 )
 from schemas.user_access import UserAccessData
+from schemas.safety_guards import SafetyGuardResult
 
 from services.data_services.message_service import MessageService
 from services.data_services.message_cache_service import MessageCacheService
@@ -136,7 +137,7 @@ class ChatSessionStore:
         )
     
     
-    async def create_user_message(self, db: AsyncSession, user_access_data: UserAccessData, thread_id: str, message_id: str, content: str, timestamp: datetime) -> Message:
+    async def create_user_message(self, db: AsyncSession, user_access_data: UserAccessData, thread_id: str, message_id: str, content: str, timestamp: datetime, ip_address: str | None = None, safety_guard_result: SafetyGuardResult | None = None) -> Message:
         async def authenticated_create():
             thread = await self.thread_service.get_thread(db, thread_id)
             if thread is None:
@@ -155,6 +156,8 @@ class ChatSessionStore:
                 text_content=content,
                 created_at=timestamp,
                 updated_at=timestamp,
+                ip_address=ip_address,
+                safety_guard_result=safety_guard_result,
             ))
         
         async def unauthenticated_create():
@@ -165,6 +168,8 @@ class ChatSessionStore:
                 text_content=content,
                 created_at=timestamp,
                 updated_at=timestamp,
+                ip_address=ip_address,
+                safety_guard_result=safety_guard_result,
             ))
             await self.thread_cache_service.update_thread(user_access_data.user_id, UpdateThreadParams(id=thread_id, updated_at=timestamp, is_empty=False))
             await self.user_access_cache_service.increment_user_message_count(user_access_data.access_token)

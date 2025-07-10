@@ -192,7 +192,7 @@ class GoogleAIFoodAgent(AIFoodAgent):
                 )
             ))
             state.start_search()
-             
+
         else:
             logger.error(f"Unexpected custom event: {data['event']}")
 

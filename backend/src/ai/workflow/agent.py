@@ -158,7 +158,7 @@ class AgentFactory:
         # TODO: We should do these as background tasks
         elif len(messages) > 5 and state.get("thread_title", None) is None:
             return "update_thread_title"
-        elif len(messages) > 12:
+        elif len(messages) > 8:
             return "summarize_conversation"
         else:
             return "__end__"

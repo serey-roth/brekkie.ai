@@ -1,9 +1,7 @@
-import os
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
-from dotenv import load_dotenv
+
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from typing import Optional
 
 from config.settings import Settings
 
@@ -11,13 +9,12 @@ from utils.logger import Logger
 
 logger = Logger("database.index")
 
-load_dotenv()
 
 def get_db_engine(settings: Settings):
     if not settings.db_url:
         raise ValueError("DB_URL environment variable is not set")
-        
-    if "sqlite" in settings.db_url.lower():
+
+    if "sqlite" in str(settings.db_url).lower():
         # For testing purposes, we don't need a pool
         # SQLite doesn't support the same pool configuration as PostgreSQL
         pool_config = {
@@ -33,16 +30,18 @@ def get_db_engine(settings: Settings):
             "pool_pre_ping": True,
             "echo": settings.environment == "development",
         }
-    
-    return create_async_engine(settings.db_url, **pool_config)
+
+    return create_async_engine(str(settings.db_url), **pool_config)
+
 
 def get_db_session_factory(settings: Settings):
     engine = get_db_engine(settings)
     return async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
+
 def create_db_transaction_maker(settings: Settings):
     session_factory = get_db_session_factory(settings)
-    
+
     @asynccontextmanager
     async def db_transaction_maker() -> AsyncGenerator[AsyncSession, None]:
         async with session_factory() as db:
@@ -53,5 +52,5 @@ def create_db_transaction_maker(settings: Settings):
                 logger.error(f"Error in database transaction: {e}")
                 await db.rollback()
                 raise
-    
-    return db_transaction_maker 
+
+    return db_transaction_maker

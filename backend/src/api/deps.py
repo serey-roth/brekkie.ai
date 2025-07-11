@@ -27,11 +27,11 @@ def get_access_token_from_websocket(websocket: WebSocket) -> str | None:
     return websocket.cookies.get("bk_access_token")
 
 
-def get_client_ip(request: Request) -> str: 
+def get_client_ip(request: Request) -> str:
     return (
-        request.headers.get("fly-client-ip")                                # Fly.io
-        or request.headers.get("x-forwarded-for", "").split(",")[0].strip() # generic proxy
-        or request.client.host
+        request.headers.get("fly-client-ip")  # Fly.io
+        or request.headers.get("x-forwarded-for", "").split(",")[0].strip()  # generic proxy
+        or request.client.host if request.client else ""
     )
 
 

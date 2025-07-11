@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from config.settings import Settings
 
-from api.deps import  get_service_container, get_access_token, get_client_ip, get_settings
+from api.deps import get_service_container, get_access_token, get_client_ip, get_settings
 
 from schemas.api_error import RateLimitError
 from schemas.user_access import UserAccessData
@@ -23,7 +23,11 @@ async def ensure_access_token(
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     try:
-        user_access_data = await service_container.anonymous_access_service.get_or_create_user_access(ip_address, access_token)
+        user_access_data = (
+            await service_container.anonymous_access_service.get_or_create_user_access(
+                ip_address, access_token
+            )
+        )
     except RateLimitError:
         raise HTTPException(
             status_code=429,
@@ -31,8 +35,7 @@ async def ensure_access_token(
                 "message": "Rate limit exceeded. Please try again later.",
             },
         )
-        
-        
+
     should_refresh = False
     if access_token is None or access_token != user_access_data.access_token:
         should_refresh = True
@@ -45,10 +48,10 @@ async def ensure_access_token(
             settings.cookie_name,
             user_access_data.access_token,
             secure=settings.get_cookie_secure(),
-            samesite=settings.cookie_samesite,
+            samesite=settings.cookie_samesite,  # type: ignore
             max_age=settings.cookie_max_age,
             httponly=settings.get_cookie_httponly(),
             path=settings.cookie_path,
         )
-        
+
     return user_access_data

@@ -116,5 +116,13 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
         event: z.literal('chat_session_error'),
         data: ChatSessionErrorSchema,
     }),
+    z.object({
+        event: z.literal('user_message_rejected'),
+        data: z.object({
+            user_access_data: UserAccessDataSchema,
+            thread: ThreadSchema,
+            message: MessageSchema,
+        }),
+    }),
 ]);
 export type ChatEvent = z.infer<typeof ChatEventSchema>;

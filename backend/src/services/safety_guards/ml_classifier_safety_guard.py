@@ -1,7 +1,4 @@
-import torch
-from transformers import AutoTokenizer, pipeline
-from optimum.onnxruntime import ORTModelForSequenceClassification
-import os
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
 from schemas.safety_guards import SafetyIssue, SafetyIssueType, SafetyGuardResult, SafetyGuardType
 
@@ -19,44 +16,11 @@ class MLClassifierSafetyGuard(SafetyGuard):
         self.prompt_injection_tokenizer = AutoTokenizer.from_pretrained(self.prompt_injection_model_id)
         self.toxicity_tokenizer = AutoTokenizer.from_pretrained(self.toxicity_model_id)
         
-        # Load optimized models using Optimum - only export if not already converted
-        prompt_injection_onnx_path = f"src/ml_models/{self.prompt_injection_model_id}-onnx"
-        toxicity_onnx_path = f"src/ml_models/{self.toxicity_model_id}-onnx"
+        # Load models using standard transformers
+        self.prompt_injection_model = AutoModelForSequenceClassification.from_pretrained(self.prompt_injection_model_id)
+        self.toxicity_model = AutoModelForSequenceClassification.from_pretrained(self.toxicity_model_id)
         
-        # Check if ONNX models already exist
-        if os.path.exists(prompt_injection_onnx_path):
-            print(f"Loading existing ONNX model from {prompt_injection_onnx_path}")
-            self.prompt_injection_model = ORTModelForSequenceClassification.from_pretrained(
-                prompt_injection_onnx_path,
-                provider="CPUExecutionProvider"
-            )
-        else:
-            print(f"Converting {self.prompt_injection_model_id} to ONNX...")
-            self.prompt_injection_model = ORTModelForSequenceClassification.from_pretrained(
-                self.prompt_injection_model_id,
-                export=True,
-                provider="CPUExecutionProvider"
-            )
-            # Save the model to the filesystem
-            self.prompt_injection_model.save_pretrained(prompt_injection_onnx_path)
-        
-        if os.path.exists(toxicity_onnx_path):
-            print(f"Loading existing ONNX model from {toxicity_onnx_path}")
-            self.toxicity_model = ORTModelForSequenceClassification.from_pretrained(
-                toxicity_onnx_path,
-                provider="CPUExecutionProvider"
-            )
-        else:
-            print(f"Converting {self.toxicity_model_id} to ONNX...")
-            self.toxicity_model = ORTModelForSequenceClassification.from_pretrained(
-                self.toxicity_model_id,
-                export=True,
-                provider="CPUExecutionProvider"
-            )
-            # Save the model to the filesystem
-            self.toxicity_model.save_pretrained(toxicity_onnx_path)
-        
-        # Create optimized pipelines
+        # Create pipelines
         self.prompt_injection_classifier = pipeline(
             "text-classification",
             model=self.prompt_injection_model,

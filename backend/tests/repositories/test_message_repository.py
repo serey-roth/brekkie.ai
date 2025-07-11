@@ -1,7 +1,9 @@
+from datetime import datetime, timedelta, timezone
+from typing import cast
+from uuid import uuid4
+
 import pytest
 import pytest_asyncio
-from datetime import datetime, timedelta, timezone
-from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,13 +48,13 @@ class TestCreateMessage:
         result = await async_session.get(DBMessage, params.id)
         
         assert result is not None
-        assert result.id == params.id
-        assert result.user_id == params.user_id
-        assert result.thread_id == params.thread_id
-        assert result.role == params.role
-        assert result.content_type == params.content_type
-        assert result.created_at == strip_timezone(params.created_at)
-        assert result.updated_at == strip_timezone(params.updated_at)
+        assert str(result.id) == params.id
+        assert str(result.user_id) == params.user_id
+        assert str(result.thread_id) == params.thread_id
+        assert MessageRole(result.role) == params.role
+        assert MessageContentType(result.content_type) == params.content_type
+        assert cast(datetime, result.created_at) == strip_timezone(params.created_at)
+        assert cast(datetime, result.updated_at) == strip_timezone(params.updated_at)
 
 
     async def test_create_message_with_optional_fields(self, async_session: AsyncSession, message_repository: MessageRepository):
@@ -87,17 +89,18 @@ class TestCreateMessage:
         await async_session.commit()
         result = await async_session.get(DBMessage, params.id)
         
-        assert result.text_content == params.text_content
-        assert result.recipe_id == params.recipe_id
-        assert result.parent_id == params.parent_id
-        assert result.model_name == params.model_name
-        assert result.input_tokens == params.input_tokens
-        assert result.output_tokens == params.output_tokens
-        assert result.tool_name == params.tool_name
-        assert result.tool_input == params.tool_input
-        assert result.tool_output == params.tool_output
-        assert result.is_recipe_generation_started == params.is_recipe_generation_started
-        assert result.is_recipe_generation_completed == params.is_recipe_generation_completed
+        assert result is not None
+        assert str(result.text_content) == params.text_content
+        assert str(result.recipe_id) == params.recipe_id
+        assert str(result.parent_id) == params.parent_id
+        assert str(result.model_name) == params.model_name
+        assert cast(int, result.input_tokens) == params.input_tokens
+        assert cast(int, result.output_tokens) == params.output_tokens
+        assert str(result.tool_name) == params.tool_name
+        assert_deep_equal(cast(dict, result.tool_input) , params.tool_input)
+        assert_deep_equal(cast(dict, result.tool_output), params.tool_output)
+        assert cast(bool, result.is_recipe_generation_started) == params.is_recipe_generation_started
+        assert cast(bool, result.is_recipe_generation_completed) == params.is_recipe_generation_completed
 
 
     async def test_create_assistant_text_message(self, async_session: AsyncSession, message_repository: MessageRepository):
@@ -122,9 +125,9 @@ class TestCreateMessage:
         result = await async_session.get(DBMessage, params.id)
         
         assert result is not None
-        assert result.role == MessageRole.assistant
-        assert result.content_type == MessageContentType.text
-        assert result.text_content == params.text_content
+        assert MessageRole(result.role) == MessageRole.assistant
+        assert MessageContentType(result.content_type) == MessageContentType.text
+        assert str(result.text_content) == params.text_content
 
 
     async def test_create_assistant_recipe_message(self, async_session: AsyncSession, message_repository: MessageRepository):
@@ -149,9 +152,9 @@ class TestCreateMessage:
         result = await async_session.get(DBMessage, params.id)
         
         assert result is not None
-        assert result.role == MessageRole.assistant
-        assert result.content_type == MessageContentType.recipe
-        assert result.recipe_id == params.recipe_id
+        assert MessageRole(result.role) == MessageRole.assistant
+        assert MessageContentType(result.content_type) == MessageContentType.recipe
+        assert str(result.recipe_id) == params.recipe_id
 
 
     async def test_create_user_text_message(self, async_session: AsyncSession, message_repository: MessageRepository):
@@ -176,9 +179,9 @@ class TestCreateMessage:
         result = await async_session.get(DBMessage, params.id)
         
         assert result is not None
-        assert result.role == MessageRole.user
-        assert result.content_type == MessageContentType.text
-        assert result.text_content == params.text_content
+        assert MessageRole(result.role) == MessageRole.user
+        assert MessageContentType(result.content_type) == MessageContentType.text
+        assert str(result.text_content) == params.text_content
 
 
     async def test_create_tool_message(self, async_session: AsyncSession, message_repository: MessageRepository):
@@ -205,11 +208,11 @@ class TestCreateMessage:
         result = await async_session.get(DBMessage, params.id)
         
         assert result is not None
-        assert result.role == MessageRole.assistant
-        assert result.content_type == MessageContentType.tool
-        assert result.tool_name == params.tool_name
-        assert_deep_equal(result.tool_input, params.tool_input)
-        assert_deep_equal(result.tool_output, params.tool_output)
+        assert MessageRole(result.role) == MessageRole.assistant
+        assert MessageContentType(result.content_type) == MessageContentType.tool
+        assert str(result.tool_name) == params.tool_name
+        assert_deep_equal(cast(dict, result.tool_input), params.tool_input)
+        assert_deep_equal(cast(dict, result.tool_output), params.tool_output)
 
 
     async def test_create_message_with_naive_datetime(self, async_session: AsyncSession, message_repository: MessageRepository):
@@ -236,6 +239,8 @@ class TestCreateMessage:
         assert result is not None
         assert result.created_at.tzinfo is None
         assert result.updated_at.tzinfo is None
+        assert cast(datetime, result.created_at) == strip_timezone(params.created_at)
+        assert cast(datetime, result.updated_at) == strip_timezone(params.updated_at)
 
 
 class TestGetMessage:
@@ -270,13 +275,13 @@ class TestGetMessage:
         message = await message_repository.get_message(async_session, message_id)
         assert message is not None
         
-        assert_deep_equal(message.id, message_id)
-        assert_deep_equal(message.thread_id, sample_message["thread_id"])
-        assert_deep_equal(message.role, sample_message["role"])
-        assert_deep_equal(message.content_type, sample_message["content_type"])
-        assert_deep_equal(message.text_content, sample_message["text_content"])
-        assert_deep_equal(message.created_at, strip_timezone(sample_message["created_at"]))
-        assert_deep_equal(message.updated_at, strip_timezone(sample_message["updated_at"]))
+        assert str(message.id) == message_id
+        assert str(message.thread_id) == sample_message["thread_id"]
+        assert MessageRole(message.role) == sample_message["role"]
+        assert MessageContentType(message.content_type) == sample_message["content_type"]
+        assert str(message.text_content) == sample_message["text_content"]
+        assert cast(datetime, message.created_at) == strip_timezone(sample_message["created_at"])
+        assert cast(datetime, message.updated_at) == strip_timezone(sample_message["updated_at"])
         
         
     async def test_get_non_existent_message(self, async_session: AsyncSession, message_repository: MessageRepository):
@@ -385,33 +390,33 @@ class TestGetMessages:
         
         assert len(result) == len(sample_messages)
         for i, message in enumerate(result):
-            assert message.id == sorted_messages[i]["id"]
-            assert message.thread_id == sorted_messages[i]["thread_id"]
-            assert message.role == sorted_messages[i]["role"]
-            assert message.content_type == sorted_messages[i]["content_type"]
-            assert message.created_at == strip_timezone(sorted_messages[i]["created_at"])
-            assert message.updated_at == strip_timezone(sorted_messages[i]["updated_at"])
+            assert str(message.id) == sorted_messages[i]["id"]
+            assert str(message.thread_id) == sorted_messages[i]["thread_id"]
+            assert MessageRole(message.role) == sorted_messages[i]["role"]
+            assert MessageContentType(message.content_type) == sorted_messages[i]["content_type"]
+            assert cast(datetime, message.created_at) == strip_timezone(sorted_messages[i]["created_at"])
+            assert cast(datetime, message.updated_at) == strip_timezone(sorted_messages[i]["updated_at"])
            
             if message.text_content is not None:
-                assert message.text_content == sorted_messages[i]["text_content"]
+                assert str(message.text_content) == sorted_messages[i]["text_content"]
             if message.recipe_id is not None:
-                assert message.recipe_id == sorted_messages[i]["recipe_id"]
+                assert str(message.recipe_id) == sorted_messages[i]["recipe_id"]
             if message.model_name is not None:
-                assert message.model_name == sorted_messages[i]["model_name"]
+                assert str(message.model_name) == sorted_messages[i]["model_name"]
             if message.input_tokens is not None:
-                assert message.input_tokens == sorted_messages[i]["input_tokens"]
+                assert cast(int, message.input_tokens) == sorted_messages[i]["input_tokens"]
             if message.output_tokens is not None:
-                assert message.output_tokens == sorted_messages[i]["output_tokens"] 
+                assert cast(int, message.output_tokens) == sorted_messages[i]["output_tokens"] 
             if message.tool_name is not None:
-                assert message.tool_name == sorted_messages[i]["tool_name"]
+                assert str(message.tool_name) == sorted_messages[i]["tool_name"]
             if message.tool_input is not None:
-                assert message.tool_input == sorted_messages[i]["tool_input"]
+                assert_deep_equal(cast(dict, message.tool_input), sorted_messages[i]["tool_input"])
             if message.tool_output is not None:
-                assert message.tool_output == sorted_messages[i]["tool_output"]
+                assert_deep_equal(cast(dict, message.tool_output), sorted_messages[i]["tool_output"])
             if message.is_recipe_generation_started is not None:
-                assert message.is_recipe_generation_started == sorted_messages[i]["is_recipe_generation_started"]
+                assert cast(bool, message.is_recipe_generation_started) == sorted_messages[i]["is_recipe_generation_started"]
             if message.is_recipe_generation_completed is not None:
-                assert message.is_recipe_generation_completed == sorted_messages[i]["is_recipe_generation_completed"]
+                assert cast(bool, message.is_recipe_generation_completed) == sorted_messages[i]["is_recipe_generation_completed"]
                 
                 
     async def test_get_messages_with_smaller_limit(
@@ -431,12 +436,12 @@ class TestGetMessages:
         
         assert len(result) == 2
         for i, message in enumerate(result):
-            assert message.id == first_two_messages[i]["id"]
-            assert message.thread_id == first_two_messages[i]["thread_id"]
-            assert message.role == first_two_messages[i]["role"]
-            assert message.content_type == first_two_messages[i]["content_type"]
-            assert message.created_at == strip_timezone(first_two_messages[i]["created_at"])
-            assert message.updated_at == strip_timezone(first_two_messages[i]["updated_at"])
+            assert str(message.id) == first_two_messages[i]["id"]
+            assert str(message.thread_id) == first_two_messages[i]["thread_id"]
+            assert MessageRole(message.role) == first_two_messages[i]["role"]
+            assert MessageContentType(message.content_type) == first_two_messages[i]["content_type"]
+            assert cast(datetime, message.created_at) == strip_timezone(first_two_messages[i]["created_at"])
+            assert cast(datetime, message.updated_at) == strip_timezone(first_two_messages[i]["updated_at"])
             
             
     async def test_get_messages_with_sort_by_created_at_asc(
@@ -456,12 +461,12 @@ class TestGetMessages:
         sorted_messages = sorted(sample_messages, key=lambda x: x["created_at"])
         
         for i, message in enumerate(result):
-            assert message.id == sorted_messages[i]["id"]
-            assert message.thread_id == sorted_messages[i]["thread_id"]
-            assert message.role == sorted_messages[i]["role"]
-            assert message.content_type == sorted_messages[i]["content_type"]
-            assert message.created_at == strip_timezone(sorted_messages[i]["created_at"])
-            assert message.updated_at == strip_timezone(sorted_messages[i]["updated_at"])
+            assert str(message.id) == sorted_messages[i]["id"]
+            assert str(message.thread_id) == sorted_messages[i]["thread_id"]
+            assert MessageRole(message.role) == sorted_messages[i]["role"]
+            assert MessageContentType(message.content_type) == sorted_messages[i]["content_type"]
+            assert cast(datetime, message.created_at) == strip_timezone(sorted_messages[i]["created_at"])
+            assert cast(datetime, message.updated_at) == strip_timezone(sorted_messages[i]["updated_at"])
             
             
     async def test_get_messages_with_sort_by_created_at_desc(
@@ -481,12 +486,12 @@ class TestGetMessages:
         sorted_messages = sorted(sample_messages, key=lambda x: x["created_at"], reverse=True)
         
         for i, message in enumerate(result):
-            assert message.id == sorted_messages[i]["id"]
-            assert message.thread_id == sorted_messages[i]["thread_id"]
-            assert message.role == sorted_messages[i]["role"]
-            assert message.content_type == sorted_messages[i]["content_type"]
-            assert message.created_at == strip_timezone(sorted_messages[i]["created_at"])
-            assert message.updated_at == strip_timezone(sorted_messages[i]["updated_at"])
+            assert str(message.id) == sorted_messages[i]["id"]
+            assert str(message.thread_id) == sorted_messages[i]["thread_id"]
+            assert MessageRole(message.role) == sorted_messages[i]["role"]
+            assert MessageContentType(message.content_type) == sorted_messages[i]["content_type"]
+            assert cast(datetime, message.created_at) == strip_timezone(sorted_messages[i]["created_at"])
+            assert cast(datetime, message.updated_at) == strip_timezone(sorted_messages[i]["updated_at"])
             
             
     async def test_get_messages_with_sort_by_updated_at_asc(
@@ -506,12 +511,12 @@ class TestGetMessages:
         sorted_messages = sorted(sample_messages, key=lambda x: x["updated_at"])
         
         for i, message in enumerate(result):
-            assert message.id == sorted_messages[i]["id"]
-            assert message.thread_id == sorted_messages[i]["thread_id"]
-            assert message.role == sorted_messages[i]["role"]
-            assert message.content_type == sorted_messages[i]["content_type"]
-            assert message.created_at == strip_timezone(sorted_messages[i]["created_at"])
-            assert message.updated_at == strip_timezone(sorted_messages[i]["updated_at"])
+            assert str(message.id) == sorted_messages[i]["id"]
+            assert str(message.thread_id) == sorted_messages[i]["thread_id"]
+            assert MessageRole(message.role) == sorted_messages[i]["role"]
+            assert MessageContentType(message.content_type) == sorted_messages[i]["content_type"]
+            assert cast(datetime, message.created_at) == strip_timezone(sorted_messages[i]["created_at"])
+            assert cast(datetime, message.updated_at) == strip_timezone(sorted_messages[i]["updated_at"])
             
 
     async def test_get_messages_with_sort_by_updated_at_desc(
@@ -531,12 +536,12 @@ class TestGetMessages:
         sorted_messages = sorted(sample_messages, key=lambda x: x["updated_at"], reverse=True)
         
         for i, message in enumerate(result):
-            assert message.id == sorted_messages[i]["id"]
-            assert message.thread_id == sorted_messages[i]["thread_id"]
-            assert message.role == sorted_messages[i]["role"]
-            assert message.content_type == sorted_messages[i]["content_type"]
-            assert message.created_at == strip_timezone(sorted_messages[i]["created_at"])
-            assert message.updated_at == strip_timezone(sorted_messages[i]["updated_at"])
+            assert str(message.id) == sorted_messages[i]["id"]
+            assert str(message.thread_id) == sorted_messages[i]["thread_id"]
+            assert MessageRole(message.role) == sorted_messages[i]["role"]
+            assert MessageContentType(message.content_type) == sorted_messages[i]["content_type"]
+            assert cast(datetime, message.created_at) == strip_timezone(sorted_messages[i]["created_at"])
+            assert cast(datetime, message.updated_at) == strip_timezone(sorted_messages[i]["updated_at"])
             
 
     async def test_get_messages_with_from_timestamp_and_sort_by_created_at_asc(
@@ -556,8 +561,8 @@ class TestGetMessages:
         
         first_message = result[0]
         
-        assert first_message.id == sample_messages[3]["id"]
-        assert first_message.created_at == strip_timezone(sample_messages[3]["created_at"])
+        assert str(first_message.id) == sample_messages[3]["id"]
+        assert cast(datetime, first_message.created_at) == strip_timezone(sample_messages[3]["created_at"])
         
         
     async def test_get_messages_with_from_timestamp_and_sort_by_created_at_desc(
@@ -578,11 +583,11 @@ class TestGetMessages:
         first_message = result[0]
         second_message = result[1]
         
-        assert first_message.id == sample_messages[1]["id"]
-        assert second_message.id == sample_messages[0]["id"]
+        assert str(first_message.id) == sample_messages[1]["id"]
+        assert str(second_message.id) == sample_messages[0]["id"]
         
-        assert first_message.created_at == strip_timezone(sample_messages[1]["created_at"])
-        assert second_message.created_at == strip_timezone(sample_messages[0]["created_at"])
+        assert cast(datetime, first_message.created_at) == strip_timezone(sample_messages[1]["created_at"])
+        assert cast(datetime, second_message.created_at) == strip_timezone(sample_messages[0]["created_at"])
         
         
     async def test_get_messages_with_from_timestamp_and_sort_by_updated_at_asc(
@@ -602,8 +607,8 @@ class TestGetMessages:
         
         first_message = result[0]
         
-        assert first_message.id == sample_messages[3]["id"]
-        assert first_message.updated_at == strip_timezone(sample_messages[3]["updated_at"])
+        assert str(first_message.id) == sample_messages[3]["id"]
+        assert cast(datetime, first_message.updated_at) == strip_timezone(sample_messages[3]["updated_at"])
         
                 
     async def test_get_messages_with_from_timestamp_and_sort_by_updated_at_desc(
@@ -624,11 +629,11 @@ class TestGetMessages:
         first_message = result[0]
         second_message = result[1]
         
-        assert first_message.id == sample_messages[1]["id"]
-        assert second_message.id == sample_messages[0]["id"]
+        assert str(first_message.id) == sample_messages[1]["id"]
+        assert str(second_message.id) == sample_messages[0]["id"]
         
-        assert first_message.updated_at == strip_timezone(sample_messages[1]["updated_at"])
-        assert second_message.updated_at == strip_timezone(sample_messages[0]["updated_at"])
+        assert cast(datetime, first_message.updated_at) == strip_timezone(sample_messages[1]["updated_at"])
+        assert cast(datetime, second_message.updated_at) == strip_timezone(sample_messages[0]["updated_at"])
         
 
     async def test_get_messages_with_limit_and_from_timestamp(
@@ -648,8 +653,8 @@ class TestGetMessages:
         
         first_message = result[0]
         
-        assert first_message.id == sample_messages[1]["id"]
-        assert first_message.created_at == strip_timezone(sample_messages[1]["created_at"])
+        assert str(first_message.id) == sample_messages[1]["id"]
+        assert cast(datetime, first_message.created_at) == strip_timezone(sample_messages[1]["created_at"])
         
 
 class TestUpdateMessage:
@@ -693,8 +698,8 @@ class TestUpdateMessage:
         result = await async_session.get(DBMessage, sample_message["id"])
         
         assert result is not None
-        assert result.text_content == params.text_content
-        assert result.updated_at == strip_timezone(params.updated_at)
+        assert cast(datetime, result.updated_at) is not None
+        assert cast(datetime, result.updated_at) == strip_timezone(params.updated_at)
     
     
     async def test_update_non_existent_message(self, async_session: AsyncSession, message_repository: MessageRepository):
@@ -723,8 +728,8 @@ class TestUpdateMessage:
         result = await async_session.get(DBMessage, sample_message["id"])
         
         assert result is not None
-        assert result.text_content == sample_message["text_content"]
-        assert result.updated_at == strip_timezone(params.updated_at)
+        assert str(result.text_content) == sample_message["text_content"]
+        assert cast(datetime, result.updated_at) == strip_timezone(params.updated_at)
         
         
 class TestCountThreadMessages:

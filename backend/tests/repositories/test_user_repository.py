@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
+from typing import cast
 from uuid import uuid4
+
 import pytest
 import pytest_asyncio
 
@@ -41,12 +43,12 @@ class TestCreateUser:
         
         user = await user_repository.get_user_by_id(async_session, user_id)
         assert user is not None
-        assert user.id == user_id
-        assert user.email == params.email
-        assert user.name == params.name
-        assert user.password_hash == params.password_hash
-        assert user.created_at == strip_timezone(params.created_at)
-        assert user.updated_at == strip_timezone(params.updated_at)
+        assert str(user.id) == user_id
+        assert str(user.email) == params.email
+        assert str(user.name) == params.name
+        assert str(user.password_hash) == params.password_hash
+        assert cast(datetime, user.created_at) == strip_timezone(params.created_at)
+        assert cast(datetime, user.updated_at) == strip_timezone(params.updated_at)
         
     
     async def test_create_user_with_existing_email(self, async_session: AsyncSession, user_repository: UserRepository, user_id: str):
@@ -92,12 +94,12 @@ class TestGetUserById:
     async def test_get_user_by_id(self, async_session: AsyncSession, user_repository: UserRepository, create_user_in_db, sample_user: dict, user_id: str):
         user = await user_repository.get_user_by_id(async_session, user_id)
         assert user is not None
-        assert user.id == user_id
+        assert str(user.id) == user_id
         assert user.email == sample_user["email"]
         assert user.name == sample_user["name"]
         assert user.password_hash == sample_user["password_hash"]
-        assert user.created_at == strip_timezone(sample_user["created_at"])
-        assert user.updated_at == strip_timezone(sample_user["updated_at"])
+        assert cast(datetime, user.created_at) == strip_timezone(sample_user["created_at"])
+        assert cast(datetime, user.updated_at) == strip_timezone(sample_user["updated_at"])
         
 
     async def test_get_non_existent_user_by_id(self, async_session: AsyncSession, user_repository: UserRepository):
@@ -117,7 +119,7 @@ class TestGetUserByEmail:
     async def test_get_user_by_email(self, async_session: AsyncSession, user_repository: UserRepository, create_user_in_db, sample_user: dict, user_id: str):
         user = await user_repository.get_user_by_email(async_session, sample_user["email"])
         assert user is not None
-        assert user.id == user_id   
+        assert str(user.id) == user_id   
         assert user.email == sample_user["email"]
         
     
@@ -149,7 +151,7 @@ class TestUpdateUser:
         
         user = await user_repository.get_user_by_id(async_session, user_id)
         assert user is not None
-        assert user.id == user_id   
+        assert str(user.id) == user_id   
         
         
     async def test_update_user_with_none_values(self, async_session: AsyncSession, user_repository: UserRepository, create_user_in_db, sample_user: dict, user_id: str):
@@ -166,10 +168,10 @@ class TestUpdateUser:
         
         user = await user_repository.get_user_by_id(async_session, user_id)
         assert user is not None
-        assert user.id == user_id
-        assert user.email is not None
-        assert user.name is not None
-        assert user.password_hash is not None
+        assert str(user.id) == user_id
+        assert str(user.email) is not None
+        assert str(user.name) is not None
+        assert str(user.password_hash) is not None
         
         
     async def test_update_user_with_non_existent_user(self, async_session: AsyncSession, user_repository: UserRepository):
@@ -200,7 +202,7 @@ class TestUpdateUser:
         
         params = UpdateDbUserParams(
             id=user_id,
-            email=another_user.email,
+            email=str(another_user.email),
             updated_at=datetime.now(timezone.utc),
         )
         

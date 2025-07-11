@@ -1,4 +1,6 @@
 from datetime import datetime, timezone, timedelta
+from typing import cast
+
 import pytest
 import pytest_asyncio
 
@@ -47,10 +49,10 @@ class TestCreateThread:
         await async_session.commit()
         
         assert result is not None
-        assert result.user_id == user_id
-        assert result.id == empty_thread_id
-        assert result.created_at == strip_timezone(params.created_at)
-        assert result.updated_at == strip_timezone(params.updated_at)
+        assert str(result.user_id) == user_id
+        assert str(result.id) == empty_thread_id
+        assert cast(datetime, result.created_at) == strip_timezone(params.created_at)
+        assert cast(datetime, result.updated_at) == strip_timezone(params.updated_at)
         assert result.is_empty is True
         
         
@@ -71,15 +73,19 @@ class TestCreateThread:
         await async_session.commit()
         
         assert result is not None
-        assert result.user_id == user_id
-        assert result.id == empty_thread_id
-        assert result.created_at == strip_timezone(params.created_at)
-        assert result.updated_at == strip_timezone(params.updated_at)
-        assert result.resumed_at == strip_timezone(params.resumed_at)
+        assert str(result.user_id) == user_id
+        assert str(result.id) == empty_thread_id
+        assert cast(datetime, result.created_at) == strip_timezone(params.created_at)
+        assert cast(datetime, result.updated_at) == strip_timezone(params.updated_at)
+        
+        assert result.resumed_at is not None
+        assert params.resumed_at is not None
+        assert cast(datetime, result.resumed_at) == strip_timezone(params.resumed_at)
+        
         assert result.is_empty is False
-        assert result.title == "Test Title"
-        assert result.summary == "Test Summary"
-        assert result.error_message == "Test Error Message"
+        assert str(result.title) == "Test Title"
+        assert str(result.summary) == "Test Summary"
+        assert str(result.error_message) == "Test Error Message"
 
 
 @pytest.fixture
@@ -125,10 +131,10 @@ class TestGetThread:
         await async_session.commit()
         
         assert result is not None
-        assert result.id == empty_thread_id
-        assert result.user_id == sample_empty_thread["user_id"]
-        assert result.created_at == strip_timezone(sample_empty_thread["created_at"])
-        assert result.updated_at == strip_timezone(sample_empty_thread["updated_at"])
+        assert str(result.id) == empty_thread_id
+        assert str(result.user_id) == sample_empty_thread["user_id"]
+        assert cast(datetime, result.created_at) == strip_timezone(sample_empty_thread["created_at"])
+        assert cast(datetime, result.updated_at) == strip_timezone(sample_empty_thread["updated_at"])
         assert result.is_empty is True
         
         
@@ -195,10 +201,10 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 4
-        assert result[0].id == sample_user_threads[3]["id"]
-        assert result[1].id == sample_user_threads[0]["id"]
-        assert result[2].id == sample_user_threads[1]["id"]
-        assert result[3].id == sample_user_threads[2]["id"]
+        assert str(result[0].id) == sample_user_threads[3]["id"]
+        assert str(result[1].id) == sample_user_threads[0]["id"]
+        assert str(result[2].id) == sample_user_threads[1]["id"]
+        assert str(result[3].id) == sample_user_threads[2]["id"]
         
         
     async def test_smaller_limit(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -208,8 +214,8 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 2
-        assert result[0].id == sample_user_threads[3]["id"]
-        assert result[1].id == sample_user_threads[0]["id"]
+        assert str(result[0].id) == sample_user_threads[3]["id"]
+        assert str(result[1].id) == sample_user_threads[0]["id"]
         
     
     async def test_sort_by_created_at_asc(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -219,10 +225,10 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 4
-        assert result[0].id == sample_user_threads[0]["id"]
-        assert result[1].id == sample_user_threads[1]["id"]
-        assert result[2].id == sample_user_threads[2]["id"]
-        assert result[3].id == sample_user_threads[3]["id"]
+        assert str(result[0].id) == sample_user_threads[0]["id"]
+        assert str(result[1].id) == sample_user_threads[1]["id"]
+        assert str(result[2].id) == sample_user_threads[2]["id"]
+        assert str(result[3].id) == sample_user_threads[3]["id"]
         
         
         
@@ -233,10 +239,10 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 4
-        assert result[0].id == sample_user_threads[3]["id"]
-        assert result[1].id == sample_user_threads[2]["id"]
-        assert result[2].id == sample_user_threads[1]["id"]
-        assert result[3].id == sample_user_threads[0]["id"]
+        assert str(result[0].id) == sample_user_threads[3]["id"]
+        assert str(result[1].id) == sample_user_threads[2]["id"]
+        assert str(result[2].id) == sample_user_threads[1]["id"]
+        assert str(result[3].id) == sample_user_threads[0]["id"]
         
         
     async def test_sort_by_updated_at_asc(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -246,10 +252,10 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 4
-        assert result[0].id == sample_user_threads[2]["id"]
-        assert result[1].id == sample_user_threads[1]["id"]
-        assert result[2].id == sample_user_threads[0]["id"]
-        assert result[3].id == sample_user_threads[3]["id"]
+        assert str(result[0].id) == sample_user_threads[2]["id"]
+        assert str(result[1].id) == sample_user_threads[1]["id"]
+        assert str(result[2].id) == sample_user_threads[0]["id"]
+        assert str(result[3].id) == sample_user_threads[3]["id"]
         
         
     async def test_sort_by_updated_at_desc(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -259,10 +265,10 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 4
-        assert result[0].id == sample_user_threads[3]["id"]
-        assert result[1].id == sample_user_threads[0]["id"]
-        assert result[2].id == sample_user_threads[1]["id"]
-        assert result[3].id == sample_user_threads[2]["id"]
+        assert str(result[0].id) == sample_user_threads[3]["id"]
+        assert str(result[1].id) == sample_user_threads[0]["id"]
+        assert str(result[2].id) == sample_user_threads[1]["id"]
+        assert str(result[3].id) == sample_user_threads[2]["id"]
         
         
     async def test_exclude_empty_threads(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -272,8 +278,8 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 2
-        assert result[0].id == sample_user_threads[3]["id"]
-        assert result[1].id == sample_user_threads[1]["id"]
+        assert str(result[0].id) == sample_user_threads[3]["id"]
+        assert str(result[1].id) == sample_user_threads[1]["id"]
         
         
     async def test_from_timestamp_with_sort_by_created_at_asc(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -283,9 +289,9 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 3
-        assert result[0].id == sample_user_threads[1]["id"]
-        assert result[1].id == sample_user_threads[2]["id"]
-        assert result[2].id == sample_user_threads[3]["id"]
+        assert str(result[0].id) == sample_user_threads[1]["id"]
+        assert str(result[1].id) == sample_user_threads[2]["id"]
+        assert str(result[2].id) == sample_user_threads[3]["id"]
         
     
     async def test_from_timestamp_with_sort_by_created_at_desc(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -295,9 +301,9 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 3
-        assert result[0].id == sample_user_threads[2]["id"]
-        assert result[1].id == sample_user_threads[1]["id"]
-        assert result[2].id == sample_user_threads[0]["id"]
+        assert str(result[0].id) == sample_user_threads[2]["id"]
+        assert str(result[1].id) == sample_user_threads[1]["id"]
+        assert str(result[2].id) == sample_user_threads[0]["id"]
         
         
     async def test_from_timestamp_with_sort_by_updated_at_asc(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -307,7 +313,7 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 1
-        assert result[0].id == sample_user_threads[3]["id"]
+        assert str(result[0].id) == sample_user_threads[3]["id"]
         
         
     async def test_from_timestamp_with_sort_by_updated_at_desc(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -317,8 +323,8 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 2
-        assert result[0].id == sample_user_threads[1]["id"]
-        assert result[1].id == sample_user_threads[2]["id"]
+        assert str(result[0].id) == sample_user_threads[1]["id"]
+        assert str(result[1].id) == sample_user_threads[2]["id"]
         
         
     async def test_from_timestamp_with_sort_by_created_at_asc_and_exclude_empty(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -328,8 +334,8 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 2
-        assert result[0].id == sample_user_threads[1]["id"]
-        assert result[1].id == sample_user_threads[3]["id"]
+        assert str(result[0].id) == sample_user_threads[1]["id"]
+        assert str(result[1].id) == sample_user_threads[3]["id"]
         
         
     async def test_from_timestamp_with_sort_by_created_at_asc_and_smaller_limit(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_user_threads_in_db, sample_user_threads: list[dict], user_id: str):
@@ -339,7 +345,7 @@ class TestGetUserThreads:
         await async_session.commit()
         
         assert len(result) == 1
-        assert result[0].id == sample_user_threads[1]["id"]
+        assert str(result[0].id) == sample_user_threads[1]["id"]
         
         
 class TestUpdateThread:
@@ -361,8 +367,8 @@ class TestUpdateThread:
         await async_session.commit()
         
         assert result is not None
-        assert result.id == empty_thread_id
-        assert result.resumed_at == strip_timezone(params.resumed_at)
+        assert str(result.id) == empty_thread_id
+        assert cast(datetime, result.resumed_at) == strip_timezone(params.resumed_at)
         
         
     async def test_update_thread_with_none_values(self, async_session: AsyncSession, thread_repository: ThreadRepository, create_empty_thread_in_db, empty_thread_id: str):
@@ -385,8 +391,8 @@ class TestUpdateThread:
         await async_session.commit()
         
         assert result_2 is not None
-        assert result_2.id == empty_thread_id
-        assert result_2.title is not None
+        assert str(result_2.id) == empty_thread_id
+        assert str(result_2.title) is not None
         
     
     async def test_update_thread_with_non_existent_thread(self, async_session: AsyncSession, thread_repository: ThreadRepository):

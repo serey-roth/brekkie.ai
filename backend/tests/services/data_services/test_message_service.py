@@ -65,7 +65,7 @@ class TestSimpleMessageOperations:
             text_content="test-text-content",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
-        )
+        )) # type: ignore (linter is asking for role and content_type, but they are set in the params)
         
         message = await message_service.create_user_message(async_session, params)
         
@@ -90,7 +90,7 @@ class TestSimpleMessageOperations:
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
             parent_id="user_message_id",
-        )
+        )) # type: ignore (linter is asking for role and content_type, but they are set in the params)
         
         message = await message_service.create_assistant_text_message(async_session, params)
         
@@ -117,7 +117,7 @@ class TestSimpleMessageOperations:
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
             parent_id="user_message_id",
-        )
+        )) # type: ignore (linter is asking for role and content_type, but they are set in the params)
         
         message = await message_service.create_assistant_recipe_message(async_session, params)
         
@@ -143,8 +143,8 @@ class TestSimpleMessageOperations:
             text_content="test-text-content",
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
-            parent_id="user_message_id",
-        ))
+            parent_id="user_message_id"
+        )) # type: ignore (linter is asking for role and content_type, but they are set in the params)
         
         params = UpdateMessageParams(
             id="test-message-id",
@@ -170,7 +170,7 @@ class TestSimpleMessageOperations:
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
             parent_id="user_message_id",
-        )
+        )) # type: ignore (linter is asking for role and content_type, but they are set in the params)
         message = await message_service.create_assistant_text_message(async_session, params)
         
         message = await message_service.get_message(async_session, "test-message-id")
@@ -197,7 +197,7 @@ class TestSimpleMessageOperations:
                 created_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
                 updated_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
                 parent_id=f"test-message-id-{i}"
-            ))
+            )) # type: ignore (linter is asking for role and content_type, but they are set in the params)
         
         count = await message_service.count_thread_messages(async_session, "test-thread-id")
         assert count == 10
@@ -213,10 +213,10 @@ class TestSimpleMessageOperations:
                 created_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
                 updated_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
                 parent_id=f"test-message-id-{i}"
-            ) for i in range(50)
+            ) for i in range(50) # type: ignore (linter is asking for role and content_type, but they are set in the params)
         ]
         
-        messages = await message_service.create_messages(async_session, params)
+        messages = await message_service.create_messages(async_session, params) # type: ignore (linter is asking for sequence
         
         assert len(messages) == 50
         
@@ -239,7 +239,7 @@ class TestPaginatedMessages:
                 created_at=datetime.now(timezone.utc) + timedelta(seconds=i * 10),
                 updated_at=datetime.now(timezone.utc) + timedelta(seconds=i * 100),
                 parent_id=f"test-message-id-{i}"
-            ) for i in range(50)
+            ) for i in range(50) # type: ignore (linter is asking for role and content_type, but they are set in the params)
         ]
 
 

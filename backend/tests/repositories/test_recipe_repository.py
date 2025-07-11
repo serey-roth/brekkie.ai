@@ -93,13 +93,13 @@ class TestCreateRecipe:
         assert isinstance(recipe.instructions[0], dict)
         assert isinstance(recipe.categories[0], dict)
         
-        recipe_ingredients = [RecipeIngredient(**ing) for ing in recipe.ingredients]
+        recipe_ingredients = [RecipeIngredient.model_validate(ing) for ing in recipe.ingredients]
         assert_deep_equal(recipe_ingredients, params.ingredients)
         
-        recipe_instructions = [RecipeInstruction(**inst) for inst in recipe.instructions]
+        recipe_instructions = [RecipeInstruction.model_validate(inst) for inst in recipe.instructions]
         assert_deep_equal(recipe_instructions, params.instructions)
         
-        recipe_categories = [RecipeCategory(**cat) for cat in recipe.categories]
+        recipe_categories = [RecipeCategory.model_validate(cat) for cat in recipe.categories]
         assert_deep_equal(recipe_categories, params.categories)
         
         assert_deep_equal(recipe.prep_time_minutes, params.prep_time_minutes)
@@ -141,13 +141,13 @@ class TestGetRecipe:
         assert isinstance(recipe.instructions[0], dict)
         assert isinstance(recipe.categories[0], dict)
         
-        recipe_ingredients = [RecipeIngredient(**ing) for ing in recipe.ingredients]
+        recipe_ingredients = [RecipeIngredient.model_validate(ing) for ing in recipe.ingredients]
         assert_deep_equal(recipe_ingredients, sample_recipe["ingredients"])
         
-        recipe_instructions = [RecipeInstruction(**inst) for inst in recipe.instructions]
+        recipe_instructions = [RecipeInstruction.model_validate(inst) for inst in recipe.instructions]
         assert_deep_equal(recipe_instructions, sample_recipe["instructions"])
         
-        recipe_categories = [RecipeCategory(**cat) for cat in recipe.categories]
+        recipe_categories = [RecipeCategory.model_validate(cat) for cat in recipe.categories]
         assert_deep_equal(recipe_categories, sample_recipe["categories"])
         
         assert_deep_equal(recipe.name, sample_recipe["name"])
@@ -185,9 +185,9 @@ class TestGetUserRecipes:
         
         assert len(recipes) == 1
         
-        assert recipes[0].id == sample_recipe["id"]
-        assert recipes[0].user_id == user_id
-        assert recipes[0].thread_id == sample_recipe["thread_id"]
+        assert str(recipes[0].id) == sample_recipe["id"]
+        assert str(recipes[0].user_id) == user_id
+        assert str(recipes[0].thread_id) == sample_recipe["thread_id"]
         
         
     async def test_get_non_existent_user_recipes(self, async_session: AsyncSession, recipe_repository: RecipeRepository):
@@ -229,17 +229,24 @@ class TestUpdateRecipe:
         assert_deep_equal(recipe.name, params.name)
         assert_deep_equal(recipe.description, params.description)
         
-        assert len(recipe.ingredients) == 2
-        assert len(recipe.instructions) == 2
-        assert len(recipe.categories) == 2
+        recipe_ingredients = [RecipeIngredient.model_validate(ing) for ing in recipe.ingredients]
+        assert len(recipe_ingredients) == 2
+        assert_deep_equal(recipe_ingredients, params.ingredients)
         
-        ingredients = [RecipeIngredient(**ing) for ing in recipe.ingredients]
+        recipe_instructions = [RecipeInstruction.model_validate(inst) for inst in recipe.instructions]
+        assert len(recipe_instructions) == 2
+        assert_deep_equal(recipe_instructions, params.instructions)
+        
+        recipe_categories = [RecipeCategory.model_validate(cat) for cat in recipe.categories]
+        assert len(recipe_categories) == 2
+        
+        ingredients = [RecipeIngredient.model_validate(ing) for ing in recipe.ingredients]
         assert_deep_equal(ingredients, params.ingredients)
         
-        instructions = [RecipeInstruction(**inst) for inst in recipe.instructions]
+        instructions = [RecipeInstruction.model_validate(inst) for inst in recipe.instructions]
         assert_deep_equal(instructions, params.instructions)
         
-        categories = [RecipeCategory(**cat) for cat in recipe.categories]
+        categories = [RecipeCategory.model_validate(cat) for cat in recipe.categories]
         assert_deep_equal(categories, params.categories)
         
         assert_deep_equal(recipe.prep_time_minutes, 20)
@@ -293,7 +300,7 @@ class TestUpdateRecipe:
         recipe = await recipe_repository.get_recipe(async_session, recipe_id)
         assert recipe is not None
         
-        recipe_ingredients = [RecipeIngredient(**ing) for ing in recipe.ingredients]
+        recipe_ingredients = [RecipeIngredient.model_validate(ing) for ing in recipe.ingredients]
         assert_deep_equal(recipe_ingredients, new_ingredients)
         
         
@@ -422,7 +429,7 @@ class TestUpdateRecipeField:
         assert isinstance(recipe.ingredients, list)
         assert len(recipe.ingredients) == 2
         
-        recipe_ingredients = [RecipeIngredient(**ing) for ing in recipe.ingredients]    
+        recipe_ingredients = [RecipeIngredient.model_validate(ing) for ing in recipe.ingredients]    
         assert_deep_equal(recipe_ingredients, [sample_recipe["ingredients"][0], RecipeIngredient(name="Updated Ingredient", quantity="2", unit="unit")])
     
     
@@ -448,7 +455,7 @@ class TestUpdateRecipeField:
         assert isinstance(recipe.ingredients, list)
         assert len(recipe.ingredients) == 3
         
-        recipe_ingredients = [RecipeIngredient(**ing) for ing in recipe.ingredients]
+        recipe_ingredients = [RecipeIngredient.model_validate(ing) for ing in recipe.ingredients]
         assert_deep_equal(recipe_ingredients, expected_ingredients)
 
 
@@ -466,9 +473,9 @@ class TestGetThreadRecipes:
         recipes = await recipe_repository.get_thread_recipes(async_session, thread_id)
         assert len(recipes) == 1
         
-        assert recipes[0].id == sample_recipe["id"]
-        assert recipes[0].user_id == sample_recipe["user_id"]
-        assert recipes[0].thread_id == thread_id
+        assert str(recipes[0].id) == sample_recipe["id"]
+        assert str(recipes[0].user_id) == sample_recipe["user_id"]
+        assert str(recipes[0].thread_id) == thread_id
         
         
     async def test_get_thread_recipes_with_non_existent_thread(self, async_session: AsyncSession, recipe_repository: RecipeRepository):
@@ -515,9 +522,9 @@ class TestGetRecipesByMessageId:
         recipes = await recipe_repository.get_recipes_by_message_id(async_session, [message_id])
         assert len(recipes) == 1
         
-        assert recipes[0].id == recipe_id
-        assert recipes[0].user_id == sample_recipe["user_id"]
-        assert recipes[0].thread_id == sample_recipe["thread_id"]
+        assert str(recipes[0].id) == recipe_id
+        assert str(recipes[0].user_id) == sample_recipe["user_id"]
+        assert str(recipes[0].thread_id) == sample_recipe["thread_id"]
         
         
 class TestCreateRecipes:

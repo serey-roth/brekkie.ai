@@ -2,10 +2,6 @@ from typing import Literal
 from datetime import datetime
 from pydantic import BaseModel, Field
 
-from database.schema import DBThread
-
-from utils.date_utils import to_utc_isostring
-
 
 class Thread(BaseModel):
     id: str
@@ -18,41 +14,28 @@ class Thread(BaseModel):
     summary: str | None = None
     is_empty: bool
     
-    @staticmethod
-    def from_db_thread(thread: DBThread, message_limit: int = 10) -> "Thread":
-        return Thread(
-            id=thread.id,
-            user_id=thread.user_id,
-            created_at=to_utc_isostring(thread.created_at),
-            updated_at=to_utc_isostring(thread.updated_at),
-            resumed_at=to_utc_isostring(thread.resumed_at) if thread.resumed_at else None,
-            error_message=thread.error_message,
-            title=thread.title,
-            summary=thread.summary,
-            is_empty=thread.is_empty,
-        )
-    
-    def with_updates(self, **kwargs) -> "Thread":
-        return self.model_copy(update=kwargs, deep=True)
-    
-    
+
 class PaginatedThreads(BaseModel):
     threads: list[Thread]
     total_count: int
     has_more: bool
     next_timestamp: str | None = None
-    
+
 
 class BaseThreadParams(BaseModel):
     """Base parameters for thread operations."""
+
     resumed_at: datetime | None = Field(default=None, description="When the thread was resumed")
     title: str | None = Field(default=None, description="Thread title")
     summary: str | None = Field(default=None, description="Thread summary")
-    error_message: str | None = Field(default=None, description="Error message if the thread failed")
-    
+    error_message: str | None = Field(
+        default=None, description="Error message if the thread failed"
+    )
+
 
 class CreateThreadParams(BaseThreadParams):
     """Parameters for creating a new thread."""
+
     id: str = Field(description="Unique thread identifier")
     user_id: str = Field(description="User who created the thread")
     created_at: datetime = Field(description="When the thread was created")
@@ -62,8 +45,8 @@ class CreateThreadParams(BaseThreadParams):
 
 class GetUserThreadsParams(BaseModel):
     """Parameters for getting user threads with pagination and sorting.
-    
-    Attributes: 
+
+    Attributes:
         - user_id: User who created the thread
         - limit: Number of threads to return (min 1, max 100) (default 10)
         - from_timestamp: Timestamp to start from
@@ -71,42 +54,54 @@ class GetUserThreadsParams(BaseModel):
         - sort_order: Sort order (default "desc")
         - exclude_empty: Whether to exclude empty threads (default False)
     """
+
     user_id: str = Field(description="User who created the thread")
     limit: int = Field(ge=1, le=100, default=10, description="Number of threads to return")
     from_timestamp: datetime | None = Field(default=None, description="Timestamp to start from")
-    sort_by: Literal["created_at", "updated_at"] = Field(default="updated_at", description="Field to sort by")
+    sort_by: Literal["created_at", "updated_at"] = Field(
+        default="updated_at", description="Field to sort by"
+    )
     sort_order: Literal["asc", "desc"] = Field(default="desc", description="Sort order")
     exclude_empty: bool = Field(default=False, description="Whether to exclude empty threads")
-    
-    
+
+
 class GetDBUserThreadsParams(BaseModel):
     """Parameters for getting user threads with pagination and sorting.
-    
-    Attributes: 
+
+    Attributes:
         - user_id: User who created the thread
         - limit: Number of threads to return (min 1, max 101) (default 10) (100+1 for paginated limit and has_more flag)
         - from_timestamp: Timestamp to start from
-        - sort_by: Field to sort by (default "updated_at")      
+        - sort_by: Field to sort by (default "updated_at")
         - sort_order: Sort order (default "desc")
         - exclude_empty: Whether to exclude empty threads (default False)
     """
+
     user_id: str = Field(description="User who created the thread")
-    limit: int = Field(ge=1, le=101, default=10, description="Number of threads to return (100+1 for paginated limit and has_more flag)")
+    limit: int = Field(
+        ge=1,
+        le=101,
+        default=10,
+        description="Number of threads to return (100+1 for paginated limit and has_more flag)",
+    )
     from_timestamp: datetime | None = Field(default=None, description="Timestamp to start from")
-    sort_by: Literal["created_at", "updated_at"] = Field(default="updated_at", description="Field to sort by")
+    sort_by: Literal["created_at", "updated_at"] = Field(
+        default="updated_at", description="Field to sort by"
+    )
     sort_order: Literal["asc", "desc"] = Field(default="desc", description="Sort order")
     exclude_empty: bool = Field(default=False, description="Whether to exclude empty threads")
-    
-    
+
+
 class UpdateThreadParams(BaseThreadParams):
     """Parameters for updating a thread."""
+
     id: str = Field(description="Thread ID")
     updated_at: datetime = Field(description="When the thread was last modified")
     is_empty: bool | None = Field(default=None, description="Whether the thread is empty")
-    
-    
+
+
 class ResumeThreadParams(BaseModel):
     """Parameters for resuming a thread."""
+
     id: str = Field(description="Thread ID")
     resumed_at: datetime = Field(description="When the thread was resumed")
-    

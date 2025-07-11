@@ -1,14 +1,10 @@
 from typing import Annotated, Literal
-from fastapi import APIRouter, Depends, HTTPException, Header, Cookie
+from fastapi import APIRouter, Depends, HTTPException
 
 from fastapi.params import Query
 
-from pydantic import BaseModel
-
-from schemas.user_access import UserAccessData
-from schemas.messages import PaginatedMessages, GetMessagesParams
+from schemas.messages import GetThreadMessagesResponse, GetMessagesParams
 from schemas.threads import PaginatedThreads, GetUserThreadsParams
-from schemas.recipes import UserRecipe
 
 from api.deps import get_service_container, get_access_token
 from services.service_container import ServiceContainer
@@ -51,11 +47,6 @@ async def get_user_threads(
         raise HTTPException(status_code=500, detail={ "message": "Internal server error: " + str(e) })
     
     
-class GetThreadMessagesResponse(BaseModel):
-    paginated_messages: PaginatedMessages
-    recipes: list[UserRecipe]
-
-
 @router.get("/threads/{thread_id}/messages")
 async def get_thread_messages(
     thread_id: str,

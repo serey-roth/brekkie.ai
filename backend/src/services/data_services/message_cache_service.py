@@ -1,5 +1,8 @@
 from datetime import datetime, timezone
 
+from services.redis.redis_client import RedisClient
+from services.redis.redis_cache import RedisCache
+
 from schemas.messages import (
     CreateAssistantRecipeMessageParams, 
     CreateAssistantTextMessageParams,
@@ -7,17 +10,14 @@ from schemas.messages import (
     CreateMessageParams, 
     CreateUserMessageParams, 
     Message, 
-    MessageRole, 
+    MessageResponse,
     UpdateMessageParams, 
     GetMessagesParams, 
-    PaginatedMessages
+    PaginatedMessages,
 )
-
-from services.redis.redis_client import RedisClient
-from services.redis.redis_cache import RedisCache
+from schemas.message_role import MessageRole
 
 from utils.date_utils import to_utc_isostring
-
 
 class MessageCacheService:
     def __init__(self, redis_client: RedisClient, ttl: int):
@@ -189,10 +189,10 @@ class MessageCacheService:
         else:
             next_timestamp = None
         
+        message_responses = [MessageResponse.from_message(m) for m in messages_to_return]
         return PaginatedMessages(
-            messages=messages_to_return,
+            messages=message_responses,
             total_count=len(messages),
             has_more=has_more,
             next_timestamp=next_timestamp,
         )
-    

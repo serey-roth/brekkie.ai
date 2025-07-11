@@ -16,6 +16,13 @@ from schemas.messages import (
     CreateUserMessageParams,
     CreateAssistantTextMessageParams,
     CreateAssistantRecipeMessageParams,
+    Message, 
+    CreateMessageParams,
+    MessageResponse, 
+    UpdateMessageParams, 
+    CreateUserMessageParams, 
+    CreateAssistantTextMessageParams, 
+    CreateAssistantRecipeMessageParams, 
     PaginatedMessages,
     GetDBMessagesParams,
 )
@@ -54,6 +61,9 @@ class MessageService:
             tool_output=cast(dict, message.tool_output) if message.tool_output is not None else {},
             is_recipe_generation_started=cast(bool, message.is_recipe_generation_started),
             is_recipe_generation_completed=cast(bool, message.is_recipe_generation_completed),
+            ip_address=str(message.ip_address) if message.ip_address is not None else None,
+            safety_guard_result=SafetyGuardResult.model_validate(message.safety_guard_result)
+            if message.safety_guard_result is not None else None
         )
 
     async def create_message(self, db: AsyncSession, params: CreateMessageParams) -> Message:
@@ -132,10 +142,9 @@ class MessageService:
                 else cast(datetime, messages_to_return[-1].updated_at)
             )
 
-        messages = [self._to_message_dto(message) for message in messages_to_return]
-
+        message_responses = [MessageResponse.from_message(self._to_message_dto(message)) for message in messages_to_return]
         return PaginatedMessages(
-            messages=messages,
+            messages=message_responses,
             total_count=await self.repository.count_thread_messages(db, params.thread_id),
             has_more=has_more,
             next_timestamp=next_timestamp,

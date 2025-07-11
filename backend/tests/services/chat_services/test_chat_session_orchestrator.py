@@ -13,7 +13,7 @@ from services.chat_services.chat_session_orchestrator import ChatSessionOrchestr
 
 from schemas.user_access import UserAccessData
 from schemas.threads import Thread
-from schemas.messages import PaginatedMessages, Message
+from schemas.messages import PaginatedMessages, Message, MessageResponse
 from schemas.message_role import MessageRole
 from schemas.message_content_type import MessageContentType
 from schemas.recipes import UserRecipe
@@ -176,7 +176,7 @@ def sample_messages(sample_thread_id, sample_user_id):
 @pytest.fixture
 def sample_paginated_messages(sample_thread_id, sample_messages):
     return PaginatedMessages(
-        messages=sample_messages,
+        messages=[MessageResponse.from_message(m) for m in sample_messages],
         total_count=1,
         has_more=False,
         next_timestamp=None

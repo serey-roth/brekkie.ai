@@ -300,9 +300,26 @@ def response_llm():
     mock_llm.ainvoke.return_value = MockResponse()
     return mock_llm
     
+    
+@pytest.fixture(scope="session")
+def message_guard(test_settings):
+    mock_llm = AsyncMock()
+    class MockResponse:
+        content = "I'm sorry, I can't help with that."
+        
+    mock_llm.ainvoke.return_value = MockResponse()
+    
+    return ChatSessionMessageGuard(
+        regex_safety_guard=RegexSafetyGuard(),
+        ml_classifier_safety_guard=MLClassifierSafetyGuard(
+            prompt_injection_model_id=test_settings.prompt_injection_model_id,
+            toxicity_model_id=test_settings.toxicity_model_id,
+        ),
+        response_llm=mock_llm
+    )
 
-@pytest_asyncio.fixture(scope="session")
-async def service_container(db_transaction_maker, redis_client, test_settings, response_llm):
+@pytest_asyncio.fixture(scope="function")
+async def service_container(db_transaction_maker, redis_client, test_settings, message_guard):
     user_service = UserService(UserRepository())
     thread_service = ThreadService(ThreadRepository())
     message_service = MessageService(MessageRepository())
@@ -339,14 +356,6 @@ async def service_container(db_transaction_maker, redis_client, test_settings, r
         db_transaction_maker=db_transaction_maker,
         chat_session_store=chat_session_store
     )
-    chat_session_message_guard = ChatSessionMessageGuard(
-        regex_safety_guard=RegexSafetyGuard(),
-        ml_classifier_safety_guard=MLClassifierSafetyGuard(
-            prompt_injection_model_id=test_settings.prompt_injection_model_id,
-            toxicity_model_id=test_settings.toxicity_model_id,
-        ),
-        response_llm=response_llm
-    )
     chat_session_orchestrator = ChatSessionOrchestrator(
         session_ttl=test_settings.session_ttl,
         db_transaction_maker=db_transaction_maker,
@@ -356,7 +365,7 @@ async def service_container(db_transaction_maker, redis_client, test_settings, r
         chat_session_store=chat_session_store,
         chat_session_handlers=chat_session_handlers,
         chat_session_limit_checker=chat_session_limit_checker,
-        chat_session_message_guard=chat_session_message_guard
+        chat_session_message_guard=message_guard
     )
     container = ServiceContainer(
         db_transaction_maker=db_transaction_maker,
@@ -389,25 +398,25 @@ async def service_container(db_transaction_maker, redis_client, test_settings, r
     
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def async_client(service_container: ServiceContainer):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def test_client(service_container: ServiceContainer):
     return TestClient(app)
 
 
-@pytest_asyncio.fixture(autouse=True, scope="session")
+@pytest_asyncio.fixture(autouse=True, scope="function")
 async def clean_redis(redis_client):
     await redis_client.flushall()
     yield
     await redis_client.flushall()
 
 
-@pytest_asyncio.fixture(autouse=True, scope="session")
+@pytest_asyncio.fixture(autouse=True, scope="function")
 async def clean_database(test_session_factory):
     """Clean all database tables between tests"""
     async with test_session_factory() as session:

@@ -2,9 +2,10 @@ import os
 
 from pydantic import ValidationError
 
+from config.settings import Settings, create_settings
+
 import pytest
 
-from config.settings import Settings, create_settings
 
 class TestDefaultValues:
     def test_default_values(self):
@@ -190,5 +191,3 @@ class TestTestSettings:
 
     def test_is_auth_enabled_method(self, settings: Settings):
         assert settings.is_auth_enabled() is False
-
-

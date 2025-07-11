@@ -196,22 +196,24 @@ class TestLogin:
         
     @pytest.mark.asyncio(loop_scope="session")
     async def test_login_with_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings, sample_ip_address: str):
-        test_settings.enable_auth = False
-        
-        headers = {
-            "fly-client-ip": sample_ip_address
-        }
-        
-        response = await async_client.post("/api/auth/login", json={
-            "email": "test@example.com",
-            "password": "password123",
-        }, headers=headers)
-        
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.cookies.get("bk_access_token") is None
-        assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
-        
+        # TODO: This is a hack to override the settings for the test
+        from api.main import app
+        from api.deps import get_settings
+        new_settings = test_settings.model_copy(update={"enable_auth": False})
+        app.dependency_overrides[get_settings] = lambda: new_settings
+
+        try:
+            response = await async_client.post("/api/auth/login", json={
+                "email": "test@example.com",
+                "password": "password123",
+            }, headers={})
             
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert response.cookies.get("bk_access_token") is None
+            assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
+        finally:
+            app.dependency_overrides = {}
+        
     @pytest.mark.asyncio(loop_scope="session")
     async def test_user_does_not_exist(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)

@@ -52,6 +52,16 @@ class Settings(BaseSettings):
 
     # Feature Flags
     enable_auth: bool = Field(default=False, alias="ENABLE_AUTH")
+    
+    # Safety Guard Models
+    prompt_injection_model_id: str = "ProtectAI/deberta-v3-base-prompt-injection-v2"
+    toxicity_model_id: str = "unitary/toxic-bert"
+    
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+        case_sensitive = False
+        frozen = True
 
     # Safety Guard Models
     prompt_injection_model_id: str = "ProtectAI/deberta-v3-base-prompt-injection-v2"

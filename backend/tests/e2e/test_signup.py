@@ -89,25 +89,25 @@ class TestSignup:
         
     @pytest.mark.asyncio(loop_scope="session")
     async def test_signup_with_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings, sample_ip_address: str):
-        test_settings.enable_auth = False
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
+        from api.main import app
+        from api.deps import get_settings
+        new_settings = test_settings.model_copy(update={"enable_auth": False})
+        app.dependency_overrides[get_settings] = lambda: new_settings
         
-        headers = {
-            "fly-client-ip": sample_ip_address
-        }
+        try:
+            payload = {
+                "email": "test@example.com",
+                "name": "Test User",
+                "password": "password123",
+                "confirm_password": "password123"
+            }
+            response = await async_client.post("/api/auth/signup", json=payload, headers={})   
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
         
-        async_client.cookies.set("bk_access_token", user_access_data.access_token)
-        
-        payload = {
-            "email": "test@example.com",
-            "name": "Test User",
-            "password": "password123",
-            "confirm_password": "password123"
-        }
-        response = await async_client.post("/api/auth/signup", json=payload, headers=headers)   
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
-
+        finally:
+            app.dependency_overrides = {}
+       
     @pytest.mark.asyncio(loop_scope="session")
     async def test_passwords_dont_match(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)

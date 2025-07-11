@@ -10,10 +10,11 @@ from services.service_container import ServiceContainer
 from utils.date_utils import to_utc_isostring
 
 
-
 class TestEnsureAccessToken:
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_valid_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+    async def test_valid_token(self, async_client, service_container: ServiceContainer):
+        sample_ip_address = "127.0.0.1"
+        
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
 
         headers = {
@@ -38,7 +39,9 @@ class TestEnsureAccessToken:
         assert response.cookies.get("bk_access_token") is None
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_authenticated_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+    async def test_authenticated_token(self, async_client, service_container: ServiceContainer):
+        sample_ip_address = "127.0.0.2"
+        
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         user_access_data = await service_container.user_access_cache_service.promote_to_authenticated(
             access_token=user_access_data.access_token,
@@ -71,7 +74,9 @@ class TestEnsureAccessToken:
         assert response.cookies.get("bk_access_token") is None
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_no_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+    async def test_no_token(self, async_client, service_container: ServiceContainer):
+        sample_ip_address = "127.0.0.3"
+        
         headers = {
             "fly-client-ip": sample_ip_address
         }
@@ -86,7 +91,9 @@ class TestEnsureAccessToken:
         assert response.cookies.get("bk_access_token") is not None
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_invalid_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+    async def test_invalid_token(self, async_client, service_container: ServiceContainer):
+        sample_ip_address = "127.0.0.4"
+        
         headers = {
             "fly-client-ip": sample_ip_address
         }
@@ -103,7 +110,9 @@ class TestEnsureAccessToken:
         assert response.cookies.get("bk_access_token") is not None
         
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_expired_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+    async def test_expired_token(self, async_client, service_container: ServiceContainer):
+        sample_ip_address = "127.0.0.5"
+        
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
 
         await service_container.user_access_cache_service.revoke_access(user_access_data.access_token)
@@ -126,10 +135,17 @@ class TestEnsureAccessToken:
         assert response.cookies.get("bk_access_token") is not None
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_almost_expired_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
-        with patch("services.data_services.user_access_cache_service.UserAccessCacheService.get_ttl", return_value=10):
+    async def test_almost_expired_token(self, async_client, service_container: ServiceContainer):
+        sample_ip_address = "127.0.0.6"
+        
+        # Patch the specific instance method
+        with patch.object(service_container.user_access_cache_service, 'get_ttl', return_value=10):
             user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
 
+            exist = await service_container.user_access_cache_service.get_user_access(user_access_data.access_token)
+            assert exist is not None
+            assert exist.access_token == user_access_data.access_token
+            
             headers = {
                 "fly-client-ip": sample_ip_address
             }
@@ -148,7 +164,9 @@ class TestEnsureAccessToken:
             assert response.cookies.get("bk_access_token") is not None
             
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_access_rate_limit(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
+    async def test_access_rate_limit(self, async_client, service_container: ServiceContainer):
+        sample_ip_address = "127.0.0.7"
+        
         await service_container.anonymous_access_service.get_or_create_user_access(sample_ip_address, "test_token_1")
         await service_container.anonymous_access_service.get_or_create_user_access(sample_ip_address, "test_token_2")
         await service_container.anonymous_access_service.get_or_create_user_access(sample_ip_address, "test_token_3")

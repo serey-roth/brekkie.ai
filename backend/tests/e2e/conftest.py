@@ -1,6 +1,12 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 from contextlib import asynccontextmanager
 import pytest
 import pytest_asyncio
+from unittest.mock import AsyncMock
 from httpx import AsyncClient, ASGITransport
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone

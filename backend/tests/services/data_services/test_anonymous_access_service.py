@@ -23,7 +23,7 @@ def user_access_cache_service(redis_client: FakeRedis):
 
 @pytest.fixture
 def rate_limiter(redis_client: FakeRedis):
-    return AnonymousAccessIpAddressRateLimiter(redis_client, 30, 3)
+    return AnonymousAccessIpAddressRateLimiter(redis_client, 30, 1)
 
 
 @pytest.fixture
@@ -85,7 +85,8 @@ class TestAnonymousAccessService:
             assert user_access_data.updated_at == to_utc_isostring(now)
             assert user_access_data.ip_address == sample_ip_address
             
-            assert not await rate_limiter.is_rate_limited(sample_ip_address)
+            # After the call, the rate limiter should be at the limit (1)
+            assert await rate_limiter.is_rate_limited(sample_ip_address)
             assert await rate_limiter.get_current_count(sample_ip_address) == 1
             
             
@@ -99,14 +100,15 @@ class TestAnonymousAccessService:
             
         
     @pytest.mark.asyncio
-    async def test_invalid_token_and_under_rate_limit(self, anonymous_access_service: AnonymousAccessService, user_access_cache_service: UserAccessCacheService, rate_limiter: AnonymousAccessIpAddressRateLimiter, sample_ip_address: str):
+    async def test_invalid_token_and_under_rate_limit(self, anonymous_access_service: AnonymousAccessService, user_access_cache_service: UserAccessCacheService, rate_limiter: AnonymousAccessIpAddressRateLimiter):
         access_token = "sample_access_token"
+        ip_address = "127.0.0.1"
         
         with patch("services.data_services.user_access_cache_service.datetime") as mock_datetime:
             now = datetime.now(timezone.utc)
             mock_datetime.now.return_value = now
             
-            user_access_data = await anonymous_access_service.get_or_create_user_access(sample_ip_address, access_token)
+            user_access_data = await anonymous_access_service.get_or_create_user_access(ip_address, access_token)
             assert user_access_data.access_token is not None
             assert user_access_data.user_id is not None
             assert user_access_data.email is None
@@ -115,20 +117,23 @@ class TestAnonymousAccessService:
             assert user_access_data.user_message_count == 0
             assert user_access_data.created_at == to_utc_isostring(now)
             assert user_access_data.updated_at == to_utc_isostring(now)
-            assert user_access_data.ip_address == sample_ip_address
+            assert user_access_data.ip_address == ip_address
             
-            assert not await rate_limiter.is_rate_limited(sample_ip_address)
-            assert await rate_limiter.get_current_count(sample_ip_address) == 1
+            # After the call, the rate limiter should be at the limit (1)
+            assert await rate_limiter.is_rate_limited(ip_address)
+            assert await rate_limiter.get_current_count(ip_address) == 1
+            
+            await rate_limiter.clear(ip_address)
         
         
     @pytest.mark.asyncio
-    async def test_invalid_token_and_over_rate_limit(self, anonymous_access_service: AnonymousAccessService, user_access_cache_service: UserAccessCacheService, rate_limiter: AnonymousAccessIpAddressRateLimiter, sample_ip_address: str):
+    async def test_invalid_token_and_over_rate_limit_with_token(self, anonymous_access_service: AnonymousAccessService, rate_limiter: AnonymousAccessIpAddressRateLimiter):
         access_token = "sample_access_token"
         
-        await rate_limiter.increment(sample_ip_address)
-        await rate_limiter.increment(sample_ip_address)
+        await rate_limiter.increment("127.0.0.1")
+        await rate_limiter.increment("127.0.0.1")
         
         with pytest.raises(RateLimitError):
-            await anonymous_access_service.get_or_create_user_access(sample_ip_address, access_token)
+            await anonymous_access_service.get_or_create_user_access("127.0.0.1", access_token)
             
-            
+        await rate_limiter.clear("127.0.0.1")

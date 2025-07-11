@@ -1,20 +1,27 @@
-from contextlib import asynccontextmanager
 import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.dirname(os.path.dirname(current_dir))
+env_local_path = os.path.join(backend_dir, '.env.local')
+
+print(env_local_path)
+
+from dotenv import load_dotenv
+load_dotenv(env_local_path)
+
+os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
+os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL")
+os.environ["TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY")
+
+from config.settings import Settings
+settings = Settings()
+
+from contextlib import asynccontextmanager
 import asyncio
 import uuid
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.memory import InMemorySaver
-
-from dotenv import load_dotenv
-
-# Load environment variables with proper precedence
-load_dotenv()  # Load .env if it exists
-load_dotenv(".env.local")  # Load .env.local (development)
-
-os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
-os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL")
-os.environ["TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY")
 
 from schemas.conversation_stream_events import (
     TextMessageCompletedPayload, 
@@ -29,6 +36,7 @@ from schemas.conversation_stream_events import (
     SearchStartedPayload,
     SearchCompletedPayload,
     ThreadTitleUpdatedPayload,
+    UserMessageRejectedPayload,
 )
 from schemas.recipes import RecipeIngredient, RecipeInstruction, RecipeCategory
 
@@ -42,7 +50,6 @@ async def handle_message_start(message_id: str, payload: TextMessageStartedPaylo
 
 async def handle_message_chunk(message_id: str, payload: TextMessageChunkGeneratedPayload):
     print(payload.message_chunk, end="", flush=True)
-    print(f"\n\n💬 Chunk Metadata: {payload.metadata}")
 
 async def handle_message_end(message_id: str, payload: TextMessageCompletedPayload):
     print()  # Just a newline to end the message
@@ -143,6 +150,9 @@ async def handle_summary_updated(payload: SummaryUpdatedPayload):
 async def handle_thread_title_updated(payload: ThreadTitleUpdatedPayload):
     print(f"\n\n💬 Thread Title: {payload.thread_title}")
 
+async def handle_user_message_rejected(payload: UserMessageRejectedPayload):
+    print(f"\n\n{payload.rejection_message}")
+
 @asynccontextmanager
 async def test_setup():
     checkpointer = InMemorySaver()
@@ -175,9 +185,9 @@ async def main():
                 case "text_message_started":
                     assistant_message_id = str(uuid.uuid4())
                     await handle_message_start(assistant_message_id, event.payload)
-                case "text_message_chunk_detected":
+                case "text_message_chunk_generated":
                     await handle_message_chunk(assistant_message_id, event.payload)
-                case "text_message_finished":
+                case "text_message_completed":
                     await handle_message_end(assistant_message_id, event.payload)
                     assistant_message_id = None
                 case "recipe_generation_started":
@@ -185,13 +195,13 @@ async def main():
                     await handle_recipe_start(assistant_message_id, event.payload)
                 case "recipe_field_detected":
                     await handle_recipe_field(assistant_message_id, event.payload)
-                case "recipe_generation_finished":
+                case "recipe_generation_completed":
                     await handle_recipe_complete(assistant_message_id, event.payload)
                     assistant_message_id = None
                 case "search_started":
                     assistant_message_id = str(uuid.uuid4())
                     await handle_search_started(assistant_message_id, event.payload)
-                case "search_finished":
+                case "search_completed":
                     await handle_search_completed(assistant_message_id, event.payload)
                     assistant_message_id = None                    
                 case "summary_updated":
@@ -201,7 +211,9 @@ async def main():
                 case "ai_agent_error":
                     await handle_ai_agent_error(event.payload)
                     assistant_message_id = None
-            
+                case "user_message_rejected":
+                    await handle_user_message_rejected(event.payload)
+
         while True:
             user_input = await get_user_input()
             if user_input.lower() == 'quit':

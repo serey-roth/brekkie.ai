@@ -85,7 +85,7 @@ class AgentFactory:
         recent_messages = messages[-5:] + [HumanMessage(content=title_message)]
         response = await thread_title_llm.ainvoke(recent_messages)
         response_content = str(response.content).strip()
-        
+
         write = get_stream_writer()
         write({"event": "thread_title_updated", "thread_title": response_content})
 

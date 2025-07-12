@@ -1,8 +1,11 @@
 from typing import TypeVar, Generic, Type
+
+from pydantic import BaseModel
+
 from services.redis.redis_client import RedisClient
 import json
 
-T = TypeVar("T", bound=dict)
+T = TypeVar("T", bound=dict | BaseModel)
 
 
 class RedisCache(Generic[T]):
@@ -31,7 +34,11 @@ class RedisCache(Generic[T]):
         if ttl is not None and keep_ttl:
             raise ValueError("ttl and keep_ttl cannot be used together")
 
-        json_value = json.dumps(value)
+        if isinstance(value, BaseModel):
+            json_value = json.dumps(value.model_dump())
+        else:
+            json_value = json.dumps(value)
+
         if keep_ttl:
             await self.redis.set(
                 key, json_value, keepttl=True

@@ -91,8 +91,6 @@ def sample_recipe():
         prep_time_minutes=15,
         cook_time_minutes=30,
         servings="8 servings",
-        created_at=to_utc_isostring(timestamp),
-        updated_at=to_utc_isostring(timestamp)
     )
     
 @pytest.fixture
@@ -397,7 +395,7 @@ class TestRecipeGenerationCompleted:
         assert chat_session_message_processor.assistant_message_id is None
         
     @pytest.mark.asyncio
-    async def test_missing_assistant_message_id_raises_value_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_missing_assistant_message_id_raises_value_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id, sample_recipe):
         chat_session_message_processor.assistant_message_id = None
         
         with pytest.raises(ValueError):

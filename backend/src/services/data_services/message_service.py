@@ -16,13 +16,13 @@ from schemas.messages import (
     CreateUserMessageParams,
     CreateAssistantTextMessageParams,
     CreateAssistantRecipeMessageParams,
-    Message, 
+    Message,
     CreateMessageParams,
-    MessageResponse, 
-    UpdateMessageParams, 
-    CreateUserMessageParams, 
-    CreateAssistantTextMessageParams, 
-    CreateAssistantRecipeMessageParams, 
+    MessageResponse,
+    UpdateMessageParams,
+    CreateUserMessageParams,
+    CreateAssistantTextMessageParams,
+    CreateAssistantRecipeMessageParams,
     PaginatedMessages,
     GetDBMessagesParams,
 )
@@ -48,22 +48,29 @@ class MessageService:
             thread_id=str(message.thread_id),
             role=MessageRole(message.role),
             content_type=MessageContentType(message.content_type),
-            text_content=str(message.text_content) if message.text_content is not None else "",
-            parent_id=str(message.parent_id) if message.parent_id is not None else "",
-            recipe_id=str(message.recipe_id) if message.recipe_id is not None else "",
+            text_content=str(message.text_content) if message.text_content is not None else None,
+            parent_id=str(message.parent_id) if message.parent_id is not None else None,
+            recipe_id=str(message.recipe_id) if message.recipe_id is not None else None,
             created_at=to_utc_isostring(cast(datetime, message.created_at)),
             updated_at=to_utc_isostring(cast(datetime, message.updated_at)),
-            model_name=str(message.model_name) if message.model_name is not None else "",
-            input_tokens=cast(int, message.input_tokens) if message.input_tokens is not None else 0,
-            output_tokens=cast(int, message.output_tokens) if message.output_tokens is not None else 0,
-            tool_name=str(message.tool_name) if message.tool_name is not None else "",
-            tool_input=cast(dict, message.tool_input) if message.tool_input is not None else {},
-            tool_output=cast(dict, message.tool_output) if message.tool_output is not None else {},
+            model_name=str(message.model_name) if message.model_name is not None else None,
+            input_tokens=cast(int, message.input_tokens)
+            if message.input_tokens is not None
+            else None,
+            output_tokens=cast(int, message.output_tokens)
+            if message.output_tokens is not None
+            else None,
+            tool_name=str(message.tool_name) if message.tool_name is not None else None,
+            tool_input=cast(dict, message.tool_input) if message.tool_input is not None else None,
+            tool_output=cast(dict, message.tool_output)
+            if message.tool_output is not None
+            else None,
             is_recipe_generation_started=cast(bool, message.is_recipe_generation_started),
             is_recipe_generation_completed=cast(bool, message.is_recipe_generation_completed),
             ip_address=str(message.ip_address) if message.ip_address is not None else None,
             safety_guard_result=SafetyGuardResult.model_validate(message.safety_guard_result)
-            if message.safety_guard_result is not None else None
+            if message.safety_guard_result is not None
+            else None,
         )
 
     async def create_message(self, db: AsyncSession, params: CreateMessageParams) -> Message:
@@ -142,7 +149,10 @@ class MessageService:
                 else cast(datetime, messages_to_return[-1].updated_at)
             )
 
-        message_responses = [MessageResponse.from_message(self._to_message_dto(message)) for message in messages_to_return]
+        message_responses = [
+            MessageResponse.from_message(self._to_message_dto(message))
+            for message in messages_to_return
+        ]
         return PaginatedMessages(
             messages=message_responses,
             total_count=await self.repository.count_thread_messages(db, params.thread_id),

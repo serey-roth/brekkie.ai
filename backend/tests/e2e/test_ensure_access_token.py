@@ -168,10 +168,7 @@ class TestEnsureAccessToken:
         sample_ip_address = "127.0.0.7"
         
         await service_container.anonymous_access_service.get_or_create_user_access(sample_ip_address, "test_token_1")
-        await service_container.anonymous_access_service.get_or_create_user_access(sample_ip_address, "test_token_2")
-        await service_container.anonymous_access_service.get_or_create_user_access(sample_ip_address, "test_token_3")
         
         response = await async_client.post("/api/access-token/ensure-access-token", headers={"fly-client-ip": sample_ip_address})
         assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
             
-        

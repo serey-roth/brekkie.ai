@@ -3,6 +3,7 @@ from typing import Literal
 
 from schemas.recipes import Recipe, RecipeField
 
+
 class ConversationStreamMetadata(BaseModel):
     model_name: str = Field(default="unknown")
     input_tokens: int = Field(default=0)
@@ -53,7 +54,7 @@ class AIAgentErrorPayload(BaseModel):
 
 class SummaryUpdatedPayload(BaseModel):
     summary: str
-    
+
 
 class ThreadTitleUpdatedPayload(BaseModel):
     thread_title: str
@@ -79,6 +80,7 @@ ConversationStreamEventName = Literal[
     "user_message_rejected",
 ]
 
+
 class ConversationStreamEvent(BaseModel):
     event: ConversationStreamEventName
     payload: (
@@ -96,19 +98,23 @@ class ConversationStreamEvent(BaseModel):
         | UserMessageRejectedPayload
     )
 
-    @field_validator('payload')
+    @field_validator("payload")
     @classmethod
     def validate_payload(cls, v, info):
-        event = info.data.get('event')
+        event = info.data.get("event")
         if event == "text_message_started":
             if not isinstance(v, TextMessageStartedPayload):
                 raise ValueError("text_message_started event should have TextMessageStartedPayload")
         elif event == "text_message_chunk_generated":
             if not isinstance(v, TextMessageChunkGeneratedPayload):
-                raise ValueError("text_message_chunk_generated event should have TextMessageChunkGeneratedPayload")
+                raise ValueError(
+                    "text_message_chunk_generated event should have TextMessageChunkGeneratedPayload"
+                )
         elif event == "text_message_completed":
             if not isinstance(v, TextMessageCompletedPayload):
-                raise ValueError("text_message_completed event should have TextMessageCompletedPayload")
+                raise ValueError(
+                    "text_message_completed event should have TextMessageCompletedPayload"
+                )
         elif event == "search_started":
             if not isinstance(v, SearchStartedPayload):
                 raise ValueError("search_started event should have SearchStartedPayload")
@@ -117,13 +123,19 @@ class ConversationStreamEvent(BaseModel):
                 raise ValueError("search_completed event should have SearchCompletedPayload")
         elif event == "recipe_generation_started":
             if not isinstance(v, RecipeGenerationStartedPayload):
-                raise ValueError("recipe_generation_started event should have RecipeGenerationStartedPayload")
+                raise ValueError(
+                    "recipe_generation_started event should have RecipeGenerationStartedPayload"
+                )
         elif event == "recipe_field_detected":
             if not isinstance(v, RecipeFieldDetectedPayload):
-                raise ValueError("recipe_field_detected event should have RecipeFieldDetectedPayload")
+                raise ValueError(
+                    "recipe_field_detected event should have RecipeFieldDetectedPayload"
+                )
         elif event == "recipe_generation_completed":
             if not isinstance(v, RecipeGenerationCompletedPayload):
-                raise ValueError("recipe_generation_completed event should have RecipeGenerationCompletedPayload")
+                raise ValueError(
+                    "recipe_generation_completed event should have RecipeGenerationCompletedPayload"
+                )
         elif event == "ai_agent_error":
             if not isinstance(v, AIAgentErrorPayload):
                 raise ValueError("ai_agent_error event should have AIAgentErrorPayload")
@@ -135,5 +147,7 @@ class ConversationStreamEvent(BaseModel):
                 raise ValueError("thread_title_updated event should have ThreadTitleUpdatedPayload")
         elif event == "user_message_rejected":
             if not isinstance(v, UserMessageRejectedPayload):
-                raise ValueError("user_message_rejected event should have UserMessageRejectedPayload")
+                raise ValueError(
+                    "user_message_rejected event should have UserMessageRejectedPayload"
+                )
         return v

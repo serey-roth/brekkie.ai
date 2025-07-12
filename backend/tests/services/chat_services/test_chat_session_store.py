@@ -162,8 +162,9 @@ class TestCreateUserMessage:
             text_content="content_authenticated",
             created_at=timestamp,
             updated_at=timestamp,
+            role=MessageRole.user,
+            content_type=MessageContentType.text,
         ))
-        
         mock_message_cache_service.create_user_message.assert_not_called()
 
     @pytest.mark.asyncio
@@ -204,6 +205,8 @@ class TestCreateUserMessage:
             text_content="content_unauthenticated",
             created_at=timestamp,
             updated_at=timestamp,
+            role=MessageRole.user,
+            content_type=MessageContentType.text,
         ))
         mock_user_access_cache_service.increment_user_message_count.assert_called_once_with(user_access_data.access_token)
         mock_thread_service.get_thread.assert_not_called()

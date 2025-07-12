@@ -19,8 +19,9 @@ class TestDefaultValues:
         assert settings.user_access_cache_ttl == 60 * 60 * 24  # 1 day
         
         # Test rate limiting defaults
-        assert settings.anonymous_access_rate_limiter_ttl == 60 * 60 * 24  # 1 day
-        assert settings.anonymous_access_rate_limiter_limit == 1
+        assert settings.ip_address_rate_limiter_ttl == 60 * 60 * 24  # 1 day
+        assert settings.ip_address_rate_limiter_anonymous_access_limit == 1
+        assert settings.ip_address_rate_limiter_violation_limit == 1
         
         # Test session defaults
         assert settings.session_ttl == 60 * 30  # 30 minutes

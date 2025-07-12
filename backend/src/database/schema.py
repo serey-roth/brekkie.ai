@@ -11,6 +11,7 @@ from utils.date_utils import strip_timezone
 
 Base = declarative_base()
 
+
 class DBThread(Base):
     __tablename__ = "threads"
 
@@ -61,9 +62,9 @@ class DBMessage(Base):
     recipe_id = Column(String, ForeignKey("recipes.id"), nullable=True)
     is_recipe_generation_started = Column(Boolean, nullable=True)
     is_recipe_generation_completed = Column(Boolean, nullable=True)
-    
+
     ip_address = Column(String, nullable=True)
-    
+
     safety_guard_result = Column(JSON, nullable=True)
 
     parent = relationship(

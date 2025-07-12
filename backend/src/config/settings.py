@@ -6,18 +6,32 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
 
-    # Environment
-    environment: Annotated[Literal["development", "production", "test"], Field(default="production", alias="ENVIRONMENT")]
+    environment: Annotated[
+        Literal["development", "production", "test"],
+        Field(default="production", alias="ENVIRONMENT"),
+    ]
 
     # Database
-    db_url: Annotated[str, Field(default="postgresql+psycopg://foodagent:fOoDaGent123@localhost:5432/foodagent", alias="DB_URL")]
-    checkpoint_db_url: Annotated[str, Field(default="postgresql://foodagent:fOoDaGent123@localhost:5432/foodagent", alias="CHECKPOINT_DB_URL")]
+    db_url: Annotated[
+        str,
+        Field(
+            default="postgresql+psycopg://foodagent:fOoDaGent123@localhost:5432/foodagent",
+            alias="DB_URL",
+        ),
+    ]
+    checkpoint_db_url: Annotated[
+        str,
+        Field(
+            default="postgresql://foodagent:fOoDaGent123@localhost:5432/foodagent",
+            alias="CHECKPOINT_DB_URL",
+        ),
+    ]
 
     # Redis
     redis_url: Annotated[str, Field(default="redis://localhost:6379/", alias="REDIS_URL")]
 
     # API Keys
-    google_api_key: str = Field(default="GOOGLE_API_KEY", alias="GOOGLE_API_KEY") 
+    google_api_key: str = Field(default="GOOGLE_API_KEY", alias="GOOGLE_API_KEY")
     tavily_api_key: str = Field(default="TAVILY_API_KEY", alias="TAVILY_API_KEY")
 
     # Cache TTL Settings (in seconds)
@@ -27,8 +41,9 @@ class Settings(BaseSettings):
     user_access_cache_ttl: int = 60 * 60 * 24  # 1 day
 
     # Rate Limiting
-    anonymous_access_rate_limiter_ttl: int = 60 * 60 * 24  # 1 day
-    anonymous_access_rate_limiter_limit: int = 1
+    ip_address_rate_limiter_ttl: int = 60 * 60 * 24  # 1 day
+    ip_address_rate_limiter_anonymous_access_limit: int = 1
+    ip_address_rate_limiter_violation_limit: int = 1
 
     # Session and Limits
     session_ttl: int = 60 * 30  # 30 minutes
@@ -52,32 +67,22 @@ class Settings(BaseSettings):
 
     # Feature Flags
     enable_auth: bool = Field(default=False, alias="ENABLE_AUTH")
-    
-    # Safety Guard Models
-    prompt_injection_model_id: str = "ProtectAI/deberta-v3-base-prompt-injection-v2"
-    toxicity_model_id: str = "unitary/toxic-bert"
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        frozen = True
 
     # Safety Guard Models
     prompt_injection_model_id: str = "ProtectAI/deberta-v3-base-prompt-injection-v2"
     toxicity_model_id: str = "unitary/toxic-bert"
 
     model_config = SettingsConfigDict(
-        env_file = ".env",
-        env_file_encoding = "utf-8",
-        case_sensitive = False,
-        frozen = True,
-        extra = "ignore"
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        frozen=True,
+        extra="ignore",
     )
-    
+
     def __init__(self, env_file: str = ".env"):
         super().__init__(_env_file=env_file)
-        
+
     def is_production(self) -> bool:
         return self.environment == "production"
 

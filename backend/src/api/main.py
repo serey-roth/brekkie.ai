@@ -1,8 +1,8 @@
 import os
-import sys
+
 from dotenv import load_dotenv
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
@@ -34,7 +34,10 @@ from services.chat_services.chat_session_orchestrator import ChatSessionOrchestr
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from services.data_services.user_access_cache_service import UserAccessCacheService
-from services.data_services.anonymous_access_rate_limiter import AnonymousAccessIpAddressRateLimiter
+from services.data_services.ip_address_rate_limiter import (
+    IpAddressRateLimiter,
+    IpAddressRateLimitConfig,
+)
 from services.data_services.anonymous_access_service import AnonymousAccessService
 from services.data_services.user_service import UserService
 from services.data_services.thread_service import ThreadService
@@ -49,54 +52,62 @@ from services.safety_guards.regex_safety_guard import RegexSafetyGuard
 from services.safety_guards.ml_classifier_safety_guard import MLClassifierSafetyGuard
 from services.redis.redis_client import create_redis_client
 
-# Load environment variables with proper precedence
-load_dotenv(".env.local")  # Load .env.local (development)
-
-from config.settings import Settings
+from config.settings import create_settings
 from utils.logger import Logger
-
 
 logger = Logger("api.index")
 
 logger.info("🚀 FastAPI app starting...")
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up...")
-    
-    settings = Settings()
-    
-    #https://github.com/langchain-ai/langgraph/discussions/1429
-    checkpointer_db_pool = create_checkpointer_pool()
+
+    settings = create_settings()
+
+    # https://github.com/langchain-ai/langgraph/discussions/1429
+    checkpointer_db_pool = create_checkpointer_pool(settings.checkpoint_db_url)
     await checkpointer_db_pool.open(wait=True)
-    checkpointer = AsyncPostgresSaver(conn=checkpointer_db_pool)
+    checkpointer = AsyncPostgresSaver(conn=checkpointer_db_pool)  # type: ignore
     await checkpointer.setup()
     ai_food_agent = GoogleAIFoodAgent(checkpointer=checkpointer)
-    
-    redis_client = create_redis_client()
-    
-    user_access_cache_service = UserAccessCacheService(redis_client=redis_client, ttl=settings.user_access_cache_ttl)
-    thread_cache_service = ThreadCacheService(redis_client=redis_client, ttl=settings.thread_cache_ttl)
-    message_cache_service = MessageCacheService(redis_client=redis_client, ttl=settings.message_cache_ttl)
-    recipe_cache_service = RecipeCacheService(redis_client=redis_client, ttl=settings.recipe_cache_ttl)
-    
-    anonymous_access_ip_rate_limiter = AnonymousAccessIpAddressRateLimiter(
-        redis_client=redis_client, 
-        ttl=settings.anonymous_access_rate_limiter_ttl, 
-        limit=settings.anonymous_access_rate_limiter_limit
+
+    redis_client = create_redis_client(settings.redis_url)
+
+    user_access_cache_service = UserAccessCacheService(
+        redis_client=redis_client, ttl=settings.user_access_cache_ttl
+    )
+    thread_cache_service = ThreadCacheService(
+        redis_client=redis_client, ttl=settings.thread_cache_ttl
+    )
+    message_cache_service = MessageCacheService(
+        redis_client=redis_client, ttl=settings.message_cache_ttl
+    )
+    recipe_cache_service = RecipeCacheService(
+        redis_client=redis_client, ttl=settings.recipe_cache_ttl
+    )
+
+    ip_rate_limiter = IpAddressRateLimiter(
+        redis_client=redis_client,
+        config=IpAddressRateLimitConfig(
+            ttl=settings.ip_address_rate_limiter_ttl,
+            anonymous_access_limit=settings.ip_address_rate_limiter_anonymous_access_limit,
+            violation_limit=settings.ip_address_rate_limiter_violation_limit,
+        ),
     )
     anonymous_access_service = AnonymousAccessService(
         user_access_cache_service=user_access_cache_service,
-        ip_rate_limiter=anonymous_access_ip_rate_limiter
+        ip_rate_limiter=ip_rate_limiter,
     )
-    
+
     db_transaction_maker = create_db_transaction_maker(settings)
-    
+
     thread_service = ThreadService(repository=ThreadRepository())
     message_service = MessageService(repository=MessageRepository())
     user_service = UserService(repository=UserRepository())
     recipe_service = RecipeService(repository=RecipeRepository())
-    
+
     websocket_event_sender = WebSocketEventSender()
 
     chat_session_store = ChatSessionStore(
@@ -111,17 +122,17 @@ async def lifespan(app: FastAPI):
     chat_session_limit_checker = ChatSessionLimitChecker(
         user_access_cache_service=user_access_cache_service,
         authenticated_user_message_limit=settings.authenticated_user_message_limit,
-        unauthenticated_user_message_limit=settings.unauthenticated_user_message_limit
+        unauthenticated_user_message_limit=settings.unauthenticated_user_message_limit,
     )
     chat_session_handlers = ChatSessionHandlers(
-        db_transaction_maker=db_transaction_maker,
-        chat_session_store=chat_session_store
+        db_transaction_maker=db_transaction_maker,  # type: ignore
+        chat_session_store=chat_session_store,
     )
-    
+
     response_llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash-preview-05-20",
         temperature=0.1,
-        api_key=os.getenv("GOOGLE_API_KEY"),
+        api_key=settings.google_api_key,
     )
     chat_session_message_guard = ChatSessionMessageGuard(
         regex_safety_guard=RegexSafetyGuard(),
@@ -129,26 +140,26 @@ async def lifespan(app: FastAPI):
             prompt_injection_model_id=settings.prompt_injection_model_id,
             toxicity_model_id=settings.toxicity_model_id,
         ),
-        response_llm=response_llm
+        response_llm=response_llm,
     )
-    
+
     chat_session_orchestrator = ChatSessionOrchestrator(
         session_ttl=settings.session_ttl,
-        db_transaction_maker=db_transaction_maker,
+        db_transaction_maker=db_transaction_maker,  # type: ignore
         user_access_cache_service=user_access_cache_service,
         ai_food_agent=ai_food_agent,
-        websocket_event_sender=websocket_event_sender,  
+        websocket_event_sender=websocket_event_sender,
         chat_session_store=chat_session_store,
         chat_session_handlers=chat_session_handlers,
         chat_session_limit_checker=chat_session_limit_checker,
-        chat_session_message_guard=chat_session_message_guard
+        chat_session_message_guard=chat_session_message_guard,
     )
 
     service_container = ServiceContainer(
-        db_transaction_maker=db_transaction_maker,
+        db_transaction_maker=db_transaction_maker,  # type: ignore
         ai_food_agent=ai_food_agent,
         user_access_cache_service=user_access_cache_service,
-        anonymous_access_service=anonymous_access_service,  
+        anonymous_access_service=anonymous_access_service,
         user_service=user_service,
         message_service=message_service,
         message_cache_service=message_cache_service,
@@ -159,7 +170,7 @@ async def lifespan(app: FastAPI):
         websocket_event_sender=websocket_event_sender,
         chat_session_store=chat_session_store,
         chat_session_orchestrator=chat_session_orchestrator,
-        chat_session_limit_checker=chat_session_limit_checker
+        chat_session_limit_checker=chat_session_limit_checker,
     )
 
     app.state.settings = settings
@@ -167,15 +178,15 @@ async def lifespan(app: FastAPI):
     app.state.checkpointer_db_pool = checkpointer_db_pool
     app.state.redis_client = redis_client
     logger.info("Service container initialized")
-    
+
     yield
 
     logger.info("Shutting down...")
     await checkpointer_db_pool.close()
     await redis_client.close()
-        
 
-app = FastAPI(lifespan=lifespan)
+
+app = FastAPI(lifespan=lifespan)  # type: ignore
 
 app.add_middleware(
     CORSMiddleware,

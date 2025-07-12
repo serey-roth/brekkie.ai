@@ -1,11 +1,17 @@
 import os
+
+from dotenv import load_dotenv
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.dirname(current_dir)
+env_file = os.path.join(backend_dir, '.env.test')
+load_dotenv(env_file)
+
 from unittest.mock import MagicMock, AsyncMock, patch, call
 import pytest
 
-os.environ["TAVILY_API_KEY"] = "mock_tavily_key"
-os.environ["GOOGLE_API_KEY"] = "mock_google_api_key"
-
 from langchain_core.messages import AIMessageChunk, ToolMessage
+from langchain_core.messages.ai import UsageMetadata
 
 from schemas.conversation_stream_events import (
     TextMessageCompletedPayload,
@@ -37,6 +43,7 @@ from tests.test_helpers.assert_deep_equal import assert_deep_equal
 def mock_checkpointer():
     mock_checkpointer = MagicMock()
     return mock_checkpointer
+
 
 @pytest.fixture
 def mock_agent_service(mock_checkpointer):
@@ -141,12 +148,12 @@ class TestExtractMetadata:
         
     def test_extract_ai_chunk_metadata(self, mock_agent_service):
         chunk1 = AIMessageChunk(content="Hello")
-        chunk1.usage_metadata = {"input_tokens": 0, "output_tokens": 6}
+        chunk1.usage_metadata = UsageMetadata(input_tokens=0, output_tokens=6) # type: ignore
         metadata = mock_agent_service._extract_ai_chunk_metadata(chunk1, {"ls_model_name": "gemini-2.5-flash-preview-05-20"})
         assert_deep_equal(metadata, ConversationStreamMetadata(model_name="gemini-2.5-flash-preview-05-20", input_tokens=0, output_tokens=6))
         
         chunk2 = AIMessageChunk(content=["Hello", " there"])
-        chunk2.usage_metadata = {"input_tokens": 0, "output_tokens": 10}
+        chunk2.usage_metadata = UsageMetadata(input_tokens=0, output_tokens=10) # type: ignore
         metadata = mock_agent_service._extract_ai_chunk_metadata(chunk2, {"ls_model_name": "gemini-2.5-flash-preview-05-20"})
         assert_deep_equal(metadata, ConversationStreamMetadata(model_name="gemini-2.5-flash-preview-05-20", input_tokens=0, output_tokens=10))
 

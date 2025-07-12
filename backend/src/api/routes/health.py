@@ -6,18 +6,22 @@ from utils.logger import Logger
 
 logger = Logger("health")
 
+
 # Dependency to get the checkpointer pool
 async def get_checkpointer_pool(request: Request):
     return request.app.state.checkpointer_db_pool
+
 
 # Dependency to get the Redis client
 async def get_redis_client(request: Request):
     return request.app.state.redis_client
 
+
 # 1. App/server check (always returns True for basic up signal)
 async def app_check() -> bool:
     logger.info("Checking app connection")
     return True
+
 
 # 2. DB check (verifies connection is alive and usable)
 async def db_check(pool=Depends(get_checkpointer_pool)) -> bool:
@@ -30,6 +34,7 @@ async def db_check(pool=Depends(get_checkpointer_pool)) -> bool:
         logger.warning(f"[DB CHECK FAILED]: {e}")
         return False
 
+
 # 3. Redis check (verifies Redis connection is alive and usable)
 async def redis_check(redis_client=Depends(get_redis_client)) -> bool:
     logger.info("Checking Redis connection")
@@ -39,6 +44,7 @@ async def redis_check(redis_client=Depends(get_redis_client)) -> bool:
     except Exception as e:
         logger.warning(f"[REDIS CHECK FAILED]: {e}")
         return False
+
 
 async def success_handler(**kwargs):
     return JSONResponse(
@@ -50,6 +56,7 @@ async def success_handler(**kwargs):
         },
     )
 
+
 async def failure_handler(**kwargs):
     return JSONResponse(
         status_code=503,
@@ -60,9 +67,11 @@ async def failure_handler(**kwargs):
         },
     )
 
+
 # Combine all checks into one endpoint
 health_endpoint = health(
-    [app_check, db_check, redis_check],
+    # https://kludex.github.io/fastapi-health/
+    [app_check, db_check, redis_check],  # type: ignore
     success_handler=success_handler,
     failure_handler=failure_handler,
 )

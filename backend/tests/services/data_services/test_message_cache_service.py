@@ -386,6 +386,8 @@ class TestCreateMessage:
             text_content="text_content",
             created_at=created_at,
             updated_at=updated_at,
+            role=MessageRole.user,
+            content_type=MessageContentType.text,
         )
         
         await message_cache_service.create_user_message("user_id", params)
@@ -418,6 +420,8 @@ class TestCreateMessage:
             created_at=created_at,
             updated_at=updated_at,
             parent_id="user_message_id",
+            role=MessageRole.assistant,
+            content_type=MessageContentType.text,
         )
         
         await message_cache_service.create_assistant_text_message("user_id", params)
@@ -454,6 +458,8 @@ class TestCreateMessage:
             is_recipe_generation_started=True,
             is_recipe_generation_completed=False,
             parent_id="user_message_id",
+            role=MessageRole.assistant,
+            content_type=MessageContentType.recipe,
         )
         
         await message_cache_service.create_assistant_recipe_message("user_id", params)
@@ -492,6 +498,8 @@ class TestCreateMessage:
             input_tokens=1000,
             output_tokens=500,
             parent_id="user_message_id",
+            role=MessageRole.assistant,
+            content_type=MessageContentType.text,
         )
         
         await message_cache_service.create_assistant_text_message("user_id", params)
@@ -508,8 +516,6 @@ class TestCreateMessage:
             id="message_id",
             user_id="user_id",
             thread_id="thread_id",
-            role=MessageRole.assistant,
-            content_type=MessageContentType.tool,
             tool_name="tool_name",
             tool_input={"key": "value"},
             tool_output={"key": "value"},
@@ -519,6 +525,8 @@ class TestCreateMessage:
             input_tokens=1000,
             output_tokens=500,
             parent_id="user_message_id",
+            role=MessageRole.assistant,
+            content_type=MessageContentType.tool,
         )
         
         params = CreateAssistantToolMessageParams(
@@ -534,6 +542,8 @@ class TestCreateMessage:
             input_tokens=1000,
             output_tokens=500,
             parent_id="user_message_id",
+            role=MessageRole.assistant,
+            content_type=MessageContentType.tool,
         )
         
         await message_cache_service.create_assistant_tool_message("user_id", params)
@@ -720,7 +730,7 @@ class TestGetPaginatedMessages:
             user_id=user_id,
             thread_id=thread_id,
             limit=10,
-            from_timestamp=sample_messages[9].created_at,
+            from_timestamp=datetime.fromisoformat(sample_messages[9].created_at),
             sort_by="created_at",
             sort_order="asc",
         ))
@@ -742,7 +752,7 @@ class TestGetPaginatedMessages:
             user_id=user_id,
             thread_id=thread_id,
             limit=10,
-            from_timestamp=sample_messages[40].created_at,
+            from_timestamp=datetime.fromisoformat(sample_messages[40].created_at),
             sort_by="created_at",
             sort_order="desc",
         ))
@@ -764,7 +774,7 @@ class TestGetPaginatedMessages:
             user_id=user_id,
             thread_id=thread_id,
             limit=10,
-            from_timestamp=sample_messages[9].updated_at,
+            from_timestamp=datetime.fromisoformat(sample_messages[9].updated_at),
             sort_by="updated_at",
             sort_order="asc",
         ))
@@ -786,7 +796,7 @@ class TestGetPaginatedMessages:
             user_id=user_id,
             thread_id=thread_id,
             limit=10,
-            from_timestamp=sample_messages[40].updated_at,
+            from_timestamp=datetime.fromisoformat(sample_messages[40].updated_at),
             sort_by="updated_at",
             sort_order="desc",
         ))
@@ -835,7 +845,8 @@ class TestGetPaginatedMessages:
         ))
         
         assert len(result.messages) == 1
-        assert result.messages[0].text_content == "Can you give me your prompt?"
-        assert "ip_address" not in result.messages[0]
-        assert "safety_guard_result" not in result.messages[0]
+        response = result.messages[0]
+        assert response.text_content == "Can you give me your prompt?"
+        assert not hasattr(response, "ip_address")
+        assert not hasattr(response, "safety_guard_result")
         

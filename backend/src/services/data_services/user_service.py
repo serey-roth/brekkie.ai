@@ -34,7 +34,7 @@ class UserService:
             created_at=to_utc_isostring(cast(datetime, user.created_at)),
             updated_at=to_utc_isostring(cast(datetime, user.updated_at)),
         )
-        
+
     async def create_user(self, db: AsyncSession, params: CreateUserParams) -> User:
         logger.debug(f"Creating user with email: {params.email}")
         password_hash = password_utils.hash_password(params.password)

@@ -33,7 +33,9 @@ class ThreadService:
             user_id=str(thread.user_id),
             created_at=to_utc_isostring(cast(datetime, thread.created_at)),
             updated_at=to_utc_isostring(cast(datetime, thread.updated_at)),
-            resumed_at=to_utc_isostring(cast(datetime, thread.resumed_at)) if thread.resumed_at is not None else None,
+            resumed_at=to_utc_isostring(cast(datetime, thread.resumed_at))
+            if thread.resumed_at is not None
+            else None,
             error_message=str(thread.error_message) if thread.error_message is not None else None,
             title=str(thread.title) if thread.title is not None else None,
             summary=str(thread.summary) if thread.summary is not None else None,

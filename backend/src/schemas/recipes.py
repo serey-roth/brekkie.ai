@@ -52,13 +52,17 @@ class Recipe(BaseModel):
     make_ahead_tips: str | None = None
     coordination_timeline: str | None = None
 
+    class Config:
+        extra = "allow"
+
+
 class UserRecipe(Recipe):
     id: str
     user_id: str
     thread_id: str
     created_at: str
     updated_at: str
-    
+
     def get_recipe(self) -> Recipe:
         return Recipe(
             name=self.name,

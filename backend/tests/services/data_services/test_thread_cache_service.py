@@ -426,7 +426,7 @@ class TestGetPaginatedThreads:
         result = await thread_cache_service.get_paginated_threads(GetUserThreadsParams(
             user_id=user_id,
             limit=10,
-            from_timestamp=sample_threads[9].created_at,
+            from_timestamp=datetime.fromisoformat(sample_threads[9].created_at),
             sort_by="created_at",
             sort_order="asc",
         ))
@@ -447,7 +447,7 @@ class TestGetPaginatedThreads:
         result = await thread_cache_service.get_paginated_threads(GetUserThreadsParams(
             user_id=user_id,
             limit=10,
-            from_timestamp=sample_threads[40].created_at,
+            from_timestamp=datetime.fromisoformat(sample_threads[40].created_at),
             sort_by="created_at",
             sort_order="desc",
         ))
@@ -468,7 +468,7 @@ class TestGetPaginatedThreads:
         result = await thread_cache_service.get_paginated_threads(GetUserThreadsParams(
             user_id=user_id,
             limit=10,
-            from_timestamp=sample_threads[9].updated_at,
+            from_timestamp=datetime.fromisoformat(sample_threads[9].updated_at),
             sort_by="updated_at",
             sort_order="asc",
         ))
@@ -488,7 +488,7 @@ class TestGetPaginatedThreads:
     async def test_from_timestamp_and_sort_by_updated_at_desc(self, thread_cache_service: ThreadCacheService, create_threads: list[Thread], user_id: str, sample_threads: list[Thread]):
         result = await thread_cache_service.get_paginated_threads(GetUserThreadsParams(
             user_id=user_id,
-            from_timestamp=sample_threads[40].updated_at,
+            from_timestamp=datetime.fromisoformat(sample_threads[40].updated_at),
             sort_by="updated_at",
             sort_order="desc",
             limit=10,

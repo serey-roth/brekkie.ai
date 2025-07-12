@@ -2,12 +2,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
+
 class User(BaseModel):
     id: str
     email: str | None
     name: str | None
     created_at: str
     updated_at: str
+
 
 class UserSignup(BaseModel):
     email: EmailStr

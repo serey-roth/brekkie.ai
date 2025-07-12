@@ -43,17 +43,31 @@ class RecipeService:
             categories=[RecipeCategory.model_validate(cat) for cat in recipe.categories]
             if recipe.categories is not None and isinstance(recipe.categories, list)
             else None,
-            prep_time_minutes=cast(int, recipe.prep_time_minutes) if recipe.prep_time_minutes is not None else None,
-            cook_time_minutes=cast(int, recipe.cook_time_minutes) if recipe.cook_time_minutes is not None else None,
+            prep_time_minutes=cast(int, recipe.prep_time_minutes)
+            if recipe.prep_time_minutes is not None
+            else None,
+            cook_time_minutes=cast(int, recipe.cook_time_minutes)
+            if recipe.cook_time_minutes is not None
+            else None,
             servings=str(recipe.servings) if recipe.servings is not None else None,
             chef_notes=str(recipe.chef_notes) if recipe.chef_notes is not None else None,
             substitutions=str(recipe.substitutions) if recipe.substitutions is not None else None,
-            equipment_alternatives=str(recipe.equipment_alternatives) if recipe.equipment_alternatives is not None else None,
-            scaling_guidance=str(recipe.scaling_guidance) if recipe.scaling_guidance is not None else None,
+            equipment_alternatives=str(recipe.equipment_alternatives)
+            if recipe.equipment_alternatives is not None
+            else None,
+            scaling_guidance=str(recipe.scaling_guidance)
+            if recipe.scaling_guidance is not None
+            else None,
             storage_notes=str(recipe.storage_notes) if recipe.storage_notes is not None else None,
-            serving_suggestions=str(recipe.serving_suggestions) if recipe.serving_suggestions is not None else None,
-            make_ahead_tips=str(recipe.make_ahead_tips) if recipe.make_ahead_tips is not None else None,
-            coordination_timeline=str(recipe.coordination_timeline) if recipe.coordination_timeline is not None else None,
+            serving_suggestions=str(recipe.serving_suggestions)
+            if recipe.serving_suggestions is not None
+            else None,
+            make_ahead_tips=str(recipe.make_ahead_tips)
+            if recipe.make_ahead_tips is not None
+            else None,
+            coordination_timeline=str(recipe.coordination_timeline)
+            if recipe.coordination_timeline is not None
+            else None,
             created_at=to_utc_isostring(cast(datetime, recipe.created_at)),
             updated_at=to_utc_isostring(cast(datetime, recipe.updated_at)),
         )

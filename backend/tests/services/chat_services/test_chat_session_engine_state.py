@@ -34,7 +34,7 @@ class TestChatSessionEngineState:
         
         mock_task = Mock()
         mock_task.done.return_value = False
-        state.timeout_task = mock_task
+        state.timeout_task = mock_task # type: ignore
         
         state.close()
         
@@ -49,7 +49,7 @@ class TestChatSessionEngineState:
         
         mock_task = Mock()
         mock_task.done.return_value = False
-        state.timeout_task = mock_task
+        state.timeout_task = mock_task # type: ignore
         
         state.cleanup_timeout_task()
         
@@ -62,7 +62,7 @@ class TestChatSessionEngineState:
         
         mock_task = Mock()
         mock_task.done.return_value = True
-        state.timeout_task = mock_task
+        state.timeout_task = mock_task # type: ignore
         
         state.cleanup_timeout_task()
         
@@ -83,7 +83,7 @@ class TestChatSessionEngineState:
         
         mock_task = Mock()
         mock_task.done.return_value = False
-        state.timeout_task = mock_task
+        state.timeout_task = mock_task # type: ignore
         
         assert state.is_timeout_task_running() == True
     
@@ -93,7 +93,7 @@ class TestChatSessionEngineState:
         
         mock_task = Mock()
         mock_task.done.return_value = True
-        state.timeout_task = mock_task
+        state.timeout_task = mock_task # type: ignore
         
         assert state.is_timeout_task_running() == False
     

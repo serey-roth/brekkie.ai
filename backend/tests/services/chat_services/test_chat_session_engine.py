@@ -11,7 +11,9 @@ from fastapi.websockets import WebSocketState, WebSocketDisconnect
 from services.chat_services.chat_session_engine import ChatSessionEngine, ChatSessionEngineState
 
 from schemas.user_access import UserAccessData
-from schemas.messages import UserMessagePayload, Message
+from schemas.messages import UserMessagePayload, MessageResponse
+from schemas.message_role import MessageRole
+from schemas.message_content_type import MessageContentType
 from schemas.threads import Thread
 from schemas.recipes import UserRecipe
 from schemas.chat_session_errors import (
@@ -104,12 +106,12 @@ def sample_thread(sample_thread_id, sample_user_id):
 
 @pytest.fixture
 def sample_message(sample_thread_id, sample_user_id):
-    return Message(
+    return MessageResponse(
         id="msg_123",
         user_id=sample_user_id,
         thread_id=sample_thread_id,
-        role="user",
-        content_type="text",
+        role=MessageRole.user,
+        content_type=MessageContentType.text,
         text_content="Test message",
         recipe_id=None,
         created_at=to_utc_isostring(datetime.now(timezone.utc)),
@@ -122,8 +124,6 @@ def sample_message(sample_thread_id, sample_user_id):
         model_name=None,
         input_tokens=None,
         output_tokens=None,
-        ip_address=None,
-        safety_guard_result=None,
     )
 
 
@@ -236,8 +236,8 @@ class TestAsyncContextManager:
             mock_get_loop.return_value = mock_loop
             
             engine = ChatSessionEngine(**mock_dependencies)
-            engine.state.timeout_task = Mock()
-            engine.state.timeout_task.done.return_value = False
+            engine.state.timeout_task = Mock() # type: ignore
+            engine.state.timeout_task.done.return_value = False # type: ignore
             
             with patch.object(engine.state, 'cleanup_timeout_task') as mock_cleanup:
                 engine.__del__()
@@ -250,8 +250,8 @@ class TestAsyncContextManager:
             mock_get_loop.return_value = mock_loop
             
             engine = ChatSessionEngine(**mock_dependencies)
-            engine.state.timeout_task = Mock()
-            engine.state.timeout_task.done.return_value = False
+            engine.state.timeout_task = Mock() # type: ignore
+            engine.state.timeout_task.done.return_value = False # type: ignore
             
             with patch.object(engine.state, 'cleanup_timeout_task') as mock_cleanup:
                 engine.__del__()
@@ -260,8 +260,8 @@ class TestAsyncContextManager:
     def test_del_with_runtime_error(self, mock_dependencies):
         with patch('asyncio.get_event_loop', side_effect=RuntimeError("no event loop")):
             engine = ChatSessionEngine(**mock_dependencies)
-            engine.state.timeout_task = Mock()
-            engine.state.timeout_task.done.return_value = False
+            engine.state.timeout_task = Mock() # type: ignore
+            engine.state.timeout_task.done.return_value = False # type: ignore
             
             with patch.object(engine.state, 'cleanup_timeout_task') as mock_cleanup:
                 engine.__del__()
@@ -284,7 +284,7 @@ class TestAsyncContextManager:
             mock_get_loop.return_value = mock_loop
             
             engine = ChatSessionEngine(**mock_dependencies)
-            engine.state.timeout_task = None
+            engine.state.timeout_task = None # type: ignore
             
             with patch.object(engine.state, 'cleanup_timeout_task') as mock_cleanup:
                 # Call __del__ directly since it's not called automatically during testing
@@ -299,8 +299,8 @@ class TestAsyncContextManager:
             mock_get_loop.return_value = mock_loop
             
             engine = ChatSessionEngine(**mock_dependencies)
-            engine.state.timeout_task = Mock()
-            engine.state.timeout_task.done.return_value = True
+            engine.state.timeout_task = Mock() # type: ignore
+            engine.state.timeout_task.done.return_value = True # type: ignore
             
             with patch.object(engine.state, 'cleanup_timeout_task') as mock_cleanup:
                 # Call __del__ directly since it's not called automatically during testing
@@ -624,8 +624,6 @@ class TestHandleMessageProcessed:
     async def test_user_message_rejected(self, chat_session_engine, sample_thread, sample_user_access_data, sample_message, sample_malicious_safety_guard_result):
         chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
-        
-        sample_message.safety_guard_result = sample_malicious_safety_guard_result
                 
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
             result = {"event": "user_message_rejected", "result": {"thread": sample_thread, "message": sample_message, "recipe": None, "error_message": None}}
@@ -634,7 +632,7 @@ class TestHandleMessageProcessed:
             mock_send.assert_called_once_with(chat_session_engine.websocket, "user_message_rejected", {
                 "user_access_data": sample_user_access_data.model_dump(),
                 "thread": sample_thread.model_dump(),
-                "message": sample_message.model_dump(exclude={"ip_address", "safety_guard_result"}),
+                "message": sample_message.model_dump(),
             })
 
 class TestHandleChatSessionError:
@@ -872,7 +870,7 @@ class TestRun:
 
     @pytest.mark.asyncio
     async def test_invalid_payload(self, run_chat_session_engine):
-        error = InvalidPayloadError(payload=UserMessagePayload(id="1", content="hi"))
+        error = InvalidPayloadError(payload=UserMessagePayload(id="1", content="hi").model_dump_json())
         
         run_chat_session_engine._receive_user_message.side_effect = [
             error,

@@ -262,6 +262,7 @@ class TestUpdateRecipeField:
         
         recipe = await recipe_cache_service.update_recipe_field(user_id, thread_id, params) 
     
+        assert recipe.ingredients is not None
         assert len(recipe.ingredients) == 1
         assert isinstance(recipe.ingredients[0], RecipeIngredient)
         assert_deep_equal(recipe.ingredients[0], first_ingredient)
@@ -300,6 +301,7 @@ class TestUpdateRecipeField:
         )
         
         recipe = await recipe_cache_service.update_recipe_field(user_id, thread_id, params)
+        assert recipe.ingredients is not None
         assert len(recipe.ingredients) == 2
         assert_deep_equal(recipe.ingredients[1], second_ingredient)
         
@@ -332,6 +334,7 @@ class TestUpdateRecipeField:
         )
         
         recipe = await recipe_cache_service.update_recipe_field(user_id, thread_id, params)
+        assert recipe.instructions is not None
         assert len(recipe.instructions) == 1
         assert_deep_equal(recipe.instructions[0], first_instruction)
         
@@ -362,6 +365,7 @@ class TestUpdateRecipeField:
         )
         
         recipe = await recipe_cache_service.update_recipe_field(user_id, thread_id, params)
+        assert recipe.categories is not None
         assert len(recipe.categories) == 1
         assert_deep_equal(recipe.categories[0], first_category)
         
@@ -436,12 +440,10 @@ class TestUpdateRecipe:
         
     @pytest.mark.asyncio
     async def test_update_recipe_with_invalid_field_value(self, recipe_cache_service: RecipeCacheService, sample_recipe: UserRecipe, user_id: str, thread_id: str, recipe_id: str):
-        await recipe_cache_service.set_recipe(sample_recipe)
-        
         with pytest.raises(ValueError):
             await recipe_cache_service.update_recipe(user_id, thread_id, UpdateRecipeParams(
                 id=recipe_id,
-                name=1,
+                name="recipe_1",
                 updated_at=datetime.now(timezone.utc),
             ))
             
@@ -466,6 +468,7 @@ class TestUpdateRecipe:
         )
         
         recipe = await recipe_cache_service.update_recipe(user_id, thread_id, params)
+        assert recipe.ingredients is not None
         assert len(recipe.ingredients) == 1
         assert_deep_equal(recipe.ingredients[0], new_ingredient)
         
@@ -488,6 +491,7 @@ class TestUpdateRecipe:
         )
         
         recipe = await recipe_cache_service.update_recipe(user_id, thread_id, params)
+        assert recipe.instructions is not None
         assert len(recipe.instructions) == 1
         assert_deep_equal(recipe.instructions[0], new_instruction)
         
@@ -509,5 +513,6 @@ class TestUpdateRecipe:
         )
         
         recipe = await recipe_cache_service.update_recipe(user_id, thread_id, params)
+        assert recipe.categories is not None
         assert len(recipe.categories) == 1
         assert_deep_equal(recipe.categories[0], new_category)   

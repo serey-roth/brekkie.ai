@@ -82,8 +82,10 @@ class RecipeRepository:
         if db_recipe is None:
             raise ValueError(f"Recipe {params.id} not found")
 
+        items_to_update = params.model_dump(exclude={"id"}, exclude_none=True, exclude_unset=True)
+
         items_to_update = params.model_dump(
-            exclude={"id"}, exclude_none=True, exclude_unset=True
+            exclude={"id", "updated_at"}, exclude_none=True, exclude_unset=True
         )
         for field, value in items_to_update.items():
             if value is None:
@@ -131,28 +133,46 @@ class RecipeRepository:
         field_value = params.field.value
         if field_name in ["ingredient", "instruction", "category"]:
             if field_name == "ingredient" and isinstance(field_value, RecipeIngredient):
-                current_ingredients = db_recipe.ingredients if db_recipe.ingredients is not None else []
+                current_ingredients = (
+                    db_recipe.ingredients if db_recipe.ingredients is not None else []
+                )
                 current_ingredients = current_ingredients + [field_value.model_dump()]
                 setattr(db_recipe, "ingredients", current_ingredients)
 
             elif field_name == "instruction" and isinstance(field_value, RecipeInstruction):
-                current_instructions = db_recipe.instructions if db_recipe.instructions is not None else []
+                current_instructions = (
+                    db_recipe.instructions if db_recipe.instructions is not None else []
+                )
                 current_instructions = current_instructions + [field_value.model_dump()]
                 setattr(db_recipe, "instructions", current_instructions)
 
             elif field_name == "category" and isinstance(field_value, RecipeCategory):
-                current_categories = db_recipe.categories if db_recipe.categories is not None else []
+                current_categories = (
+                    db_recipe.categories if db_recipe.categories is not None else []
+                )
                 current_categories = current_categories + [field_value.model_dump()]
                 setattr(db_recipe, "categories", current_categories)
 
         elif field_name in ["ingredients", "instructions", "categories"]:
-            if field_name == "ingredients" and isinstance(field_value, list) and all(isinstance(v, RecipeIngredient) for v in field_value):
+            if (
+                field_name == "ingredients"
+                and isinstance(field_value, list)
+                and all(isinstance(v, RecipeIngredient) for v in field_value)
+            ):
                 setattr(db_recipe, "ingredients", [v.model_dump() for v in field_value])
 
-            elif field_name == "instructions" and isinstance(field_value, list) and all(isinstance(v, RecipeInstruction) for v in field_value):
+            elif (
+                field_name == "instructions"
+                and isinstance(field_value, list)
+                and all(isinstance(v, RecipeInstruction) for v in field_value)
+            ):
                 setattr(db_recipe, "instructions", [v.model_dump() for v in field_value])
 
-            elif field_name == "categories" and isinstance(field_value, list) and all(isinstance(v, RecipeCategory) for v in field_value):
+            elif (
+                field_name == "categories"
+                and isinstance(field_value, list)
+                and all(isinstance(v, RecipeCategory) for v in field_value)
+            ):
                 setattr(db_recipe, "categories", [v.model_dump() for v in field_value])
 
         else:

@@ -3,8 +3,7 @@ import pytest_asyncio
 
 from fakeredis.aioredis import FakeRedis
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from database.schema import Base
 
@@ -22,7 +21,7 @@ async def async_engine():
 
 @pytest_asyncio.fixture(scope="function")
 async def async_session(async_engine):
-    async_session = sessionmaker(
+    async_session = async_sessionmaker(
         async_engine, class_=AsyncSession, expire_on_commit=False
     )
     async with async_session() as session:

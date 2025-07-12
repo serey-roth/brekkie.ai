@@ -13,7 +13,7 @@ class Thread(BaseModel):
     title: str | None = None
     summary: str | None = None
     is_empty: bool
-    
+
 
 class PaginatedThreads(BaseModel):
     threads: list[Thread]

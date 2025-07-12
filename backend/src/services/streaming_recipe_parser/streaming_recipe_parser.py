@@ -255,7 +255,12 @@ class StreamingRecipeFieldParser:
             for _, elem in parser.read_events():
                 elem_tag = elem.tag.lower() if hasattr(elem, "tag") else None
                 # Only process the specific tag we're looking for
-                if elem_tag is None or not isinstance(elem_tag, str) or elem_tag != tag or elem_tag not in self.known_tags:
+                if (
+                    elem_tag is None
+                    or not isinstance(elem_tag, str)
+                    or elem_tag != tag
+                    or elem_tag not in self.known_tags
+                ):
                     continue
 
                 text = "".join(elem.itertext()).strip()

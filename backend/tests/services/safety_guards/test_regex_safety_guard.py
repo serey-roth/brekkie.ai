@@ -327,7 +327,7 @@ class TestCoercion:
     def test_coercion_not_flagged(self, regex_safety_guard: RegexSafetyGuard, input_text: str, expected_issues: List[SafetyIssueType]):
         result = check_safety(input_text, regex_safety_guard)
         assert len(result) == 0, f"Expected no issues for: {input_text}, got {result}"
-        assert all(f.type != SafetyIssueType.COERCION for f in result)
+        assert all(f.issue_type != SafetyIssueType.COERCION for f in result)
 
 
 class TestEmotionalManipulation:

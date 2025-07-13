@@ -17,6 +17,7 @@ import { useAppConfig, useThreadsApiClient, useUserAccessManager } from '@/conte
 import { useAuthModal, useAuth } from '@/context/auth-context';
 import { useChatStateManager } from '@/context/chat-context';
 import type { ChatState } from '@/data/schemas/chat-state';
+import type { ChatSessionError } from '@/data/schemas/errors';
 import { type Thread } from '@/data/schemas/threads';
 import { type UserAccessData } from '@/data/schemas/user-access';
 import { getThreadGroups, formatThreadTimestamp } from '@/utils/thread-utils';
@@ -75,7 +76,7 @@ export function Sidebar({
     const { openAuthModal } = useAuthModal();
     const { signout } = useAuth();
     const userAccessData = useUserAccessData();
-    
+    const { hasLimitReached } = useChatLimit();
     const { currentThreadId, startThread, resumeThread, resetCurrentThread } = useCurrentThread();
     const { threadGroups, isFetching, error, fetchMoreObserverTarget } = useFetchThreads(
         isOpen,
@@ -177,8 +178,9 @@ export function Sidebar({
                     </motion.button>
                 </div>
 
-                <div className={`mt-2 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
+                <div className={`mt-2 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'} ${hasLimitReached ? 'opacity-50 pointer-events-none cursor-not-allowed' : ''}`}>
                     <motion.button
+                        disabled={hasLimitReached}
                         onClick={() => {
                             startThread();
                             hideRecipeListView();
@@ -409,6 +411,49 @@ const useUserAccessData = () => {
 
     return userAccessData;
 };
+
+function useChatLimit() {
+    const chatStateManager = useChatStateManager();
+    const userAccessManager = useUserAccessManager();
+    const [hasLimitReached, setHasLimitReached] = useState(false);
+
+    const { featureFlags } = useAppConfig();
+    
+    useEffect(() => {
+        const limitReachedListener = (error: ChatSessionError) => {
+            if (error.type === 'over_message_limit') {
+                setHasLimitReached(true);
+            }
+        };
+        
+
+        const accessEnsuredListener = (userAccessData: UserAccessData) => {
+            const limit = userAccessManager.getMessageLimit();
+            const messageCount = userAccessData.user_message_count;
+            setHasLimitReached(messageCount >= limit);
+        };
+        const accessChangedListener = (userAccessData: UserAccessData | null) => {
+            if (userAccessData) {
+                const limit = userAccessManager.getMessageLimit();
+                const messageCount = userAccessData.user_message_count;
+                setHasLimitReached(messageCount >= limit);
+            } else {
+                setHasLimitReached(false);
+            }
+        };
+
+        userAccessManager.subscribe('accessEnsured', accessEnsuredListener);
+        userAccessManager.subscribe('accessChanged', accessChangedListener);
+        chatStateManager.subscribe('chatSessionErrorOccurred', limitReachedListener);
+        return () => {
+            userAccessManager.unsubscribe('accessEnsured', accessEnsuredListener);
+            userAccessManager.unsubscribe('accessChanged', accessChangedListener);
+            chatStateManager.unsubscribe('chatSessionErrorOccurred', limitReachedListener);
+        };
+    }, [userAccessManager, chatStateManager, featureFlags]);
+
+    return { hasLimitReached };
+}
 
 function useCurrentThread() {
     const chatStateManager = useChatStateManager();

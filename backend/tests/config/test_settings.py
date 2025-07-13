@@ -108,7 +108,7 @@ class TestDevelopmentSettings:
         assert settings.get_cookie_httponly() is False
         
     def test_is_auth_enabled_method(self, settings: Settings):
-        assert settings.is_auth_enabled() is False
+        assert settings.is_auth_enabled() is True
         
 
 class TestProductionSettings:
@@ -148,7 +148,7 @@ class TestProductionSettings:
         assert settings.get_cookie_httponly() is True
         
     def test_is_auth_enabled_method(self, settings: Settings):
-        assert settings.is_auth_enabled() is False
+        assert settings.is_auth_enabled() is True
         
         
 class TestTestSettings:
@@ -188,4 +188,4 @@ class TestTestSettings:
         assert settings.get_cookie_httponly() is False
 
     def test_is_auth_enabled_method(self, settings: Settings):
-        assert settings.is_auth_enabled() is False
+        assert settings.is_auth_enabled() is True

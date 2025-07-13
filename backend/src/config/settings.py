@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     db_pool_recycle: int = 3600
 
     # Feature Flags
-    enable_auth: bool = Field(default=False, alias="ENABLE_AUTH")
+    enable_auth: bool = Field(default=True, alias="ENABLE_AUTH")
 
     model_config = SettingsConfigDict(
         env_file=".env",

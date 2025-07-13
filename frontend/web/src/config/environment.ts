@@ -29,7 +29,7 @@ const developmentConfig: EnvironmentConfig = {
     maxMessageCountAnonymous: 10,
     maxMessageCountAuthenticated: 50,
     featureFlags: {
-        enableAuth: false,
+        enableAuth: true,
     },
 };
 
@@ -44,7 +44,7 @@ const productionConfig: EnvironmentConfig = {
     maxMessageCountAnonymous: 10,
     maxMessageCountAuthenticated: 50,
     featureFlags: {
-        enableAuth: false,
+        enableAuth: true,
     },
 };
 
@@ -60,7 +60,7 @@ const testConfig: EnvironmentConfig = {
     maxMessageCountAnonymous: 10,
     maxMessageCountAuthenticated: 50,
     featureFlags: {
-        enableAuth: false,
+        enableAuth: true,
     },
 };
 

@@ -1,5 +1,4 @@
 import os
-import sys
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.dirname(current_dir)
@@ -53,7 +52,6 @@ from services.data_services.recipe_cache_service import RecipeCacheService
 from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from services.data_services.ip_address_rate_limiter import IpAddressRateLimitConfig, IpAddressRateLimiter
 from services.safety_guards.regex_safety_guard import RegexSafetyGuard
-from services.safety_guards.ml_classifier_safety_guard import MLClassifierSafetyGuard
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
@@ -278,19 +276,8 @@ def response_llm():
     
 @pytest.fixture(scope="session")
 def message_guard(test_settings):
-    mock_llm = AsyncMock()
-    class MockResponse:
-        content = "I'm sorry, I can't help with that."
-        
-    mock_llm.ainvoke.return_value = MockResponse()
-    
     return ChatSessionMessageGuard(
         regex_safety_guard=RegexSafetyGuard(),
-        ml_classifier_safety_guard=MLClassifierSafetyGuard(
-            prompt_injection_model_id=test_settings.prompt_injection_model_id,
-            toxicity_model_id=test_settings.toxicity_model_id,
-        ),
-        response_llm=mock_llm
     )
 
 @pytest_asyncio.fixture(scope="function")

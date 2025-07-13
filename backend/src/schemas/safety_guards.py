@@ -22,7 +22,6 @@ class SafetyIssueType(str, Enum):
 
 class SafetyGuardType(str, Enum):
     REGEX = "regex"
-    ML_TEXT_CLASSIFIER = "ml_text_classifier"
 
 
 class SafetyRiskLevel(str, Enum):

@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from api.routes.chats import router as chats_router
 from api.routes.auth import router as auth_router
@@ -49,7 +48,6 @@ from services.data_services.recipe_cache_service import RecipeCacheService
 from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from services.websocket_event_sender import WebSocketEventSender
 from services.safety_guards.regex_safety_guard import RegexSafetyGuard
-from services.safety_guards.ml_classifier_safety_guard import MLClassifierSafetyGuard
 from services.redis.redis_client import create_redis_client
 
 from config.settings import create_settings
@@ -128,21 +126,9 @@ async def lifespan(app: FastAPI):
         db_transaction_maker=db_transaction_maker,  # type: ignore
         chat_session_store=chat_session_store,
     )
-
-    response_llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-preview-05-20",
-        temperature=0.1,
-        api_key=settings.google_api_key,
-    )
     chat_session_message_guard = ChatSessionMessageGuard(
         regex_safety_guard=RegexSafetyGuard(),
-        ml_classifier_safety_guard=MLClassifierSafetyGuard(
-            prompt_injection_model_id=settings.prompt_injection_model_id,
-            toxicity_model_id=settings.toxicity_model_id,
-        ),
-        response_llm=response_llm,
     )
-
     chat_session_orchestrator = ChatSessionOrchestrator(
         session_ttl=settings.session_ttl,
         db_transaction_maker=db_transaction_maker,  # type: ignore

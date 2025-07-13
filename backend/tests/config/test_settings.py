@@ -40,9 +40,6 @@ class TestDefaultValues:
         
         assert settings.access_token_refresh_ttl == 60 * 60 * 3  # 3 hours
         
-        assert settings.prompt_injection_model_id == "ProtectAI/deberta-v3-base-prompt-injection-v2"
-        assert settings.toxicity_model_id == "unitary/toxic-bert"   
-        
     def test_override_settings(self):
         os.environ["ENVIRONMENT"] = "production"
         os.environ["DB_URL"] = "postgresql://foodagent:fOoDaGent123@localhost:5432/test_db_url"

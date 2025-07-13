@@ -1,67 +1,120 @@
 import os
+
 from typing import Annotated, Any
 
-from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.messages.ai import AIMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate,
+)
 from langchain_core.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_tavily import TavilySearch
 
 from ai.workflow.prompts import search_prompt, create_recipe_prompt
 
+
 # TODO: Use web search instead of Gemini, and maybe real time/geolocation search
 @tool(name_or_callable="search")
-async def search(query: Annotated[str, "What the user mentioned that needs lookup - places, people, dishes, cultural items, technical terms, media references, current events, trends, or any unfamiliar concept"]) -> str:
+async def search(
+    query: Annotated[
+        str,
+        "What the user mentioned that needs lookup - places, people, dishes, cultural items, technical terms, media references, current events, trends, or any unfamiliar concept",
+    ],
+) -> str:
     """
     Look up information the user mentioned to provide context for responses.
-    
+
     Use when the user references:
     - Specific places, people, dishes, or cultural items
     - Technical terms or unfamiliar concepts
     - Media references (movies, books, songs, shows)
     - Current events or trends they mention
-    
+
     Returns factual information to inform appropriate responses.
     """
     search_llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
         temperature=0.7,
         api_key=os.getenv("GOOGLE_API_KEY"),
-        disable_streaming=True
+        disable_streaming=True,
     )
-    
-    prompt = ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(search_prompt),
-        HumanMessagePromptTemplate.from_template("Query: {query}")
-    ])
-        
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(search_prompt),
+            HumanMessagePromptTemplate.from_template("Query: {query}"),
+        ]
+    )
+
     chain = prompt | search_llm
     result = await chain.ainvoke({"query": query})
-    return result.content.strip()
+    content = str(result.content[0])
+    return content
 
 
-tavily_search = TavilySearch(
-    max_results=3,
-    topic="general",
-    include_answer=True,
-    include_raw_content=False,
-    time_range="year",
-    search_depth="advanced",
-    api_key=os.getenv("TAVILY_API_KEY"),
-)
+class TavilySearchWrapper:
+    """
+    Wrapper for Tavily search to handle SSL errors gracefully
+    """
+
+    def __init__(self):
+        self.tavily_search = TavilySearch(
+            max_results=3,
+            topic="general",
+            include_answer=True,
+            include_raw_content=False,
+            time_range="year",
+            search_depth="advanced",
+            api_key=os.getenv("TAVILY_API_KEY"),
+        )
+
+    async def __call__(self, query: str) -> str:
+        try:
+            # https://github.com/langchain-ai/langchain/issues/22445
+            return self.tavily_search.invoke(query)
+        except Exception as e:
+            # Handle SSL certificate errors and other connection issues
+            return f"Search temporarily unavailable. Error: {str(e)}"
+
+
+@tool(name_or_callable="tavily_search")
+async def tavily_search(query: Annotated[str, "Search query to look up information"]) -> str:
+    """
+    Search the web for information using Tavily search.
+
+    Use when you need to look up:
+    - Places, people, dishes, or cultural items
+    - Technical terms or unfamiliar concepts
+    - Media references (movies, books, songs, shows)
+    - Current events or trends
+
+    Returns factual information to inform appropriate responses.
+    """
+    tavily_search = TavilySearchWrapper()
+    return await tavily_search(query)
+
 
 @tool(name_or_callable="create_recipe")
 async def create_recipe(
-    idea: Annotated[str, "What the user wants - could be a specifc request (vegan coq au vin for two), a mood-based idea (something cozy and comforting), or a general vibe (a meal for a special occasion)"],  
-    context: Annotated[str, "User's constraints and situation - could be dietary needs, time limits, skill level, equipment, occasion, etc."]
+    idea: Annotated[
+        str,
+        "What the user wants - could be a specifc request (vegan coq au vin for two), a mood-based idea (something cozy and comforting), or a general vibe (a meal for a special occasion)",
+    ],
+    context: Annotated[
+        str,
+        "User's constraints and situation - could be dietary needs, time limits, skill level, equipment, occasion, etc.",
+    ],
 ) -> Any:
     """
     Create personalized recipes based on what the user wants and their current situation.
-    
+
     Use when:
     - User directly asks for a recipe
     - They agree to a recipe suggestion
     - They give you ingredients, constraints, or just a general mood/direction
-    
+
     Returns detailed recipes that are feasible and personalized to the user's request and situation.
     """
     create_recipe_llm = ChatGoogleGenerativeAI(
@@ -70,15 +123,30 @@ async def create_recipe(
         api_key=os.getenv("GOOGLE_API_KEY"),
     )
 
-    
-    prompt = ChatPromptTemplate.from_messages([
-        SystemMessagePromptTemplate.from_template(create_recipe_prompt),
-        HumanMessagePromptTemplate.from_template("Recipe idea: {idea}\n\nUser context: {context}"),
-    ])
-    
-    chain = prompt | create_recipe_llm
-    result = await chain.ainvoke({"idea": idea, "context": context})
-    return {"content": result.content.strip(), "response_metadata": result.response_metadata, "usage_metadata": result.usage_metadata}
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            SystemMessagePromptTemplate.from_template(create_recipe_prompt),
+            HumanMessagePromptTemplate.from_template(
+                "Recipe idea: {idea}\n\nUser context: {context}"
+            ),
+        ]
+    )
+
+    result = await create_recipe_llm.ainvoke(prompt.format_messages(idea=idea, context=context))
+    content = str(result.content).strip()
+
+    if isinstance(result, AIMessage):
+        metadata = result.response_metadata
+        usage_metadata = result.usage_metadata
+    else:
+        metadata = getattr(result, "response_metadata", None)
+        usage_metadata = getattr(result, "usage_metadata", None)
+
+    return {
+        "content": content,
+        "response_metadata": metadata,
+        "usage_metadata": usage_metadata,
+    }
 
 
 # manage_contextual_memory = create_manage_memory_tool(
@@ -107,6 +175,6 @@ async def create_recipe(
 # )
 
 
-TOOLS = [create_recipe, tavily_search] 
+TOOLS = [create_recipe, tavily_search]
 
 __all__ = ["TOOLS"]

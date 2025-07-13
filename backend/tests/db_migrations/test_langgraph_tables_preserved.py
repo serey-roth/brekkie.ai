@@ -156,7 +156,7 @@ def test_langgraph_tables_preserved_in_parent_id_migration(langgraph_tables_setu
     # Verify data exists before parent_id migration
     with Session(engine) as session:
         checkpoint_count = session.execute(text("SELECT COUNT(*) FROM checkpoints")).scalar()
-        assert checkpoint_count >= 2, "Should have at least 2 checkpoints before parent_id migration"
+        assert checkpoint_count is not None and checkpoint_count >= 2, "Should have at least 2 checkpoints before parent_id migration"
     
     # Run the parent_id migration
     command.upgrade(alembic_config, "781a8252ecfe")
@@ -169,7 +169,7 @@ def test_langgraph_tables_preserved_in_parent_id_migration(langgraph_tables_setu
         
         # Verify data is preserved
         checkpoint_count = session.execute(text("SELECT COUNT(*) FROM checkpoints")).scalar()
-        assert checkpoint_count >= 2, "Should still have at least 2 checkpoints after parent_id migration"
+        assert checkpoint_count is not None and checkpoint_count >= 2, "Should still have at least 2 checkpoints after parent_id migration"
         
         # Verify the specific data is preserved
         checkpoint_data = session.execute(text("""

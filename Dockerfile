@@ -31,7 +31,7 @@ RUN pnpm build
 # =========================
 # Backend Build Stage
 # =========================
-FROM python:3.13-alpine AS backend-builder
+FROM python:3.12-alpine AS backend-builder
 
 # Install build dependencies for psycopg which is needed for sqlalchemy
 RUN apk add --no-cache \
@@ -57,14 +57,14 @@ RUN pip show psycopg
 # =========================
 # Final Runtime Stage
 # =========================
-FROM python:3.13-alpine
+FROM python:3.12-alpine
 
 # Runtime deps for psycopg
 RUN apk add --no-cache postgresql-libs
 
 WORKDIR /app
 
-COPY --from=backend-builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=backend-builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=backend-builder /usr/local/bin /usr/local/bin
 COPY --from=backend-builder /app/backend /app/backend
 COPY --from=frontend-builder /app/frontend/dist /app/backend/src/frontend/dist

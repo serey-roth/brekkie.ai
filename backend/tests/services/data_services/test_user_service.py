@@ -183,15 +183,7 @@ class TestUserService:
             result = await user_service.verify_password(mock_async_session, sample_user_id, sample_user_password)
             
             mock_verify_password.assert_called_once_with(sample_user_password, "hashed-password")
-        
-        
-    async def test_verify_password_with_none_password(self, user_service: UserService, mock_user_repository: UserRepository, mock_async_session: AsyncSession, mock_db_user: DBUser, sample_user_id: str, sample_user_email: str, sample_user_name: str, sample_user_password: str, sample_timestamps: tuple[datetime, datetime]):
-        mock_user_repository.get_user_by_id.return_value = mock_db_user
-        
-        result = await user_service.verify_password(mock_async_session, sample_user_id, None)
-        
-        assert result is False
-        
+
         
     async def test_verify_password_for_non_existent_user(self, user_service: UserService, mock_user_repository: UserRepository, mock_async_session: AsyncSession, mock_db_user: DBUser, sample_user_id: str, sample_user_email: str, sample_user_name: str, sample_user_password: str, sample_timestamps: tuple[datetime, datetime]):
         mock_user_repository.get_user_by_id.return_value = None

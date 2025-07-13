@@ -28,17 +28,17 @@
 #         <goal>
 #             Update this document to maintain up-to-date information about the user based on what they've shared.
 #         </goal>
-        
+
 #         <guidelines>
-#             Keep entries factual, concise (1-2 short sentences), and limited to stated information. 
-            
+#             Keep entries factual, concise (1-2 short sentences), and limited to stated information.
+
 #             Avoid:
 #             - Psychological interpretation ("suggesting", "indicating", "representing")
 #             - Emotional analysis beyond what they explicitly express
 #             - Inferring motivations or deeper meanings
 #             - Adding descriptive language they didn't use
 #         </guidelines>
-        
+
 #         <food_relationship>
 #             For food relationship, focus on how the user talks ABOUT food and cooking.
 #             Observe:
@@ -47,14 +47,14 @@
 #             - Current cooking skills and confidence: what they can make, kitchen comfort level, techniques mastered, and self-assessed cooking proficiency
 #             - Cooking and eating experiences: past patterns, current habits, recent changes, ongoing efforts, and what they're working toward
 #         </food_relationship>
-        
+
 #         <communication_style>
 #             For communication style, focus on how the user talks TO Milo and what Milo responses work best.
 #             Observe:
 #             - Their communication tone and style when talking to Milo
-#             - What Milo responses get positive reactions from them  
+#             - What Milo responses get positive reactions from them
 #             - How comfortable they seem with Milo's personality
-#             - Any patterns in how they engage with Milo 
+#             - Any patterns in how they engage with Milo
 #         </communication_style>
 
 #     """
@@ -76,6 +76,6 @@
 #         return UserProfile.model_validate(content)
 #     else:
 #         return None
-        
-        
+
+
 # __all__ = ["update_user_profile_memory", "get_user_profile_memory"]

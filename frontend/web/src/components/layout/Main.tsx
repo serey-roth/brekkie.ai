@@ -81,16 +81,18 @@ export function Main() {
 
     const { messageGroups } = useChatMessageGroups({
         onMessageChange: useCallback(() => {
-            const container = scrollRef.current;
-            if (!container) return;
-            const distanceFromBottom =
-                container.scrollHeight - container.scrollTop - container.clientHeight;
+            requestAnimationFrame(() => {
+                const container = scrollRef.current;
+                if (!container) return;
+                const distanceFromBottom =
+                    container.scrollHeight - container.scrollTop - container.clientHeight;
 
-            if (distanceFromBottom <= 250) {
-                scrollToBottom();
-            } else {
-                setScrollToBottomMessage('New message');
-            }
+                if (distanceFromBottom <= 250) {
+                    scrollToBottom();
+                } else {
+                    setScrollToBottomMessage('New message');
+                }
+            });
         }, [scrollRef, scrollToBottom]),
     });
 

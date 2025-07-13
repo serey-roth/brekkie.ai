@@ -76,7 +76,16 @@ class TestLogout:
 
     @pytest.mark.asyncio(loop_scope="session")
     async def test_logout_with_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings):
-        test_settings.enable_auth = False
-        response = await async_client.post("/api/auth/logout", headers={})
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
+        # TODO: This is a hack to override the settings for the test
+        from api.main import app
+        from api.deps import get_settings
+        new_settings = test_settings.model_copy(update={"enable_auth": False})
+        app.dependency_overrides[get_settings] = lambda: new_settings
+
+        try:
+            response = await async_client.post("/api/auth/logout", headers={})
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
+        
+        finally:
+            app.dependency_overrides = {}

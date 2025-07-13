@@ -14,7 +14,9 @@ from services.service_container import ServiceContainer
 from schemas.users import CreateUserParams
 from schemas.threads import Thread, GetUserThreadsParams
 from schemas.messages import Message, GetMessagesParams
-from schemas.recipes import Recipe, RecipeIngredient, RecipeInstruction, RecipeCategory
+from schemas.recipes import UserRecipe, RecipeIngredient, RecipeInstruction, RecipeCategory
+from schemas.message_role import MessageRole
+from schemas.message_content_type import MessageContentType
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 from utils.date_utils import to_utc_isostring
@@ -58,7 +60,7 @@ class TestSignup:
         
         assert response.cookies.get("bk_access_token") is not None
         
-        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(sample_ip_address) == 0
+        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_anonymous_access_count(sample_ip_address) == 0
         
         old_user_access_data = await service_container.user_access_cache_service.get_user_access(user_access_data.access_token)
         assert old_user_access_data is None
@@ -78,36 +80,36 @@ class TestSignup:
             "fly-client-ip": sample_ip_address
         }
         
-        await service_container.anonymous_access_service.ip_rate_limiter.increment(sample_ip_address)
+        await service_container.anonymous_access_service.ip_rate_limiter.increment_anonymous_access_count(sample_ip_address)
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
         
         response = await async_client.post("/api/auth/signup", json=payload, headers=headers)
         assert response.status_code == status.HTTP_200_OK
         
-        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(sample_ip_address) == 0
+        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_anonymous_access_count(sample_ip_address) == 0
         
     @pytest.mark.asyncio(loop_scope="session")
     async def test_signup_with_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings, sample_ip_address: str):
-        test_settings.enable_auth = False
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
+        from api.main import app
+        from api.deps import get_settings
+        new_settings = test_settings.model_copy(update={"enable_auth": False})
+        app.dependency_overrides[get_settings] = lambda: new_settings
         
-        headers = {
-            "fly-client-ip": sample_ip_address
-        }
+        try:
+            payload = {
+                "email": "test@example.com",
+                "name": "Test User",
+                "password": "password123",
+                "confirm_password": "password123"
+            }
+            response = await async_client.post("/api/auth/signup", json=payload, headers={})   
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
         
-        async_client.cookies.set("bk_access_token", user_access_data.access_token)
-        
-        payload = {
-            "email": "test@example.com",
-            "name": "Test User",
-            "password": "password123",
-            "confirm_password": "password123"
-        }
-        response = await async_client.post("/api/auth/signup", json=payload, headers=headers)   
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
-
+        finally:
+            app.dependency_overrides = {}
+       
     @pytest.mark.asyncio(loop_scope="session")
     async def test_passwords_dont_match(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
@@ -133,7 +135,7 @@ class TestSignup:
     async def test_user_already_exists(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             await service_container.user_service.create_user(db, CreateUserParams(
                 id=str(uuid4()),
                 email="new@example.com",
@@ -364,7 +366,7 @@ class TestSignup:
             error_message=None
         )
         
-        sample_recipe = Recipe(
+        sample_recipe = UserRecipe(
             id="anon123",
             user_id=old_user_id,
             thread_id=sample_thread.id,
@@ -392,8 +394,8 @@ class TestSignup:
             id="anon123",
             user_id=old_user_id,
             thread_id=sample_thread.id,
-            role="user",
-            content_type="text",
+            role=MessageRole.user,
+            content_type=MessageContentType.text,
             text_content="Hello, world!",
             created_at=to_utc_isostring(datetime.now()),
             updated_at=to_utc_isostring(datetime.now()),
@@ -464,7 +466,7 @@ class TestSignup:
         assert len(cached_recipes) == 0
                 
         # User data should be migrated to db - use separate sessions like in production
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             db_thread = await service_container.thread_service.get_thread(db, sample_thread.id)
             assert db_thread is not None
             assert db_thread.user_id == new_user_id
@@ -542,7 +544,7 @@ class TestSignup:
 
         assert response.status_code == status.HTTP_200_OK
         
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             user = await service_container.user_service.get_user_by_email(db, "test_hashing@example.com")
             assert user is not None
             assert user.email == "test_hashing@example.com"
@@ -593,7 +595,7 @@ class TestSignup:
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             user = await service_container.user_service.get_user_by_email(db, "test_cleanup@example.com")
             assert user is None 
 

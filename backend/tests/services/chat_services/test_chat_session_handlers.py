@@ -17,6 +17,7 @@ from schemas.conversation_stream_events import (
     SearchStartedPayload,
     SummaryUpdatedPayload,
     ThreadTitleUpdatedPayload,
+    UserMessageRejectedPayload,
 )
 
 from services.chat_services.chat_session_store import ChatSessionStore
@@ -26,6 +27,7 @@ from services.chat_services.chat_session_handlers import ChatSessionHandlers
 
 from schemas.messages import (
     Message,
+    MessageResponse,
     CreateAssistantTextMessageParams,
     CreateAssistantRecipeMessageParams,
     CreateAssistantToolMessageParams,
@@ -75,7 +77,7 @@ def mock_chat_session_store():
     return chat_session_store
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 def chat_session_handlers(mock_db_transaction_maker, mock_chat_session_store):
     return ChatSessionHandlers(
         db_transaction_maker=mock_db_transaction_maker,
@@ -112,7 +114,7 @@ class TestAssistantStartedResponding:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = Message(
+        expected_message = MessageResponse(
             id=assistant_message_id,
             user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
@@ -156,6 +158,8 @@ class TestAssistantStartedResponding:
                 created_at=timestamp,
                 updated_at=timestamp,
                 parent_id=sample_user_message_id,
+                role=MessageRole.assistant,
+                content_type=MessageContentType.text,
             ),
         )
         
@@ -234,7 +238,7 @@ class TestAssistantResponding:
             input_tokens=0,
             output_tokens=0,
         )
-        expected_message = Message(
+        expected_message = MessageResponse(
             id=assistant_message_id,
             user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
@@ -280,10 +284,10 @@ class TestAssistantResponding:
             UpdateMessageParams(
                 id=assistant_message_id,
                 updated_at=timestamp,
-                text_content=initial_message.text_content + message_chunk,
+                text_content=(initial_message.text_content or "") + message_chunk,
                 model_name=metadata.model_name,
-                input_tokens=initial_message.input_tokens + metadata.input_tokens,
-                output_tokens=initial_message.output_tokens + metadata.output_tokens,
+                input_tokens=(initial_message.input_tokens or 0) + metadata.input_tokens,
+                output_tokens=(initial_message.output_tokens or 0) + metadata.output_tokens,
             ),
         )
         
@@ -335,7 +339,7 @@ class TestAssistantFinishedResponding:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = Message(
+        expected_message = MessageResponse(
             id=assistant_message_id,
             user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
@@ -450,7 +454,7 @@ class TestRecipeGenerationStarted:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = Message(
+        expected_message = MessageResponse(
             id=assistant_message_id,
             user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
@@ -508,6 +512,8 @@ class TestRecipeGenerationStarted:
                     created_at=timestamp,
                     updated_at=timestamp,
                     parent_id=sample_user_message_id,
+                    role=MessageRole.assistant,
+                    content_type=MessageContentType.recipe,
                 ),
             )
             
@@ -595,7 +601,7 @@ class TestRecipeFieldDetected:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = Message(
+        expected_message = MessageResponse(
             id=assistant_message_id,
             user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
@@ -627,6 +633,8 @@ class TestRecipeFieldDetected:
             thread_id,
             assistant_message_id,
         )
+        
+        assert existing_message.recipe_id is not None
         mock_chat_session_store.update_recipe_field.assert_called_once_with(
             mock_async_session,
             sample_user_access_data,
@@ -780,7 +788,7 @@ class TestRecipeGenerationCompleted:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = Message(
+        expected_message = MessageResponse(
             id=assistant_message_id,
             user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
@@ -818,6 +826,8 @@ class TestRecipeGenerationCompleted:
             thread_id,
             assistant_message_id,
         )
+        
+        assert existing_message.recipe_id is not None
         mock_chat_session_store.update_recipe.assert_called_once_with(
             mock_async_session,
             sample_user_access_data,
@@ -941,7 +951,7 @@ class TestSearchStarted:
             updated_at=to_utc_isostring(timestamp),
         )
         
-        expected_message = Message(
+        expected_message = MessageResponse(
             id=assistant_message_id,
             user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
@@ -991,6 +1001,8 @@ class TestSearchStarted:
                 created_at=timestamp,
                 updated_at=timestamp,
                 parent_id=sample_user_message_id,
+                role=MessageRole.assistant,
+                content_type=MessageContentType.tool,
             ),
         )
         
@@ -1059,7 +1071,7 @@ class TestSearchCompleted:
             updated_at=to_utc_isostring(timestamp),
         )
         
-        expected_message = Message(
+        expected_message = MessageResponse(
             id=assistant_message_id,
             user_id=sample_user_access_data.user_id,
             thread_id=thread_id,
@@ -1347,5 +1359,82 @@ class TestThreadTitleUpdated:
         
         assert_deep_equal(result, {
             "thread": expected_thread,
+        })
+        
+        
+class TestUserMessageRejected:
+    @pytest.mark.asyncio
+    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access_data, sample_user_message_id):
+        thread_id = "123"
+        assistant_message_id = "123"
+        timestamp = datetime.now(timezone.utc)
+        
+        rejection_message = "This is a test rejection message"
+        
+        expected_thread = Thread(
+            id=thread_id,
+            user_id=sample_user_access_data.user_id,
+            error_message=None,
+            is_empty=False,
+            created_at=to_utc_isostring(timestamp),
+            updated_at=to_utc_isostring(timestamp),
+        )
+        
+        expected_message = MessageResponse(
+            id=assistant_message_id,
+            user_id=sample_user_access_data.user_id,
+            thread_id=thread_id,
+            text_content=rejection_message,
+            created_at=to_utc_isostring(timestamp),
+            updated_at=to_utc_isostring(timestamp),
+            role=MessageRole.assistant,
+            content_type=MessageContentType.text,
+            parent_id=sample_user_message_id,
+        )
+        
+        mock_chat_session_store.update_thread.return_value = expected_thread
+        mock_chat_session_store.create_assistant_text_message.return_value = expected_message
+        
+        result = await chat_session_handlers.handle_user_message_rejected(
+            user_access_data=sample_user_access_data,
+            thread_id=thread_id,
+            assistant_message_id=assistant_message_id,
+            payload=UserMessageRejectedPayload(
+                rejection_message=rejection_message,
+            ),
+            timestamp=timestamp,
+            user_message_id=sample_user_message_id,
+        )
+        
+        mock_chat_session_store.update_thread.assert_called_once_with(
+            mock_async_session, 
+            sample_user_access_data,
+            UpdateThreadParams(
+                id=thread_id,
+                updated_at=timestamp,
+                error_message=None,
+                is_empty=False,
+            ),
+        )
+        
+        mock_chat_session_store.create_assistant_text_message.assert_called_once_with(      
+            mock_async_session,
+            sample_user_access_data,
+            CreateAssistantTextMessageParams(
+                id=assistant_message_id,
+                user_id=sample_user_access_data.user_id,
+                thread_id=thread_id,
+                text_content=rejection_message,
+                created_at=timestamp,
+                updated_at=timestamp,
+                parent_id=sample_user_message_id,   
+                role=MessageRole.assistant,
+                content_type=MessageContentType.text,
+            ),
+        )
+        
+        assert_deep_equal(result, {
+            "thread": expected_thread,
+            "message": expected_message,
         })
         

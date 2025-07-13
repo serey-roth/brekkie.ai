@@ -1,79 +1,106 @@
-import os
-from typing import Literal, Optional
+from typing import Annotated, Literal
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
-    
-    # Environment
-    environment: Literal["development", "production"] = Field(default="production", env="ENVIRONMENT")
-    
+
+    environment: Annotated[
+        Literal["development", "production", "test"],
+        Field(default="production", alias="ENVIRONMENT"),
+    ]
+
     # Database
-    db_url: Optional[str] = Field(default=None, env="DB_URL")
-    checkpoint_db_url: Optional[str] = Field(default=None, env="CHECKPOINT_DB_URL")
-    
+    db_url: Annotated[
+        str,
+        Field(
+            default="postgresql+psycopg://foodagent:fOoDaGent123@localhost:5432/foodagent",
+            alias="DB_URL",
+        ),
+    ]
+    checkpoint_db_url: Annotated[
+        str,
+        Field(
+            default="postgresql://foodagent:fOoDaGent123@localhost:5432/foodagent",
+            alias="CHECKPOINT_DB_URL",
+        ),
+    ]
+
     # Redis
-    redis_url: Optional[str] = Field(default=None, env="REDIS_URL")
-    
+    redis_url: Annotated[str, Field(default="redis://localhost:6379/", alias="REDIS_URL")]
+
     # API Keys
-    google_api_key: Optional[str] = Field(default=None, env="GOOGLE_API_KEY")
-    tavily_api_key: Optional[str] = Field(default=None, env="TAVILY_API_KEY")
-    
+    google_api_key: str = Field(default="GOOGLE_API_KEY", alias="GOOGLE_API_KEY")
+    tavily_api_key: str = Field(default="TAVILY_API_KEY", alias="TAVILY_API_KEY")
+
     # Cache TTL Settings (in seconds)
-    thread_cache_ttl: int = Field(default=60 * 60 * 24, env="THREAD_CACHE_TTL")  # 1 day
-    message_cache_ttl: int = Field(default=60 * 60 * 24, env="MESSAGE_CACHE_TTL")  # 1 day
-    recipe_cache_ttl: int = Field(default=60 * 60 * 24, env="RECIPE_CACHE_TTL")  # 1 day
-    user_access_cache_ttl: int = Field(default=60 * 60 * 24, env="USER_ACCESS_CACHE_TTL")  # 1 day
-    
+    thread_cache_ttl: int = 60 * 60 * 24  # 1 day
+    message_cache_ttl: int = 60 * 60 * 24  # 1 day
+    recipe_cache_ttl: int = 60 * 60 * 24  # 1 day
+    user_access_cache_ttl: int = 60 * 60 * 24  # 1 day
+
     # Rate Limiting
-    anonymous_access_rate_limiter_ttl: int = Field(default=60 * 60 * 24, env="ANONYMOUS_ACCESS_RATE_LIMITER_TTL")  # 1 day
-    anonymous_access_rate_limiter_limit: int = Field(default=1, env="ANONYMOUS_ACCESS_RATE_LIMITER_LIMIT")
-    
+    ip_address_rate_limiter_ttl: int = 60 * 60 * 24  # 1 day
+    ip_address_rate_limiter_anonymous_access_limit: int = 1
+    ip_address_rate_limiter_violation_limit: int = 1
+
     # Session and Limits
-    session_ttl: int = Field(default=60 * 30, env="SESSION_TTL")  # 30 minutes
-    authenticated_user_message_limit: int = Field(default=50, env="AUTHENTICATED_USER_MESSAGE_LIMIT")
-    unauthenticated_user_message_limit: int = Field(default=10, env="UNAUTHENTICATED_USER_MESSAGE_LIMIT")
-    
+    session_ttl: int = 60 * 30  # 30 minutes
+    authenticated_user_message_limit: int = 50
+    unauthenticated_user_message_limit: int = 10
+
     # Cookie Settings
-    cookie_name: str = Field(default="bk_access_token", env="COOKIE_NAME")
-    cookie_max_age: int = Field(default=60 * 60 * 24, env="COOKIE_MAX_AGE")  # 1 day
-    cookie_samesite: str = Field(default="Lax", env="COOKIE_SAMESITE")
-    cookie_path: str = Field(default="/", env="COOKIE_PATH")
-    
+    cookie_name: str = "bk_access_token"
+    cookie_max_age: int = 60 * 60 * 24  # 1 day
+    cookie_samesite: str = "Lax"
+    cookie_path: str = "/"
+
     # Refresh TTL
-    access_token_refresh_ttl: int = Field(default=60 * 60 * 3, env="ACCESS_TOKEN_REFRESH_TTL")  # 3 hours
-    
+    access_token_refresh_ttl: int = 60 * 60 * 3  # 3 hours
+
     # Database Pool Settings
-    db_pool_size: int = Field(default=5, env="DB_POOL_SIZE")
-    db_max_overflow: int = Field(default=10, env="DB_MAX_OVERFLOW")
-    db_pool_timeout: int = Field(default=30, env="DB_POOL_TIMEOUT")
-    db_pool_recycle: int = Field(default=3600, env="DB_POOL_RECYCLE")
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_timeout: int = 30
+    db_pool_recycle: int = 3600
 
     # Feature Flags
-    enable_auth: bool = Field(default=False, env="ENABLE_AUTH")
-    
-    # Safety Guard Models
-    prompt_injection_model_id: str = Field(default="ProtectAI/deberta-v3-base-prompt-injection-v2", env="PROMPT_INJECTION_MODEL_ID")
-    toxicity_model_id: str = Field(default="unitary/toxic-bert", env="TOXICITY_MODEL_ID")
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    enable_auth: bool = Field(default=False, alias="ENABLE_AUTH")
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        frozen=True,
+        extra="ignore",
+    )
+
+    def __init__(self, env_file: str = ".env"):
+        super().__init__(_env_file=env_file)
 
     def is_production(self) -> bool:
         return self.environment == "production"
-    
+
     def is_development(self) -> bool:
         return self.environment == "development"
-    
+
+    def is_test(self) -> bool:
+        return self.environment == "test"
+
     def get_cookie_secure(self) -> bool:
         return self.is_production()
-    
+
+    def get_cookie_samesite(self) -> str:
+        return self.cookie_samesite
+
     def get_cookie_httponly(self) -> bool:
         return self.is_production()
-    
+
     def is_auth_enabled(self) -> bool:
         return self.enable_auth
-    
+
+
+def create_settings(env_file: str = ".env") -> Settings:
+    """Create Settings instance with custom env file."""
+    return Settings(env_file=env_file)

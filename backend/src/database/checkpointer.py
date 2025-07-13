@@ -1,14 +1,18 @@
-import os
-
 from psycopg_pool.pool_async import AsyncConnectionPool
+from psycopg.connection_async import AsyncConnection
 
-def create_checkpointer_pool():
+
+async def _check_connection(conn: AsyncConnection) -> None:
+    await conn.execute("SELECT 1")
+
+
+def create_checkpointer_pool(db_url: str):
     return AsyncConnectionPool(
-        conninfo=os.getenv("CHECKPOINT_DB_URL"),
+        conninfo=db_url,
         max_size=5,
         max_lifetime=1800,
         timeout=30,
-        check=lambda conn: conn.execute("SELECT 1"),
+        check=_check_connection,
         kwargs={
             "connect_timeout": 10,
             "application_name": "brekkie-ai-checkpointer",
@@ -16,5 +20,5 @@ def create_checkpointer_pool():
             "keepalives_interval": 30,
             "keepalives_count": 3,
             "autocommit": True,
-        }
+        },
     )

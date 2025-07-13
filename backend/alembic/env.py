@@ -6,11 +6,12 @@ from sqlalchemy import pool
 from alembic import context
 
 from dotenv import load_dotenv
+
 load_dotenv()
-load_dotenv(".env.local")
 
 import os
 import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database.schema import Base
@@ -24,7 +25,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", os.getenv("DB_URL"))
+config.set_main_option("sqlalchemy.url", os.getenv("DB_URL"))  # type: ignore
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -39,12 +40,8 @@ target_metadata = Base.metadata
 
 # LangGraph checkpoint tables that should be excluded from migrations
 # These are automatically inserted by LangGraph and are not part of the schema
-LANGGRAPH_TABLES = {
-    'checkpoints',
-    'checkpoint_blobs', 
-    'checkpoint_writes',
-    'checkpoint_migrations'
-}
+LANGGRAPH_TABLES = {"checkpoints", "checkpoint_blobs", "checkpoint_writes", "checkpoint_migrations"}
+
 
 def include_object(object_, name, type_, reflected, compare_to):
     """
@@ -97,7 +94,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, 
+            connection=connection,
             target_metadata=target_metadata,
             # Exclude LangGraph checkpoint tables from migrations
             include_object=include_object,

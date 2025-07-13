@@ -1,16 +1,17 @@
-import pytest
 import os
-from config.settings import Settings
+
+from pydantic import ValidationError
+
+from config.settings import Settings, create_settings
+
+import pytest
 
 
-class TestSettings:
+class TestDefaultValues:
     def test_default_values(self):
         """Test that default values are set correctly."""
-        settings = Settings()
-        
-        # Test environment defaults
-        assert settings.environment == "production"
-        
+        settings = create_settings()
+                
         # Test cache TTL defaults
         assert settings.thread_cache_ttl == 60 * 60 * 24  # 1 day
         assert settings.message_cache_ttl == 60 * 60 * 24  # 1 day
@@ -18,8 +19,9 @@ class TestSettings:
         assert settings.user_access_cache_ttl == 60 * 60 * 24  # 1 day
         
         # Test rate limiting defaults
-        assert settings.anonymous_access_rate_limiter_ttl == 60 * 60 * 24  # 1 day
-        assert settings.anonymous_access_rate_limiter_limit == 1
+        assert settings.ip_address_rate_limiter_ttl == 60 * 60 * 24  # 1 day
+        assert settings.ip_address_rate_limiter_anonymous_access_limit == 1
+        assert settings.ip_address_rate_limiter_violation_limit == 1
         
         # Test session defaults
         assert settings.session_ttl == 60 * 30  # 30 minutes
@@ -28,119 +30,162 @@ class TestSettings:
         
         # Test cookie defaults
         assert settings.cookie_max_age == 60 * 60 * 24  # 1 day
-        assert settings.get_cookie_secure() is True  # production default
         assert settings.cookie_samesite == "Lax"
-        assert settings.get_cookie_httponly() is True  # production default
         
         # Test database pool defaults
         assert settings.db_pool_size == 5
         assert settings.db_max_overflow == 10
         assert settings.db_pool_timeout == 30
         assert settings.db_pool_recycle == 3600
-
-    def test_environment_variable_override(self):
-        """Test that environment variables can override defaults."""
-        # Set environment variables
-        os.environ["THREAD_CACHE_TTL"] = "3600"  # 1 hour
-        os.environ["AUTHENTICATED_USER_MESSAGE_LIMIT"] = "100"
-        os.environ["ENVIRONMENT"] = "development"
+        
+        assert settings.access_token_refresh_ttl == 60 * 60 * 3  # 3 hours
+        
+    def test_override_settings(self):
+        os.environ["ENVIRONMENT"] = "production"
+        os.environ["DB_URL"] = "postgresql://foodagent:fOoDaGent123@localhost:5432/test_db_url"
+        os.environ["CHECKPOINT_DB_URL"] = "postgresql://foodagent:fOoDaGent123@localhost:5432/test_checkpoint_db_url"
+        os.environ["REDIS_URL"] = "redis://localhost:6379/test_redis_url"
+        os.environ["GOOGLE_API_KEY"] = "test_google_api_key"
+        os.environ["TAVILY_API_KEY"] = "test_tavily_api_key"
+        os.environ["ENABLE_AUTH"] = "true"
         
         try:
-            settings = Settings()
-            
-            assert settings.thread_cache_ttl == 3600
-            assert settings.authenticated_user_message_limit == 100
-            assert settings.get_cookie_secure() is False  # development default
+            settings = create_settings(".env.test")
+            assert settings.environment == "production"
+            assert str(settings.db_url) == "postgresql://foodagent:fOoDaGent123@localhost:5432/test_db_url"
+            assert str(settings.checkpoint_db_url) == "postgresql://foodagent:fOoDaGent123@localhost:5432/test_checkpoint_db_url"
+            assert str(settings.redis_url) == "redis://localhost:6379/test_redis_url"
+            assert settings.google_api_key == "test_google_api_key"
+            assert settings.tavily_api_key == "test_tavily_api_key"
+            assert settings.enable_auth is True
         finally:
-            # Clean up environment variables
-            os.environ.pop("THREAD_CACHE_TTL", None)
-            os.environ.pop("AUTHENTICATED_USER_MESSAGE_LIMIT", None)
-            os.environ.pop("ENVIRONMENT", None)
+            os.environ.pop("ENVIRONMENT")
+            os.environ.pop("DB_URL")
+            os.environ.pop("CHECKPOINT_DB_URL")
+            os.environ.pop("REDIS_URL")
+            os.environ.pop("GOOGLE_API_KEY")
+            os.environ.pop("TAVILY_API_KEY")
+            os.environ.pop("ENABLE_AUTH")
+        
 
-    def test_is_production_method(self):
-        """Test the is_production method."""
-        # Test production environment
-        settings = Settings(environment="production")
+class TestMutateSettings:
+    def test_mutate_settings(self):
+        settings = create_settings(".env.test")
+        with pytest.raises(ValidationError):
+            settings.enable_auth = True
+     
+     
+class TestDevelopmentSettings:
+    @pytest.fixture
+    def settings(self):
+        return create_settings(".env.development")
+    
+    def test_environment(self, settings: Settings):
+        assert settings.environment == "development"
+        
+    def test_db_url(self, settings: Settings):
+        assert str(settings.db_url) == "postgresql+psycopg://foodagent:fOoDaGent123@localhost:5432/foodagent"
+        
+    def test_checkpoint_db_url(self, settings: Settings):
+        assert str(settings.checkpoint_db_url) == "postgresql://foodagent:fOoDaGent123@localhost:5432/foodagent"
+        
+    def test_redis_url(self, settings: Settings):
+        assert str(settings.redis_url) == "redis://localhost:6379/"
+        
+    def test_is_development(self, settings: Settings):
+        assert settings.is_development() is True
+        
+    def test_is_production(self, settings: Settings):
+        assert settings.is_production() is False
+        
+    def test_is_test(self, settings: Settings):
+        assert settings.is_test() is False
+        
+    def test_get_cookie_secure_method(self, settings: Settings):
+        assert settings.get_cookie_secure() is False
+        
+    def test_get_cookie_httponly_method(self, settings: Settings):
+        assert settings.get_cookie_httponly() is False
+        
+    def test_is_auth_enabled_method(self, settings: Settings):
+        assert settings.is_auth_enabled() is False
+        
+
+class TestProductionSettings:
+    @pytest.fixture
+    def settings(self):
+        return create_settings(".env.production")
+    
+    def test_environment(self, settings: Settings):
+        assert settings.environment == "production"
+        
+    def test_db_url(self, settings: Settings):
+        assert str(settings.db_url) != "postgresql://foodagent:fOoDaGent123@localhost:5432/foodagent"
+        
+    def test_checkpoint_db_url(self, settings: Settings):
+        assert str(settings.checkpoint_db_url) != "postgresql://foodagent:fOoDaGent123@localhost:5432/foodagent"
+        
+    def test_redis_url(self, settings: Settings):
+        assert str(settings.redis_url) != "redis://localhost:6379"
+        
+    def test_api_keys(self, settings: Settings):
+        assert settings.google_api_key != "GOOGLE_API_KEY"
+        assert settings.tavily_api_key != "TAVILY_API_KEY"
+        
+    def test_is_production(self, settings: Settings):
         assert settings.is_production() is True
+        
+    def test_is_development(self, settings: Settings):
         assert settings.is_development() is False
         
-        # Test development environment
-        settings = Settings(environment="development")
-        assert settings.is_production() is False
-        assert settings.is_development() is True
-
-    def test_get_cookie_secure_method(self):
-        """Test the get_cookie_secure method."""
-        # Test production environment - should be secure
-        settings = Settings(environment="production")
+    def test_is_test(self, settings: Settings):
+        assert settings.is_test() is False
+        
+    def test_get_cookie_secure_method(self, settings: Settings):
         assert settings.get_cookie_secure() is True
         
-        # Test development environment - should not be secure
-        settings = Settings(environment="development")
-        assert settings.get_cookie_secure() is False
-
-    def test_get_cookie_httponly_method(self):
-        """Test the get_cookie_httponly method."""
-        # Test production environment - should be httponly
-        settings = Settings(environment="production")
+    def test_get_cookie_httponly_method(self, settings: Settings):
         assert settings.get_cookie_httponly() is True
         
-        # Test development environment - should not be httponly
-        settings = Settings(environment="development")
+    def test_is_auth_enabled_method(self, settings: Settings):
+        assert settings.is_auth_enabled() is False
+        
+        
+class TestTestSettings:
+    @pytest.fixture
+    def settings(self):
+        return create_settings(".env.test")
+    
+    def test_environment(self, settings: Settings):
+        assert settings.environment == "test"
+        
+    def test_db_url(self, settings: Settings):
+        assert str(settings.db_url) == "postgresql+psycopg://foodagent:fOoDaGent123@localhost:5432/foodagent"
+        
+    def test_checkpoint_db_url(self, settings: Settings):
+        assert str(settings.checkpoint_db_url) == "postgresql://foodagent:fOoDaGent123@localhost:5432/foodagent"
+        
+    def test_redis_url(self, settings: Settings):
+        assert str(settings.redis_url) == "redis://localhost:6379/"
+        
+    def test_api_keys(self, settings: Settings):
+        assert settings.google_api_key != "GOOGLE_API_KEY"
+        assert settings.tavily_api_key != "TAVILY_API_KEY"
+
+    def test_is_production(self, settings: Settings):
+        assert settings.is_production() is False
+        
+    def test_is_development(self, settings: Settings):
+        assert settings.is_development() is False
+        
+    def test_is_test(self, settings: Settings):
+        assert settings.is_test() is True
+
+    def test_get_cookie_secure_method(self, settings: Settings):
+        assert settings.get_cookie_secure() is False
+
+    def test_get_cookie_httponly_method(self, settings: Settings):
         assert settings.get_cookie_httponly() is False
 
-    def test_is_auth_enabled_method(self):
-        """Test the is_auth_enabled method."""
-        # Test with auth disabled (default)
-        settings = Settings()
+    def test_is_auth_enabled_method(self, settings: Settings):
         assert settings.is_auth_enabled() is False
-        
-        # Test with auth enabled
-        settings = Settings(enable_auth=True)
-        assert settings.is_auth_enabled() is True
-        
-        # Test with auth explicitly disabled
-        settings = Settings(enable_auth=False)
-        assert settings.is_auth_enabled() is False
-
-    def test_environment_methods_with_env_vars(self):
-        """Test environment methods work correctly with environment variables."""
-        # Test production
-        os.environ["ENVIRONMENT"] = "production"
-        try:
-            settings = Settings()
-            assert settings.is_production() is True
-            assert settings.is_development() is False
-            assert settings.get_cookie_secure() is True
-            assert settings.get_cookie_httponly() is True
-        finally:
-            os.environ.pop("ENVIRONMENT", None)
-        
-        # Test development
-        os.environ["ENVIRONMENT"] = "development"
-        try:
-            settings = Settings()
-            assert settings.is_production() is False
-            assert settings.is_development() is True
-            assert settings.get_cookie_secure() is False
-            assert settings.get_cookie_httponly() is False
-        finally:
-            os.environ.pop("ENVIRONMENT", None)
-
-    def test_auth_enabled_with_env_vars(self):
-        """Test auth enabled works correctly with environment variables."""
-        # Test with auth enabled
-        os.environ["ENABLE_AUTH"] = "true"
-        try:
-            settings = Settings()
-            assert settings.is_auth_enabled() is True
-        finally:
-            os.environ.pop("ENABLE_AUTH", None)
-        
-        # Test with auth disabled
-        os.environ["ENABLE_AUTH"] = "false"
-        try:
-            settings = Settings()
-            assert settings.is_auth_enabled() is False
-        finally:
-            os.environ.pop("ENABLE_AUTH", None)

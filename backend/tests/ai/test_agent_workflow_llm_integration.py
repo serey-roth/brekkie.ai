@@ -1,16 +1,15 @@
 import os
-import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.dirname(current_dir)
+env_file = os.path.join(backend_dir, '.env.test')
 
 from dotenv import load_dotenv
-load_dotenv('.env.local')
-os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY", "test-key")
-os.environ["TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY", "test-key")
-
+load_dotenv(env_file)
 
 import pytest
 from unittest.mock import MagicMock, patch
+
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
@@ -45,7 +44,7 @@ class TestUpdateThreadTitleRealLLM:
             HumanMessage(content="I'm vegetarian, so no meat please"),
         ]
         
-        state = AgentState(messages=messages)
+        state = AgentState(messages=messages) # type: ignore
         
         with patch('ai.workflow.agent.get_stream_writer') as mock_writer:
             mock_write = MagicMock()
@@ -70,7 +69,7 @@ class TestUpdateThreadTitleRealLLM:
             HumanMessage(content="That looks great! Can you make it vegetarian?"),
         ]
         
-        state = AgentState(messages=messages)
+        state = AgentState(messages=messages) # type: ignore
         
         with patch('ai.workflow.agent.get_stream_writer') as mock_writer:
             mock_write = MagicMock()
@@ -91,7 +90,7 @@ class TestUpdateThreadTitleRealLLM:
             HumanMessage(content="Can you make it gluten-free? 🌾"),
         ]
         
-        state = AgentState(messages=messages)
+        state = AgentState(messages=messages) # type: ignore
         
         with patch('ai.workflow.agent.get_stream_writer') as mock_writer:
             mock_write = MagicMock()
@@ -106,7 +105,7 @@ class TestUpdateThreadTitleRealLLM:
     @pytest.mark.asyncio
     async def test_update_thread_title_empty_messages(self, agent_factory):
         """Test thread title update with empty message list"""
-        state = AgentState(messages=[])
+        state = AgentState(messages=[]) # type: ignore
         
         with patch('ai.workflow.agent.get_stream_writer') as mock_writer:
             mock_write = MagicMock()
@@ -138,7 +137,7 @@ class TestUpdateThreadTitleRealLLM:
             ),
         ]
         
-        state = AgentState(messages=messages)
+        state = AgentState(messages=messages) # type: ignore
         
         with patch('ai.workflow.agent.get_stream_writer') as mock_writer:
             mock_write = MagicMock()
@@ -157,7 +156,7 @@ class TestUpdateThreadTitleRealLLM:
             AIMessage(content="I'll help you!"),
         ]
         
-        state = AgentState(messages=messages)
+        state = AgentState(messages=messages) # type: ignore
         
         with patch('ai.workflow.agent.get_stream_writer') as mock_writer:
             mock_write = MagicMock()
@@ -179,7 +178,7 @@ class TestUpdateThreadTitleRealLLM:
             ),
         ]
         
-        state = AgentState(messages=messages)
+        state = AgentState(messages=messages) # type: ignore
         
         with patch('ai.workflow.agent.get_stream_writer') as mock_writer:
             mock_write = MagicMock()

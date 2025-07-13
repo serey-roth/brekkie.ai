@@ -11,12 +11,12 @@ class ApiErrorType(str, Enum):
 class ApiError(Exception):
     type: ApiErrorType
     message_template: str
-    
+
     def format_message(self, **kwargs) -> str:
         template = Template(self.message_template)
         return template.safe_substitute(kwargs)
-    
-    
+
+
 class RateLimitError(ApiError):
     def __init__(self, ip_address: str):
         super().__init__(

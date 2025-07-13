@@ -236,6 +236,16 @@ export class ChatStateManager {
                     this._eventManager.publish('chatSessionErrorOccurred', event.data);
                     break;
                 }
+
+                case 'user_message_rejected': {
+                    draft.thread = event.data.thread;
+
+                    draft.isAssistantThinking = false;
+                    draft.isAssistantResponding = false;
+
+                    this._messageManager.addMessage(event.data.message);
+                    break;
+                }
             }
         });
     }

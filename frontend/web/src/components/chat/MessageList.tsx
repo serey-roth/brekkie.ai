@@ -61,7 +61,7 @@ export function MessageList({
                 <ChatMessageGroup
                     key={idx}
                     group={group}
-                    isAssistantResponding={isAssistantResponding}
+                    isAssistantResponding={idx === messageGroups.length - 1 && isAssistantResponding}
                     selectedRecipeId={selectedRecipeId}
                     onSelectRecipe={onSelectRecipe}
                 />

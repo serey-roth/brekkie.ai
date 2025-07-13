@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from typing import cast
 
 import pytest
 import pytest_asyncio
@@ -152,16 +153,16 @@ class TestRecipeService:
         assert isinstance(result, UserRecipe)
         
         mock_db_ingredients = [
-            RecipeIngredient(name=ingredient["name"], quantity=ingredient["quantity"], unit=ingredient["unit"])
-            for ingredient in mock_db_recipe.ingredients
+            RecipeIngredient.model_validate(ingredient)
+            for ingredient in cast(list[dict], mock_db_recipe.ingredients)
         ]
         mock_db_instructions = [
-            RecipeInstruction(title=instruction["title"], description=instruction["description"])
-            for instruction in mock_db_recipe.instructions
+            RecipeInstruction.model_validate(instruction)
+            for instruction in cast(list[dict], mock_db_recipe.instructions)
         ]
         mock_db_categories = [
-            RecipeCategory(name=category["name"])
-            for category in mock_db_recipe.categories
+            RecipeCategory.model_validate(category)
+            for category in cast(list[dict], mock_db_recipe.categories)
         ]
         
         assert result.id == sample_recipe_id

@@ -21,10 +21,12 @@ from utils.logger import Logger
 logger = Logger("api.routes.auth")
 
 
-async def _migrate_user_data(old_user_id: str, new_user_id: str, service_container: ServiceContainer):
+async def _migrate_user_data(
+    old_user_id: str, new_user_id: str, service_container: ServiceContainer
+):
     logger.info(f"Starting migration from old_user_id={old_user_id} to new_user_id={new_user_id}")
     try:
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             threads = await service_container.thread_cache_service.get_threads(old_user_id)
             logger.info(f"Found {len(threads)} threads to migrate")
             if len(threads) > 0:
@@ -32,21 +34,32 @@ async def _migrate_user_data(old_user_id: str, new_user_id: str, service_contain
                     CreateThreadParams(
                         id=thread.id,
                         user_id=new_user_id,
-                        created_at=datetime.fromisoformat(thread.created_at).replace(tzinfo=timezone.utc),
-                        updated_at=datetime.fromisoformat(thread.updated_at).replace(tzinfo=timezone.utc),
-                        resumed_at=datetime.fromisoformat(thread.resumed_at).replace(tzinfo=timezone.utc) if thread.resumed_at else None,
+                        created_at=datetime.fromisoformat(thread.created_at).replace(
+                            tzinfo=timezone.utc
+                        ),
+                        updated_at=datetime.fromisoformat(thread.updated_at).replace(
+                            tzinfo=timezone.utc
+                        ),
+                        resumed_at=datetime.fromisoformat(thread.resumed_at).replace(
+                            tzinfo=timezone.utc
+                        )
+                        if thread.resumed_at
+                        else None,
                         is_empty=thread.is_empty,
                         title=thread.title,
                         summary=thread.summary,
                         error_message=thread.error_message,
                     )
-                    for thread in threads if thread.is_empty is False
+                    for thread in threads
+                    if thread.is_empty is False
                 ]
                 await service_container.thread_service.create_threads(db, thread_params)
                 await service_container.thread_cache_service.delete_threads_by_user_id(old_user_id)
                 logger.info(f"Successfully migrated {len(threads)} threads")
-                
-            recipes = await service_container.recipe_cache_service.get_recipes_by_user_id(old_user_id)
+
+            recipes = await service_container.recipe_cache_service.get_recipes_by_user_id(
+                old_user_id
+            )
             logger.info(f"Found {len(recipes)} recipes to migrate")
             if len(recipes) > 0:
                 recipe_params = [
@@ -54,8 +67,12 @@ async def _migrate_user_data(old_user_id: str, new_user_id: str, service_contain
                         id=recipe.id,
                         user_id=new_user_id,
                         thread_id=recipe.thread_id,
-                        created_at=datetime.fromisoformat(recipe.created_at).replace(tzinfo=timezone.utc),
-                        updated_at=datetime.fromisoformat(recipe.updated_at).replace(tzinfo=timezone.utc),
+                        created_at=datetime.fromisoformat(recipe.created_at).replace(
+                            tzinfo=timezone.utc
+                        ),
+                        updated_at=datetime.fromisoformat(recipe.updated_at).replace(
+                            tzinfo=timezone.utc
+                        ),
                         name=recipe.name,
                         description=recipe.description,
                         ingredients=recipe.ingredients,
@@ -78,8 +95,10 @@ async def _migrate_user_data(old_user_id: str, new_user_id: str, service_contain
                 await service_container.recipe_service.create_recipes(db, recipe_params)
                 await service_container.recipe_cache_service.delete_recipes_by_user_id(old_user_id)
                 logger.info(f"Successfully migrated {len(recipes)} recipes")
-                
-            messages = await service_container.message_cache_service.get_messages_by_user_id(old_user_id)
+
+            messages = await service_container.message_cache_service.get_messages_by_user_id(
+                old_user_id
+            )
             logger.info(f"Found {len(messages)} messages to migrate")
             if len(messages) > 0:
                 message_params = [
@@ -90,8 +109,12 @@ async def _migrate_user_data(old_user_id: str, new_user_id: str, service_contain
                         role=message.role,
                         content_type=message.content_type,
                         text_content=message.text_content,
-                        created_at=datetime.fromisoformat(message.created_at).replace(tzinfo=timezone.utc),
-                        updated_at=datetime.fromisoformat(message.updated_at).replace(tzinfo=timezone.utc),
+                        created_at=datetime.fromisoformat(message.created_at).replace(
+                            tzinfo=timezone.utc
+                        ),
+                        updated_at=datetime.fromisoformat(message.updated_at).replace(
+                            tzinfo=timezone.utc
+                        ),
                         model_name=message.model_name,
                         input_tokens=message.input_tokens,
                         output_tokens=message.output_tokens,
@@ -105,12 +128,18 @@ async def _migrate_user_data(old_user_id: str, new_user_id: str, service_contain
                     for message in messages
                 ]
                 await service_container.message_service.create_messages(db, message_params)
-                await service_container.message_cache_service.delete_messages_by_user_id(old_user_id)
+                await service_container.message_cache_service.delete_messages_by_user_id(
+                    old_user_id
+                )
                 logger.info(f"Successfully migrated {len(messages)} messages")
-        
-        logger.info(f"Migration completed successfully from old_user_id={old_user_id} to new_user_id={new_user_id}")
+
+        logger.info(
+            f"Migration completed successfully from old_user_id={old_user_id} to new_user_id={new_user_id}"
+        )
     except Exception as e:
-        logger.error(f"Error during migration from old_user_id={old_user_id} to new_user_id={new_user_id}: {e}")
+        logger.error(
+            f"Error during migration from old_user_id={old_user_id} to new_user_id={new_user_id}: {e}"
+        )
         raise
 
 
@@ -118,36 +147,44 @@ router = APIRouter()
 
 # TODO: Add email verification
 
+
 @router.post("/login", response_model=UserAccessData)
 async def login(
     response: Response,
-    payload: UserLogin, 
+    payload: UserLogin,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
     settings: Annotated[Settings, Depends(get_settings)],
     ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     logger.debug(f"Login attempt for email: {payload.email}")
-    
+
     if not settings.is_auth_enabled():
-        raise HTTPException(status_code=403, detail={"message": "Feature temporarily unavailable. Please check back later."})
-    
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "Feature temporarily unavailable. Please check back later."},
+        )
+
     try:
         user_service = service_container.user_service
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             user = await user_service.get_user_by_email(db, payload.email)
             if user is None:
                 logger.error(f"User with email {payload.email} not found")
                 raise HTTPException(status_code=401, detail={"message": "User does not exist"})
-                
+
             if not await user_service.verify_password(db, user.id, payload.password):
                 logger.error(f"Invalid password for user {payload.email}")
                 raise HTTPException(status_code=401, detail={"message": "Invalid credentials"})
-        
-            user_message_count = await service_container.message_service.count_total_messages_sent_by_user(db, user.id)
-            
+
+            user_message_count = (
+                await service_container.message_service.count_total_messages_sent_by_user(
+                    db, user.id
+                )
+            )
+
             timestamp = datetime.now(timezone.utc)
-            
+
             new_access_data = await service_container.user_access_cache_service.create_user_access(
                 access_token=str(uuid4()),
                 user_id=user.id,
@@ -159,17 +196,17 @@ async def login(
                 updated_at=to_utc_isostring(timestamp),
                 ip_address=ip_address,
             )
-            
+
             if access_token:
                 await service_container.user_access_cache_service.revoke_access(access_token)
-            
+
             await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
-            
+
             response.set_cookie(
                 settings.cookie_name,
                 new_access_data.access_token,
                 secure=settings.get_cookie_secure(),
-                samesite=settings.cookie_samesite,
+                samesite=settings.cookie_samesite,  # type: ignore
                 max_age=settings.cookie_max_age,
                 httponly=settings.get_cookie_httponly(),
                 path=settings.cookie_path,
@@ -177,67 +214,76 @@ async def login(
 
             logger.info(f"User {user.id} ({user.email}) logged in successfully")
             return new_access_data
-    
+
     except HTTPException:
         raise
-    
+
     except Exception as e:
         logger.error(f"Unexpected error during login: {e}")
         raise HTTPException(status_code=500, detail={"message": "Internal server error"})
-   
-   
+
+
 @router.post("/signup", response_model=UserAccessData)
 async def signup(
     response: Response,
-    payload: UserSignup, 
-    service_container: Annotated[ServiceContainer, Depends(get_service_container)], 
+    payload: UserSignup,
+    service_container: Annotated[ServiceContainer, Depends(get_service_container)],
     settings: Annotated[Settings, Depends(get_settings)],
     background_tasks: BackgroundTasks,
     ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ) -> UserAccessData:
     logger.debug(f"Signup attempt for email: {payload.email}")
-    
+
     if not settings.is_auth_enabled():
-        raise HTTPException(status_code=403, detail={"message": "Feature temporarily unavailable. Please check back later."})
-    
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "Feature temporarily unavailable. Please check back later."},
+        )
+
     try:
         if not access_token:
             raise HTTPException(status_code=401, detail={"message": "Missing access token"})
 
-        user_access_data = await service_container.user_access_cache_service.get_user_access(access_token)
+        user_access_data = await service_container.user_access_cache_service.get_user_access(
+            access_token
+        )
         if user_access_data is None:
             raise HTTPException(status_code=401, detail={"message": "Access token not found"})
-        
+
         if user_access_data.is_authenticated:
             return user_access_data
-        
+
         old_user_id = user_access_data.user_id
-        
+
         timestamp = datetime.now(timezone.utc)
-        
+
         user_service = service_container.user_service
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             existing = await user_service.get_user_by_email(db, payload.email)
             if existing:
                 logger.error(f"User with email {payload.email} already exists")
                 raise HTTPException(status_code=400, detail={"message": "User already exists"})
-        
+
             user = await user_service.create_user(
-                db, 
+                db,
                 CreateUserParams(
                     id=old_user_id,
                     created_at=timestamp,
                     updated_at=timestamp,
                     email=payload.email,
                     name=payload.name,
-                    password=payload.password
+                    password=payload.password,
                     # TODO: Add ip address
+                ),
+            )
+
+            old_user_message_count = (
+                await service_container.message_cache_service.count_total_messages_sent_by_user(
+                    old_user_id
                 )
             )
 
-            old_user_message_count = await service_container.message_cache_service.count_total_messages_sent_by_user(old_user_id)
-            
             new_access_data = await service_container.user_access_cache_service.create_user_access(
                 access_token=str(uuid4()),
                 user_id=user.id,
@@ -249,28 +295,28 @@ async def signup(
                 updated_at=to_utc_isostring(timestamp),
                 ip_address=ip_address,
             )
-            
+
             await service_container.user_access_cache_service.revoke_access(access_token)
             await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
-            
+
             response.set_cookie(
                 settings.cookie_name,
                 new_access_data.access_token,
                 secure=settings.get_cookie_secure(),
-                samesite=settings.cookie_samesite,
+                samesite=settings.cookie_samesite,  # type: ignore
                 max_age=settings.cookie_max_age,
                 httponly=settings.get_cookie_httponly(),
                 path=settings.cookie_path,
             )
-            
+
             logger.info(f"User {user.id} ({user.email}) signed up successfully")
             background_tasks.add_task(_migrate_user_data, old_user_id, user.id, service_container)
 
             return new_access_data
-        
+
     except HTTPException:
         raise
-    
+
     except Exception as e:
         logger.error(f"Unexpected error during signup: {e}")
         raise HTTPException(status_code=500, detail={"message": "Internal server error"})
@@ -283,24 +329,29 @@ async def logout(
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
 ):
     if not settings.is_auth_enabled():
-        raise HTTPException(status_code=403, detail={"message": "Feature temporarily unavailable. Please check back later."})
-    
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "Feature temporarily unavailable. Please check back later."},
+        )
+
     try:
         if not access_token:
             raise HTTPException(status_code=401, detail={"message": "Missing access token"})
-        
-        user_access_data = await service_container.user_access_cache_service.get_user_access(access_token)
+
+        user_access_data = await service_container.user_access_cache_service.get_user_access(
+            access_token
+        )
         if user_access_data is None:
             raise HTTPException(status_code=401, detail={"message": "Access token not found"})
-        
+
         if not user_access_data.is_authenticated:
             raise HTTPException(status_code=400, detail={"message": "User not authenticated"})
-        
+
         await service_container.user_access_cache_service.revoke_access(access_token)
-    
+
     except HTTPException:
         raise
-    
+
     except Exception as e:
         logger.error(f"Unexpected error during logout: {e}")
         raise HTTPException(status_code=500, detail={"message": "Internal server error"})

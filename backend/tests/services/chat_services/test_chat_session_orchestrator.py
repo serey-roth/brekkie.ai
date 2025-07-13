@@ -13,7 +13,7 @@ from services.chat_services.chat_session_orchestrator import ChatSessionOrchestr
 
 from schemas.user_access import UserAccessData
 from schemas.threads import Thread
-from schemas.messages import PaginatedMessages, Message
+from schemas.messages import PaginatedMessages, Message, MessageResponse
 from schemas.message_role import MessageRole
 from schemas.message_content_type import MessageContentType
 from schemas.recipes import UserRecipe
@@ -28,6 +28,7 @@ from services.data_services.user_access_cache_service import UserAccessCacheServ
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 
 from services.websocket_event_sender import WebSocketEventSender
 from utils.date_utils import to_utc_isostring
@@ -74,6 +75,11 @@ def mock_websocket_event_sender():
 
 
 @pytest.fixture
+def mock_chat_session_message_guard():
+    return MagicMock(spec=ChatSessionMessageGuard)
+
+
+@pytest.fixture
 def mock_websocket():
     websocket = MagicMock(spec=WebSocket)
     websocket.client_state = WebSocketState.CONNECTED
@@ -88,13 +94,15 @@ def orchestrator(
     mock_chat_session_handlers,
     mock_chat_session_limit_checker,
     mock_food_agent,
-    mock_websocket_event_sender
+    mock_websocket_event_sender,
+    mock_chat_session_message_guard
 ):
     return ChatSessionOrchestrator(
         session_ttl=1000,
         db_transaction_maker=mock_db_transaction_maker,
         user_access_cache_service=mock_user_access_cache_service,
         ai_food_agent=mock_food_agent,
+        chat_session_message_guard=mock_chat_session_message_guard,
         chat_session_store=mock_chat_session_store,
         chat_session_handlers=mock_chat_session_handlers,
         chat_session_limit_checker=mock_chat_session_limit_checker,
@@ -168,7 +176,7 @@ def sample_messages(sample_thread_id, sample_user_id):
 @pytest.fixture
 def sample_paginated_messages(sample_thread_id, sample_messages):
     return PaginatedMessages(
-        messages=sample_messages,
+        messages=[MessageResponse.from_message(m) for m in sample_messages],
         total_count=1,
         has_more=False,
         next_timestamp=None

@@ -32,31 +32,31 @@ class ServiceContainer:
         message_cache_service: MessageCacheService,
         recipe_service: RecipeService,
         recipe_cache_service: RecipeCacheService,
-        thread_service: ThreadService, 
+        thread_service: ThreadService,
         thread_cache_service: ThreadCacheService,
         websocket_event_sender: WebSocketEventSender,
         chat_session_store: ChatSessionStore,
         chat_session_orchestrator: ChatSessionOrchestrator,
         chat_session_limit_checker: ChatSessionLimitChecker,
-    ):  
+    ):
         self.db_transaction_maker = db_transaction_maker
         self.ai_food_agent = ai_food_agent
-        
+
         self.user_service = user_service
         self.user_access_cache_service = user_access_cache_service
         self.anonymous_access_service = anonymous_access_service
-        
+
         self.message_service = message_service
         self.message_cache_service = message_cache_service
-        
+
         self.recipe_service = recipe_service
         self.recipe_cache_service = recipe_cache_service
-        
+
         self.thread_service = thread_service
         self.thread_cache_service = thread_cache_service
-        
+
         self.websocket_event_sender = websocket_event_sender
-        
+
         self.chat_session_store = chat_session_store
         self.chat_session_orchestrator = chat_session_orchestrator
         self.chat_session_limit_checker = chat_session_limit_checker

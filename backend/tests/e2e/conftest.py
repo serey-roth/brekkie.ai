@@ -1,26 +1,26 @@
 import os
-import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.dirname(current_dir)
+env_file = os.path.join(backend_dir, '.env.test')
+
+from dotenv import load_dotenv
+load_dotenv(env_file)
 
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from uuid import uuid4
+import tempfile
+
 import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock
 from httpx import AsyncClient, ASGITransport
+
 from fastapi.testclient import TestClient
-from datetime import datetime, timezone
-from uuid import uuid4
-import tempfile
-import os
 
 from fakeredis.aioredis import FakeRedis
 
-from services.chat_services.chat_session_handlers import ChatSessionHandlers
-from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
-from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
-from services.data_services.anonymous_access_service import AnonymousAccessService
-from services.websocket_event_sender import WebSocketEventSender
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -28,14 +28,7 @@ from sqlalchemy.sql import text
 
 from langgraph.checkpoint.memory import InMemorySaver
 
-from dotenv import load_dotenv
-
-load_dotenv()  
-os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY") or "mock-google-api-key"
-os.environ["CHECKPOINT_DB_URL"] = os.getenv("CHECKPOINT_DB_URL") or "mock-checkpoint-db-url"
-os.environ["TAVILY_API_KEY"] = os.getenv("TAVILY_API_KEY") or "mock-tavily-api-key"
-
-from config.settings import Settings
+from config.settings import Settings, create_settings
 
 from api.main import app
 from api.deps import get_service_container
@@ -56,15 +49,24 @@ from services.data_services.recipe_service import RecipeService
 from services.data_services.thread_cache_service import ThreadCacheService
 from services.data_services.message_cache_service import MessageCacheService
 from services.data_services.recipe_cache_service import RecipeCacheService
-from services.chat_services.chat_session_store import ChatSessionStore
 from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
-from services.data_services.anonymous_access_rate_limiter import AnonymousAccessIpAddressRateLimiter
+from services.data_services.ip_address_rate_limiter import IpAddressRateLimitConfig, IpAddressRateLimiter
+from services.safety_guards.regex_safety_guard import RegexSafetyGuard
+from services.chat_services.chat_session_store import ChatSessionStore
+from services.chat_services.chat_session_handlers import ChatSessionHandlers
+from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
+from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
+from services.data_services.anonymous_access_service import AnonymousAccessService
+from services.websocket_event_sender import WebSocketEventSender
 
 from schemas.users import User
 from schemas.user_access import UserAccessData
 from schemas.threads import Thread
 from schemas.messages import Message
-from schemas.recipes import Recipe
+from schemas.message_role import MessageRole
+from schemas.message_content_type import MessageContentType
+from schemas.recipes import RecipeIngredient, UserRecipe, RecipeInstruction, RecipeCategory
 
 from utils.date_utils import to_utc_isostring
 
@@ -120,7 +122,7 @@ async def test_session_factory(test_engine):
     return async_session_factory
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="session")
 async def db_transaction_maker(test_session_factory):
     @asynccontextmanager
     async def db_transaction_maker():
@@ -135,7 +137,7 @@ async def db_transaction_maker(test_session_factory):
     
     return db_transaction_maker
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="session")
 async def redis_client() -> FakeRedis:
     redis = await FakeRedis()
     return redis
@@ -155,7 +157,6 @@ def sample_user():
 @pytest.fixture
 def sample_ip_address():
     return "192.168.1.100"
-
 
 
 @pytest.fixture
@@ -202,13 +203,14 @@ def sample_thread(sample_user):
 
 
 @pytest.fixture
-def sample_message(sample_thread):
+def sample_message(sample_thread, sample_user):
     now = datetime.now(timezone.utc)
     return Message(
         id=str(uuid4()),
         thread_id=sample_thread.id,
-        role="user",
-        content_type="text",
+        user_id=sample_user.id,
+        role=MessageRole.user,
+        content_type=MessageContentType.text,
         text_content="Hello, world!",
         created_at=to_utc_isostring(now),
         updated_at=to_utc_isostring(now),
@@ -220,14 +222,16 @@ def sample_message(sample_thread):
         tool_output=None,
         recipe_id=None,
         is_recipe_generation_started=False,
-        is_recipe_generation_completed=False
+        is_recipe_generation_completed=False,
+        ip_address=None,
+        safety_guard_result=None
     )
 
 
 @pytest.fixture
 def sample_recipe(sample_user, sample_thread):
     now = datetime.now(timezone.utc)
-    return Recipe(
+    return UserRecipe(
         id=str(uuid4()),
         user_id=sample_user.id,
         thread_id=sample_thread.id,
@@ -235,15 +239,15 @@ def sample_recipe(sample_user, sample_thread):
         updated_at=to_utc_isostring(now),
         name="Test Recipe",
         description="A test recipe",
-        ingredients=["ingredient 1", "ingredient 2"],
-        instructions=["step 1", "step 2"],
-        categories=["main dish"],
+        ingredients=[RecipeIngredient(name="ingredient 1", quantity="1", unit="unit")],
+        instructions=[RecipeInstruction(title="step 1", description="step 1 description")],
+        categories=[RecipeCategory(name="main dish")],
         prep_time_minutes=15,
         cook_time_minutes=30,
-        servings=4,
+        servings="4",
         chef_notes="Test notes",
-        substitutions={},
-        equipment_alternatives={},
+        substitutions="Test substitutions",
+        equipment_alternatives="Test equipment alternatives",
         scaling_guidance="Test guidance",
         storage_notes="Test storage",
         serving_suggestions="Test serving",
@@ -252,40 +256,32 @@ def sample_recipe(sample_user, sample_thread):
     )
 
 
-@pytest_asyncio.fixture
-async def test_settings():
-    test_settings = Settings(
-        environment="development",
-        db_url="sqlite+aiosqlite:///:memory:",
-        redis_url="redis://localhost:6379/1",
-        google_api_key="mock-google-api-key",
-        tavily_api_key="mock-tavily-api-key",
-        checkpoint_db_url="mock-checkpoint-db-url",
-        # Test-specific settings
-        thread_cache_ttl=60 * 30,  # 30 minutes for tests
-        message_cache_ttl=60 * 30,
-        recipe_cache_ttl=60 * 30,
-        user_access_cache_ttl=60 * 30,
-        access_token_refresh_ttl=60 * 10,
-        anonymous_access_rate_limiter_ttl=60 * 30,
-        anonymous_access_rate_limiter_limit=3,
-        session_ttl=60 * 30,
-        authenticated_user_message_limit=100,
-        unauthenticated_user_message_limit=20,
-        cookie_name="bk_access_token",  # Keep the original cookie name for tests
-        cookie_max_age=60 * 60 * 24 * 3,
-        cookie_samesite="Lax",
-        db_pool_size=5,
-        db_max_overflow=10,
-        db_pool_timeout=30,
-        db_pool_recycle=3600,
-        enable_auth=True
+@pytest_asyncio.fixture(scope="session")
+async def test_settings() -> Settings:
+    os.environ["ENABLE_AUTH"] = "true"
+    return create_settings(".env.test")
+
+
+@pytest.fixture(scope="session")
+def response_llm():
+    # TODO: Langchain LLM will force the event loop to close prematurely when running the security tests together as a class
+    mock_llm = AsyncMock()
+    class MockResponse:
+        content = "I'm sorry, I can't help with that."
+        
+    mock_llm.ainvoke.return_value = MockResponse()
+    return mock_llm
+    
+
+    
+@pytest.fixture(scope="session")
+def message_guard(test_settings):
+    return ChatSessionMessageGuard(
+        regex_safety_guard=RegexSafetyGuard(),
     )
-    return test_settings
 
-
-@pytest_asyncio.fixture
-async def service_container(db_transaction_maker, redis_client, test_settings):
+@pytest_asyncio.fixture(scope="function")
+async def service_container(db_transaction_maker, redis_client, test_settings: Settings, message_guard: ChatSessionMessageGuard):
     user_service = UserService(UserRepository())
     thread_service = ThreadService(ThreadRepository())
     message_service = MessageService(MessageRepository())
@@ -294,14 +290,16 @@ async def service_container(db_transaction_maker, redis_client, test_settings):
     thread_cache_service = ThreadCacheService(redis_client, ttl=test_settings.thread_cache_ttl)
     message_cache_service = MessageCacheService(redis_client, ttl=test_settings.message_cache_ttl)
     recipe_cache_service = RecipeCacheService(redis_client, ttl=test_settings.recipe_cache_ttl)
-    anonymous_access_rate_limiter = AnonymousAccessIpAddressRateLimiter(
+    anonymous_access_rate_limiter = IpAddressRateLimiter(
         redis_client, 
-        ttl=test_settings.anonymous_access_rate_limiter_ttl, 
-        limit=test_settings.anonymous_access_rate_limiter_limit
+        IpAddressRateLimitConfig(
+            ttl=test_settings.ip_address_rate_limiter_ttl,
+            anonymous_access_limit=test_settings.ip_address_rate_limiter_anonymous_access_limit,
+            violation_limit=test_settings.ip_address_rate_limiter_violation_limit
+        )
     )
     anonymous_access_service = AnonymousAccessService(user_access_cache_service, anonymous_access_rate_limiter)
     websocket_event_sender = WebSocketEventSender()
-
     ai_food_agent = GoogleAIFoodAgent(checkpointer=InMemorySaver())
 
     chat_session_store = ChatSessionStore(
@@ -331,7 +329,8 @@ async def service_container(db_transaction_maker, redis_client, test_settings):
         websocket_event_sender=websocket_event_sender,  
         chat_session_store=chat_session_store,
         chat_session_handlers=chat_session_handlers,
-        chat_session_limit_checker=chat_session_limit_checker
+        chat_session_limit_checker=chat_session_limit_checker,
+        chat_session_message_guard=message_guard
     )
     container = ServiceContainer(
         db_transaction_maker=db_transaction_maker,
@@ -362,27 +361,29 @@ async def service_container(db_transaction_maker, redis_client, test_settings):
     app.state.service_container = None
     app.state.settings = None
     
+    os.environ.pop("ENABLE_AUTH", None)
+    
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def async_client(service_container: ServiceContainer):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def test_client(service_container: ServiceContainer):
     return TestClient(app)
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest_asyncio.fixture(autouse=True, scope="function")
 async def clean_redis(redis_client):
     await redis_client.flushall()
     yield
     await redis_client.flushall()
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest_asyncio.fixture(autouse=True, scope="function")
 async def clean_database(test_session_factory):
     """Clean all database tables between tests"""
     async with test_session_factory() as session:

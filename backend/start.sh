@@ -5,7 +5,7 @@ cd /app/backend
 
 # Run database migrations
 echo "Running database migrations..."
-alembic upgrade head
+alembic -c /app/backend/alembic.ini upgrade head
 
 # Change back to the src directory and start the application
 cd /app/backend/src

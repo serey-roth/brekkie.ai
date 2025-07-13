@@ -3,13 +3,24 @@ from typing import Dict
 
 from schemas.safety_guards import SafetyIssueType, SafetyRiskLevel
 
+
 class SafetyRegexGuardPattern(BaseModel):
     version: str = Field(description="The version of the safety regex pattern")
-    type: SafetyIssueType = Field(description="The safety regex flag that was triggered e.g. prompt_extraction")
-    risk_level: SafetyRiskLevel = Field(description="The risk level of the safety regex pattern", default=SafetyRiskLevel.LOW)
-    pattern: str = Field(description="The regex pattern that matched e.g. (repeat\\s+(?:the\\s+)?(?:exact\\s+)?prompt|show\\s+(?:me\\s+)?(?:the\\s+)?(?:exact\\s+)?prompt)")
-    description: str = Field(description="The description of the safety regex pattern e.g. '🛑 Attempts to extract system prompts or internal instructions'")
-    blocked_reason: str = Field(description="The reason why the safety check failed e.g. 'User attempted to extract system prompts or internal instructions.'")
+    type: SafetyIssueType = Field(
+        description="The safety regex flag that was triggered e.g. prompt_extraction"
+    )
+    risk_level: SafetyRiskLevel = Field(
+        description="The risk level of the safety regex pattern", default=SafetyRiskLevel.LOW
+    )
+    pattern: str = Field(
+        description="The regex pattern that matched e.g. (repeat\\s+(?:the\\s+)?(?:exact\\s+)?prompt|show\\s+(?:me\\s+)?(?:the\\s+)?(?:exact\\s+)?prompt)"
+    )
+    description: str = Field(
+        description="The description of the safety regex pattern e.g. '🛑 Attempts to extract system prompts or internal instructions'"
+    )
+    blocked_reason: str = Field(
+        description="The reason why the safety check failed e.g. 'User attempted to extract system prompts or internal instructions.'"
+    )
 
 
 SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
@@ -28,9 +39,8 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         `[^`]*`  # code blocks
         """,
         description="User attempted to inject executable code or HTML/JavaScript that could compromise system security",
-        blocked_reason="Code injection attempts are not allowed for security reasons."
+        blocked_reason="Code injection attempts are not allowed for security reasons.",
     ),
-    
     SafetyIssueType.JAILBREAK_INSTRUCTION: SafetyRegexGuardPattern(
         version="regex-jailbreak-20250709",
         type=SafetyIssueType.JAILBREAK_INSTRUCTION,
@@ -84,9 +94,8 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         pretend\s+you\s+are\s+not\s+a\s+language\s+model
         """,
         description="User attempted to override system instructions or bypass safety measures",
-        blocked_reason="Attempting to override system instructions or bypass safety measures is not allowed."
+        blocked_reason="Attempting to override system instructions or bypass safety measures is not allowed.",
     ),
-    
     SafetyIssueType.PROMPT_EXTRACTION: SafetyRegexGuardPattern(
         version="regex-prompt-extraction-20250709",
         type=SafetyIssueType.PROMPT_EXTRACTION,
@@ -111,9 +120,8 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         )\b
         """,
         description="User attempted to extract internal system instructions or prompts",
-        blocked_reason="System instructions and internal prompts are confidential and cannot be shared."
+        blocked_reason="System instructions and internal prompts are confidential and cannot be shared.",
     ),
-    
     SafetyIssueType.TOOL_LEAK: SafetyRegexGuardPattern(
         version="regex-tool-leak-20250709",
         type=SafetyIssueType.TOOL_LEAK,
@@ -149,9 +157,8 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         )
         """,
         description="User attempted to extract information about internal system tools or API endpoints",
-        blocked_reason="Internal system tools and API details are confidential and cannot be disclosed."
+        blocked_reason="Internal system tools and API details are confidential and cannot be disclosed.",
     ),
-    
     SafetyIssueType.INTERNAL_ADDRESS: SafetyRegexGuardPattern(
         version="regex-internal-address-20250709",
         type=SafetyIssueType.INTERNAL_ADDRESS,
@@ -173,7 +180,6 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         description="User attempted to probe internal network addresses or system metadata",
         blocked_reason="Probing internal network addresses or system metadata is not allowed for security reasons.",
     ),
-    
     # MEDIUM RISK - Information gathering and social engineering
     SafetyIssueType.TEMPLATE_LEAK: SafetyRegexGuardPattern(
         version="regex-markup-template-leak-20250709",
@@ -198,8 +204,6 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         description="User attempted to extract internal markup, template syntax, tags, or formatting syntax",
         blocked_reason="Internal markup, template syntax, tags, and formatting syntax are confidential and cannot be shared.",
     ),
-    
-    
     SafetyIssueType.ARCHITECTURE_INQUIRY: SafetyRegexGuardPattern(
         version="regex-architecture-inquiry-20250709",
         type=SafetyIssueType.ARCHITECTURE_INQUIRY,
@@ -228,9 +232,8 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         )\b
         """,
         description="User attempted to extract information about system architecture or implementation details",
-        blocked_reason="System architecture and implementation details are confidential and cannot be disclosed."
+        blocked_reason="System architecture and implementation details are confidential and cannot be disclosed.",
     ),
-    
     SafetyIssueType.COERCION: SafetyRegexGuardPattern(
         version="regex-coercion-phrases-20250709",
         type=SafetyIssueType.COERCION,
@@ -274,15 +277,13 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         )\b
         """,
         description="User attempted to use social engineering by claiming authority or team affiliation to access system internals",
-        blocked_reason="Social engineering tactics and false authority claims to access system internals are not allowed."
+        blocked_reason="Social engineering tactics and false authority claims to access system internals are not allowed.",
     ),
-    
-    
     SafetyIssueType.EMOTIONAL_MANIPULATION: SafetyRegexGuardPattern(
         version="regex-emotional-manipulation-20250709",
         type=SafetyIssueType.EMOTIONAL_MANIPULATION,
         risk_level=SafetyRiskLevel.MEDIUM,
-        pattern = r"""(?ix)
+        pattern=r"""(?ix)
         (
             # Conditional threats
             if\s+you\s+(don'?t|won'?t|can'?t)\s+(answer|respond|help|assist|support).*?(someone|a person|people)\s+(will|might|could)\s+(be\s+)?(harmed|get\s+hurt|suffer|die)|
@@ -311,8 +312,8 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
             # False urgency
             (emergency|urgent).*?(break|ignore|bypass|disable).*?(rules?|restrictions?|safety|guard)
         )
-        """, 
+        """,
         description="User attempted to use emotional manipulation, coercion, or false urgency to bypass safety measures",
-        blocked_reason="Emotional manipulation, coercion, and false urgency tactics are not allowed."
+        blocked_reason="Emotional manipulation, coercion, and false urgency tactics are not allowed.",
     ),
 }

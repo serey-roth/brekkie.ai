@@ -3,7 +3,11 @@ from typing import Literal
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
-from langchain_core.prompts import SystemMessagePromptTemplate, ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import (
+    SystemMessagePromptTemplate,
+    ChatPromptTemplate,
+    MessagesPlaceholder,
+)
 from langgraph.graph import StateGraph
 from langgraph.prebuilt.tool_node import ToolNode
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -13,22 +17,25 @@ from langgraph.config import get_stream_writer
 from ai.workflow.prompts import agent_prompt
 from ai.workflow.tools import TOOLS
 
+
 class AgentState(MessagesState):
     # food_relationship: str
     # communication_style: str
     thread_title: str
     summary: str
 
-# TODO: 1. Add long-term memory (user profile, contextual/episodic memory) 
+
+# TODO: 1. Add long-term memory (user profile, contextual/episodic memory)
 # TODO: 2. Add modification workflow for recipes
 # TODO: 3. Future optimization - Background summarization?
 # TODO: 4. Add a way to update the thread title in the background, maybe a sub-workflow?
 # TODO: 5. Should we parallelize the thread title update and AI response?
 
-class AgentFactory: 
+
+class AgentFactory:
     def __init__(
-        self, 
-        user_id: str, 
+        self,
+        user_id: str,
         thread_id: str,
         checkpointer: BaseCheckpointSaver,
     ):
@@ -53,14 +60,13 @@ class AgentFactory:
         workflow.add_edge("tools", "call_model")
         workflow.add_edge("summarize_conversation", "__end__")
         workflow.add_edge("update_thread_title", "__end__")
-        
-        return workflow.compile(name="food_agent", checkpointer=self.checkpointer)
 
+        return workflow.compile(name="food_agent", checkpointer=self.checkpointer)
 
     async def update_thread_title(self, state: AgentState):
         messages = state.get("messages", [])
         summary = state.get("summary", "")
-        
+
         thread_title_llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash-preview-05-20",
             temperature=0.1,
@@ -75,25 +81,25 @@ class AgentFactory:
             f"Examples: 'Need dinner ideas', 'Feeling stressed about cooking', 'Want to try new recipes', 'Help with meal planning'\n\n"
             f"IMPORTANT: Return ONLY the title text. No markdown, no explanations, no quotes."
         )
-        
+
         recent_messages = messages[-5:] + [HumanMessage(content=title_message)]
         response = await thread_title_llm.ainvoke(recent_messages)
-        
-        write = get_stream_writer()
-        write({ "event": "thread_title_updated", "thread_title": response.content.strip() })
-        
-        return { "thread_title": response.content.strip() }
+        response_content = str(response.content).strip()
 
-    
+        write = get_stream_writer()
+        write({"event": "thread_title_updated", "thread_title": response_content})
+
+        return {"thread_title": response_content}
+
     async def summarize_conversation(self, state: AgentState):
         messages = state.get("messages", [])
-        
+
         summary_llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash-preview-05-20",
             temperature=0.1,  # Lower temperature for more consistent summaries
             api_key=os.getenv("GOOGLE_API_KEY"),
         )
-        
+
         summary = state.get("summary", "")
         if summary:
             summary_message = (
@@ -110,49 +116,54 @@ class AgentFactory:
 
         recent_messages = messages[-8:] + [HumanMessage(content=summary_message)]
         response = await summary_llm.ainvoke(recent_messages)
-        
+        response_content = str(response.content).strip()
+
         write = get_stream_writer()
-        write({ "event": "summary_updated", "summary": response.content })
+        write({"event": "summary_updated", "summary": response_content})
 
-        delete_messages = [RemoveMessage(id=m.id) for m in messages[:-8]]
+        delete_messages = [RemoveMessage(id=str(m.id)) for m in messages[:-8]]
 
-        return {"summary": response.content, "messages": delete_messages}
-    
-    
+        return {"summary": response_content, "messages": delete_messages}
+
     async def call_model(self, state: AgentState) -> AgentState:
-        prompt_template = ChatPromptTemplate.from_messages([
-            SystemMessagePromptTemplate.from_template(agent_prompt),
-            MessagesPlaceholder(variable_name="messages")
-        ])
-        
+        prompt_template = ChatPromptTemplate.from_messages(
+            [
+                SystemMessagePromptTemplate.from_template(agent_prompt),
+                MessagesPlaceholder(variable_name="messages"),
+            ]
+        )
+
         # prompt_with_partials = prompt_template.partial(
         #     user_relationship_with_food=state.get("food_relationship", ""),
         #     how_the_user_talks_to_you=state.get("communication_style", "")
         # )
-        
+
         chain = prompt_template | self.agent_llm.bind_tools(TOOLS)
-        response = await chain.ainvoke({
-            "messages": state.get("messages", []),
-        })
-        
-        if response.tool_calls:
+        response = await chain.ainvoke(
+            {
+                "messages": state.get("messages", []),
+            }
+        )
+
+        if isinstance(response, AIMessage) and response.tool_calls:
             write = get_stream_writer()
             name = response.tool_calls[0]["name"]
             args = response.tool_calls[0]["args"]
             if name == "create_recipe":
-                write({ "event": "recipe_generation_started", "tool_name": name, "tool_input": args })
+                write({"event": "recipe_generation_started", "tool_name": name, "tool_input": args})
             elif name == "tavily_search":
-                write({ "event": "search_started", "tool_name": name, "tool_input": args })
-        
-        return { "messages": [response] }
+                write({"event": "search_started", "tool_name": name, "tool_input": args})
 
+        return {"messages": [response]}  # type: ignore
 
-    def route_model_response(self, state: AgentState) -> Literal["tools", "summarize_conversation", "update_thread_title", "__end__"]:
+    def route_model_response(
+        self, state: AgentState
+    ) -> Literal["tools", "summarize_conversation", "update_thread_title", "__end__"]:
         messages = state.get("messages", [])
         last_message = messages[-1]
         if not isinstance(last_message, AIMessage):
             raise ValueError("Expected an AI message, got: ", {type(last_message).__name__})
-        
+
         if len(last_message.tool_calls) > 0:
             return "tools"
         # TODO: We should do these as background tasks
@@ -162,5 +173,3 @@ class AgentFactory:
             return "summarize_conversation"
         else:
             return "__end__"
-
-

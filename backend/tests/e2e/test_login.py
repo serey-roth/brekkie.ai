@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from fastapi import status
 from uuid import uuid4
 
+from schemas.message_role import MessageRole
+from schemas.message_content_type import MessageContentType
 from schemas.messages import CreateMessageParams
 from services.service_container import ServiceContainer
 
@@ -24,7 +26,7 @@ class TestLogin:
         
         user_id = user_access_data.user_id
         
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             await service_container.user_service.create_user(db, CreateUserParams(
                 id=user_id,
                 email="test@example.com",
@@ -47,8 +49,8 @@ class TestLogin:
                 id=message_id,
                 user_id=user_id,
                 thread_id=thread_id,
-                role="user",
-                content_type="text",
+                role=MessageRole.user,
+                content_type=MessageContentType.text,
                 text_content="Hello, world!",
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
@@ -75,7 +77,7 @@ class TestLogin:
         
         assert response.cookies.get("bk_access_token") is not None
         
-        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(sample_ip_address) == 0
+        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_anonymous_access_count(sample_ip_address) == 0
                 
         old_user_access_data = await service_container.user_access_cache_service.get_user_access(user_access_data.access_token)
         assert old_user_access_data is None
@@ -86,7 +88,7 @@ class TestLogin:
         
         user_id = user_access_data.user_id
         
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             await service_container.user_service.create_user(db, CreateUserParams(
                 id=user_id,
                 email="test@example.com",
@@ -109,8 +111,8 @@ class TestLogin:
                 id=message_id,
                 user_id=user_id,
                 thread_id=thread_id,
-                role="user",
-                content_type="text",
+                role=MessageRole.user,
+                content_type=MessageContentType.text,
                 text_content="Hello, world!",
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
@@ -137,7 +139,7 @@ class TestLogin:
             
             assert not mock_revoke_access.called
             
-        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(ip_address) == 0
+        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_anonymous_access_count(ip_address) == 0
         
     @pytest.mark.asyncio(loop_scope="session")
     async def test_login_with_rate_limit_exceeded(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
@@ -145,7 +147,7 @@ class TestLogin:
         
         user_id = user_access_data.user_id
         
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             await service_container.user_service.create_user(db, CreateUserParams(
                 id=user_id,
                 email="test@example.com",
@@ -168,8 +170,8 @@ class TestLogin:
                 id=message_id,
                 user_id=user_id,
                 thread_id=thread_id,
-                role="user",
-                content_type="text",
+                role=MessageRole.user,
+                content_type=MessageContentType.text,
                 text_content="Hello, world!",
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
@@ -185,33 +187,35 @@ class TestLogin:
             "fly-client-ip": sample_ip_address
         }
         
-        await service_container.anonymous_access_service.ip_rate_limiter.increment(sample_ip_address)
+        await service_container.anonymous_access_service.ip_rate_limiter.increment_anonymous_access_count(sample_ip_address)
         
         async_client.cookies.set("bk_access_token", user_access_data.access_token)
         
         response = await async_client.post("/api/auth/login", json=payload, headers=headers)
         assert response.status_code == status.HTTP_200_OK
         
-        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_count(sample_ip_address) == 0
+        assert await service_container.anonymous_access_service.ip_rate_limiter.get_current_anonymous_access_count(sample_ip_address) == 0
         
     @pytest.mark.asyncio(loop_scope="session")
     async def test_login_with_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings, sample_ip_address: str):
-        test_settings.enable_auth = False
-        
-        headers = {
-            "fly-client-ip": sample_ip_address
-        }
-        
-        response = await async_client.post("/api/auth/login", json={
-            "email": "test@example.com",
-            "password": "password123",
-        }, headers=headers)
-        
-        assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert response.cookies.get("bk_access_token") is None
-        assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
-        
+        # TODO: This is a hack to override the settings for the test
+        from api.main import app
+        from api.deps import get_settings
+        new_settings = test_settings.model_copy(update={"enable_auth": False})
+        app.dependency_overrides[get_settings] = lambda: new_settings
+
+        try:
+            response = await async_client.post("/api/auth/login", json={
+                "email": "test@example.com",
+                "password": "password123",
+            }, headers={})
             
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert response.cookies.get("bk_access_token") is None
+            assert_deep_equal(response.json(), {"detail": {"message": "Feature temporarily unavailable. Please check back later."}})
+        finally:
+            app.dependency_overrides = {}
+        
     @pytest.mark.asyncio(loop_scope="session")
     async def test_user_does_not_exist(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
@@ -236,7 +240,7 @@ class TestLogin:
     async def test_invalid_password(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
         user_access_data = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         
-        async with service_container.db_transaction_maker() as db:
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             await service_container.user_service.create_user(db, CreateUserParams(
                 id=str(uuid4()),
                 email="test_user@example.com",

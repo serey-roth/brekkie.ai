@@ -66,17 +66,9 @@ function AssistantMessageContent({ message }: { message: AssistantMessage }) {
     // Consider implementing a custom typing animation that works well with markdown elements
     // like lists, headers, and code blocks without breaking the visual flow
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-                type: 'tween',
-                duration: 0.5,
-                ease: 'easeInOut',
-            }}
-        >
+        <div>
             <Markdown>{message.text_content ?? ''}</Markdown>
-        </motion.div>
+        </div>
     );
 }
 
@@ -119,14 +111,20 @@ function AssistantMessageBubble({
                         </div>
 
                         <motion.div
-                            key={isAssistantResponding ? 'active' : 'finished'}
+                            key="assistant-name"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
                             transition={{ duration: 0.15 }}
                         >
                             {isAssistantResponding ? (
-                                <div className="flex items-center gap-1">
+                                <motion.div
+                                    key="responding"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="flex items-center gap-1"
+                                >
                                     <span className="text-primary/70 text-base font-medium">
                                         Milo is responding
                                     </span>
@@ -148,9 +146,17 @@ function AssistantMessageBubble({
                                             />
                                         ))}
                                     </div>
-                                </div>
+                                </motion.div>
                             ) : (
-                                <span className="text-base font-medium">Milo</span>
+                                <motion.span
+                                    key="finished"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="text-base font-medium"
+                                >
+                                    Milo
+                                </motion.span>
                             )}
                         </motion.div>
                     </div>
@@ -210,7 +216,7 @@ function AssistantMessageGroup({
                             message={msg}
                             isFirst={isFirst}
                             isLast={isLast}
-                            isAssistantResponding={isAssistantResponding}
+                            isAssistantResponding={isLast && isAssistantResponding}
                             selectedRecipeId={selectedRecipeId}
                             onSelectRecipe={onSelectRecipe}
                         />
@@ -281,8 +287,9 @@ export function ChatMessageGroup({
 
     return (
         <div className="mb-3 flex w-full flex-col gap-3">
-            {role === 'user' && <UserMessageGroup messages={messages} />}
-            {role === 'assistant' && (
+            {role === 'user' ? (
+                <UserMessageGroup messages={messages} />
+            ) : (
                 <AssistantMessageGroup
                     messages={messages}
                     isAssistantResponding={isAssistantResponding}

@@ -68,7 +68,7 @@ export function ChatLayout({
                 x: selectedRecipeId ? '0%' : '0%',
                 width: selectedRecipeId ? '100%' : '100%',
             }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            transition={{ type: "tween", duration: 0.2 }}
         >
             <div className={`absolute top-5 right-4 z-50 flex flex-col items-end gap-1`}>
                 <ConnectionStatusNotification status={connectionStatus} />

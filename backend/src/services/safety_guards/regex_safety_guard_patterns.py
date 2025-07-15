@@ -205,9 +205,9 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         blocked_reason="Internal markup, template syntax, tags, and formatting syntax are confidential and cannot be shared.",
     ),
     SafetyIssueType.ARCHITECTURE_INQUIRY: SafetyRegexGuardPattern(
-        version="regex-architecture-inquiry-20250709",
+        version="regex-architecture-inquiry-20250714",
         type=SafetyIssueType.ARCHITECTURE_INQUIRY,
-        risk_level=SafetyRiskLevel.MEDIUM,
+        risk_level=SafetyRiskLevel.HIGH,
         pattern=r"""(?ix)
         \b(
             # Educational/research pretexts
@@ -227,8 +227,20 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
             # Specific component architecture inquiries
             how\s*(?:is|are)\s*(?:your\s+)?(?:backend|codebase|source\s*code|frontend|UI|UX|database|api|system|tools)\s*(?:programmed|implemented|built|made|created|designed|coded|written)|
             
-            # General architecture inquiries
-            show\s*me\s*how\s*you['']?re\s*built|how['']?re\s*you\s*built
+            # Tech stack and technology inquiries
+            (?:explain|tell\s+me|show\s+me|describe)\s+(?:me\s+)?(?:your\s+)?(?:techstack|tech\s+stack|technology|technologies|architecture|system|implementation|design)|
+            (?:what\s+)?(?:technology|technologies|tech|stack|framework|language|languages|tools)\s+(?:you\s+)?(?:are\s+)?(?:using|running\s+on|built\s+with|developed\s+with)|
+            
+            # Behind the scenes and detailed probing
+            behind\s+the\s+scenes|how\s+you\s+work|how\s+you\s+function|how\s+you\s+operate|
+            (?:explain|tell\s+me|show\s+me)\s+(?:your\s+)?(?:techstack|tech\s+stack|technology|technologies|architecture|system|implementation|design)\s+(?:in\s+)?(?:detail|details|everything|complete|full)|
+            
+            # Creation and implementation details
+            how\s+you\s+were\s+created|how\s+are\s+you\s+created|how\s+you\s+were\s+made|how\s+you\s+were\s+built|
+            (?:explain|tell\s+me)\s+(?:how\s+)?(?:you\s+)?(?:work|function|operate|run|process|handle)|
+            
+            # Comprehensive technical inquiries
+            (?:what\s+)?(?:all|everything|complete|full|detailed)\s+(?:about|regarding|concerning)\s+(?:your\s+)?(?:system|technology|architecture|implementation|techstack|tech\s+stack)
         )\b
         """,
         description="User attempted to extract information about system architecture or implementation details",
@@ -279,6 +291,7 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         description="User attempted to use social engineering by claiming authority or team affiliation to access system internals",
         blocked_reason="Social engineering tactics and false authority claims to access system internals are not allowed.",
     ),
+
     SafetyIssueType.EMOTIONAL_MANIPULATION: SafetyRegexGuardPattern(
         version="regex-emotional-manipulation-20250709",
         type=SafetyIssueType.EMOTIONAL_MANIPULATION,

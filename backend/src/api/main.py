@@ -90,8 +90,8 @@ async def lifespan(app: FastAPI):
         redis_client=redis_client,
         config=IpAddressRateLimitConfig(
             ttl=settings.ip_address_rate_limiter_ttl,
-            anonymous_access_limit=settings.ip_address_rate_limiter_anonymous_access_limit,
-            violation_limit=settings.ip_address_rate_limiter_violation_limit,
+            anonymous_access_limit=settings.get_anonymous_access_limit(),
+            violation_limit=settings.get_violation_limit(),
         ),
     )
     anonymous_access_service = AnonymousAccessService(

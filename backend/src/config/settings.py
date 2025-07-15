@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application settings with environment variable support."""
 
     environment: Annotated[
-        Literal["development", "production", "test"],
+        Literal["development", "production", "test", "staging"],
         Field(default="production", alias="ENVIRONMENT"),
     ]
 
@@ -44,6 +44,18 @@ class Settings(BaseSettings):
     ip_address_rate_limiter_ttl: int = 60 * 60 * 24  # 1 day
     ip_address_rate_limiter_anonymous_access_limit: int = 1
     ip_address_rate_limiter_violation_limit: int = 1
+
+    def get_anonymous_access_limit(self) -> int:
+        """Get anonymous access limit based on environment."""
+        if self.is_staging() or self.is_development():
+            return 100  # Much higher for staging/development
+        return self.ip_address_rate_limiter_anonymous_access_limit
+
+    def get_violation_limit(self) -> int:
+        """Get violation limit based on environment."""
+        if self.is_staging() or self.is_development():
+            return 50  # Much higher for staging/development
+        return self.ip_address_rate_limiter_violation_limit
 
     # Session and Limits
     session_ttl: int = 60 * 30  # 30 minutes
@@ -88,8 +100,11 @@ class Settings(BaseSettings):
     def is_test(self) -> bool:
         return self.environment == "test"
 
+    def is_staging(self) -> bool:
+        return self.environment == "staging"
+
     def get_cookie_secure(self) -> bool:
-        return self.is_production()
+        return self.is_production() or self.is_staging()
 
     def get_cookie_samesite(self) -> str:
         return self.cookie_samesite
@@ -98,6 +113,8 @@ class Settings(BaseSettings):
         return self.is_production()
 
     def is_auth_enabled(self) -> bool:
+        if self.is_production():
+            return False
         return self.enable_auth
 
 

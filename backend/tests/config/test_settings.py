@@ -109,6 +109,12 @@ class TestDevelopmentSettings:
         
     def test_is_auth_enabled_method(self, settings: Settings):
         assert settings.is_auth_enabled() is True
+
+    def test_get_anonymous_access_limit_development(self, settings: Settings):
+        assert settings.get_anonymous_access_limit() == 100
+
+    def test_get_violation_limit_development(self, settings: Settings):
+        assert settings.get_violation_limit() == 50
         
 
 class TestProductionSettings:
@@ -148,7 +154,13 @@ class TestProductionSettings:
         assert settings.get_cookie_httponly() is True
         
     def test_is_auth_enabled_method(self, settings: Settings):
-        assert settings.is_auth_enabled() is True
+        assert settings.is_auth_enabled() is False
+
+    def test_get_anonymous_access_limit_production(self, settings: Settings):
+        assert settings.get_anonymous_access_limit() == 1
+
+    def test_get_violation_limit_production(self, settings: Settings):
+        assert settings.get_violation_limit() == 1
         
         
 class TestTestSettings:
@@ -189,3 +201,9 @@ class TestTestSettings:
 
     def test_is_auth_enabled_method(self, settings: Settings):
         assert settings.is_auth_enabled() is True
+
+    def test_get_anonymous_access_limit_test(self, settings: Settings):
+        assert settings.get_anonymous_access_limit() == 1
+
+    def test_get_violation_limit_test(self, settings: Settings):
+        assert settings.get_violation_limit() == 1

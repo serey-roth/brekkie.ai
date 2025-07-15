@@ -25,8 +25,8 @@ RUN pnpm install --frozen-lockfile
 # Copy frontend source
 COPY frontend/web/ ./
 
-# Build
-RUN pnpm build
+# Build with explicit mode
+RUN if [ "$MODE" = "staging" ]; then pnpm build --mode staging; else pnpm build; fi
 
 # =========================
 # Backend Build Stage

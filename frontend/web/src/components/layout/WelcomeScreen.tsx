@@ -35,10 +35,10 @@ export function WelcomeScreen({ onSendMessage, disabled }: WelcomeScreenProps) {
                     <span>Hey, I'm Milo</span>
                 </h1>
                 <p className="text-contrast-subtle mx-auto mb-1 text-sm leading-snug sm:max-w-lg sm:text-base md:max-w-xl">
-                    Your food sidekick who's all about making your life easier
+                    Your food sidekick for cravings, meal ideas, and kitchen inspo.
                 </p>
                 <p className="text-contrast-subtle mx-auto mb-4 text-sm leading-snug sm:max-w-lg sm:text-base md:max-w-xl">
-                    Stuck on what to make? Need a little inspo? I got you 💪
+                    Not sure what to make? Let's figure it out together. 💪
                 </p>
             </div>
             <div className="grid w-full max-w-md grid-cols-1 gap-2 sm:grid-cols-2">

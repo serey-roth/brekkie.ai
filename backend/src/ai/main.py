@@ -1,3 +1,12 @@
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.dirname(current_dir)
+env_file = os.path.join(os.path.dirname(backend_dir), '.env.development')
+
+from dotenv import load_dotenv
+load_dotenv(env_file)
+
 from contextlib import asynccontextmanager
 import asyncio
 import uuid

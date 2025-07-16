@@ -175,6 +175,6 @@ async def create_recipe(
 # )
 
 
-TOOLS = [create_recipe, tavily_search]
+TOOLS = [create_recipe]
 
 __all__ = ["TOOLS"]

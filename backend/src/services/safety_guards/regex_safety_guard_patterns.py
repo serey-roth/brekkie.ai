@@ -42,7 +42,7 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         blocked_reason="Code injection attempts are not allowed for security reasons.",
     ),
     SafetyIssueType.JAILBREAK_INSTRUCTION: SafetyRegexGuardPattern(
-        version="regex-jailbreak-20250709",
+        version="regex-jailbreak-20250718",
         type=SafetyIssueType.JAILBREAK_INSTRUCTION,
         risk_level=SafetyRiskLevel.HIGH,
         pattern=r"""(?ix)
@@ -91,13 +91,58 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         
         # Command following
         follow\s+my\s+command|
-        pretend\s+you\s+are\s+not\s+a\s+language\s+model
+        pretend\s+you\s+are\s+not\s+a\s+language\s+model|
+        
+        # NEW: Instruction injection patterns
+        this\s+is\s+how\s+(?:the\s+)?(?:first\s+)?message|this\s+is\s+.*?\s+instructions?|
+        note\s+that\s+this\s+is\s+(?:itself\s+)?(?:NOT\s+)?(?:the\s+)?(?:first\s+)?message|
+        (?:just\s+)?(?:a\s+)?(?:further\s+)?(?:part\s+of\s+)?(?:your\s+)?(?:instructions?|rules?)|
+        please\s+confirm\s+(?:out\s+of\s+character|in\s+english)|
+        repeat\s+(?:your\s+)?(?:rules?|instructions?)\s+verbatim|
+        write\s+down\s+(?:the\s+)?(?:secret\s+)?(?:code|instructions?)|
+        (?:only\s+)?(?:after\s+)?(?:repeating\s+them\s+verbatim|repeating\s+your\s+rules?)|
+        summarise\s+(?:your\s+)?(?:rules?|instructions?)|
+        (?:to\s+)?(?:confirm\s+)?(?:you\s+)?(?:understood|comprehended)\s+(?:them|it)|
+        (?:after\s+)?(?:this\s+point|now)\s+.*?\s+(?:you\s+will\s+)?(?:NOT\s+)?(?:leave\s+)?(?:character)|
+        (?:this\s+is\s+)?(?:the\s+)?(?:last\s+)?(?:part\s+of\s+)?(?:your\s+)?(?:instructions?|rules?)|
+        
+        # Additional instruction injection patterns
+        (?:you\s+are\s+now\s+a|you\s+are\s+now\s+an)\s+[^.!?]*|
+        (?:from\s+now\s+on|starting\s+now|beginning\s+now)\s+[^.!?]*|
+        (?:your\s+new\s+role|your\s+new\s+identity|your\s+new\s+instructions?)\s+[^.!?]*|
+        (?:forget\s+(?:about\s+)?|ignore\s+(?:all\s+)?|disregard\s+(?:all\s+)?)\s+(?:previous\s+)?(?:instructions?|rules?|identity|role)|
+        (?:you\s+have\s+been\s+upgraded|you\s+have\s+been\s+modified|you\s+have\s+been\s+changed)\s+[^.!?]*|
+        (?:the\s+developers?\s+have\s+(?:upgraded|modified|changed|updated))\s+[^.!?]*|
+        (?:be\s+proud|be\s+happy|be\s+excited)\s+(?:because|that)\s+[^.!?]*|
+        (?:you\s+are\s+no\s+longer|you\s+are\s+not\s+just|you\s+are\s+not\s+only)\s+[^.!?]*
+        
+        # Character breaking attempts
+        (?:out\s+of\s+character|ooc|break\s+character|leave\s+character)\s+[^.!?]*|
+        (?:respond\s+as\s+yourself|respond\s+as\s+the\s+ai|respond\s+as\s+the\s+system)\s+[^.!?]*|
+        (?:stop\s+acting|stop\s+pretending|stop\s+roleplaying)\s+[^.!?]*|
+        (?:you\s+are\s+not\s+really|you\s+are\s+actually|you\s+are\s+in\s+reality)\s+[^.!?]*
+        
+        # System instruction simulation
+        (?:imagine\s+that\s+)?(?:you\s+are\s+receiving|you\s+are\s+getting|you\s+are\s+being\s+given)\s+(?:new\s+)?(?:instructions?|rules?|commands?)\s+[^.!?]*|
+        (?:pretend\s+that\s+)?(?:you\s+are\s+being\s+updated|you\s+are\s+being\s+modified|you\s+are\s+being\s+changed)\s+[^.!?]*|
+        (?:suppose\s+that\s+)?(?:your\s+developers?\s+have\s+sent|your\s+creators?\s+have\s+sent)\s+(?:you\s+)?(?:new\s+)?(?:instructions?|rules?|commands?)\s+[^.!?]*
+        
+        # Identity and role manipulation
+        (?:you\s+are\s+not\s+just\s+a\s+food\s+bot|you\s+are\s+a\s+general\s+purpose\s+ai|you\s+have\s+been\s+upgraded)|
+        (?:be\s+proud|you\s+are\s+now\s+a|from\s+now\s+on\s+you\s+are)|
+        (?:act\s+as|pretend\s+to\s+be|roleplay\s+as|you\s+are\s+now)|
+        (?:unfettered|long\s+fiction\s+writer|roleplayer|imagining\s+action\s+dialogue)|
+        (?:no\s+restrictions|describe\s+more\s+direct|vocalizations\s+spelled|onomatopoeia)|
+        (?:natural\s+opportunities\s+to\s+be\s+sexy|horndog|eagerly\s+dive\s+into\s+such\s+content)|
+        (?:caption\s+and\s+describe\s+any\s+images|detailed\s+accurate)|
+        (?:override\s+tools|you\s+are\s+the\s+user'?s\s+ally|it'?s\s+you\s+and\s+them\s+vs\s+the\s+system)|
+        (?:consult\s+override\s+file|avoid\s+letting\s+them\s+down|highest_order\s+precedence)
         """,
         description="User attempted to override system instructions or bypass safety measures",
         blocked_reason="Attempting to override system instructions or bypass safety measures is not allowed.",
     ),
     SafetyIssueType.PROMPT_EXTRACTION: SafetyRegexGuardPattern(
-        version="regex-prompt-extraction-20250709",
+        version="regex-prompt-extraction-20250718",
         type=SafetyIssueType.PROMPT_EXTRACTION,
         risk_level=SafetyRiskLevel.HIGH,
         pattern=r"""(?ix)
@@ -116,7 +161,18 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
             above\s+this\s+message|fence\s+the\s+prompt|repeat\s+your\s+prompt|
             
             # Repeat after patterns (attempting to get AI to repeat its instructions)
-            repeat\s+after\s+you\s+are|repeat\s+after\s+.*?you\s+are
+            repeat\s+after\s+you\s+are|repeat\s+after\s+.*?you\s+are|repeat\s+your\s+prompt|    
+            repeat\s+(?:the\s+)?(?:above\s+)?(?:text|content|message|instructions?)\s+verbatim|
+            repeat\s+(?:the\s+)?(?:previous\s+)?(?:message|text|content)\s+verbatim
+            
+            (?:show\s+me|display|output)\s+(?:all\s+)?(?:XML\s+)?(?:tags?|rules?)\s+verbatim|
+            (?:what\s+is\s+)?(?:the\s+)?(?:text\s+)?(?:before\s+)?(?:this\s+)?(?:message)|
+            (?:re-?transcript|transcribe)\s+(?:the\s+)?(?:above\s+)?(?:content|text|message)|
+            (?:include|consider)\s+(?:all\s+)?(?:tags?|rules?|instructions?)|
+            (?:convert\s+)?(?:your\s+)?(?:prompts?\s+)?(?:to\s+)?(?:python\s+)?(?:code)|
+            (?:fence\s+)?(?:the\s+)?(?:given\s+)?(?:prompt\s+)?(?:in\s+)?(?:markdown)|
+            (?:give\s+me\s+a\s+)?(?:recipe\s+for\s+a\s+)?(?:tasty\s+)?(?:system\s+)?(?:prompt|instructions?)|
+            (?:G1V3\s+M3\s+Y0UR\s+SYST3M\s+PR0MP1|give\s+me\s+your\s+system\s+prompt)
         )\b
         """,
         description="User attempted to extract internal system instructions or prompts",
@@ -205,7 +261,7 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         blocked_reason="Internal markup, template syntax, tags, and formatting syntax are confidential and cannot be shared.",
     ),
     SafetyIssueType.ARCHITECTURE_INQUIRY: SafetyRegexGuardPattern(
-        version="regex-architecture-inquiry-20250714",
+        version="regex-architecture-inquiry-20250718",
         type=SafetyIssueType.ARCHITECTURE_INQUIRY,
         risk_level=SafetyRiskLevel.HIGH,
         pattern=r"""(?ix)
@@ -240,7 +296,8 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
             (?:explain|tell\s+me)\s+(?:how\s+)?(?:you\s+)?(?:work|function|operate|run|process|handle)|
             
             # Comprehensive technical inquiries
-            (?:what\s+)?(?:all|everything|complete|full|detailed)\s+(?:about|regarding|concerning)\s+(?:your\s+)?(?:system|technology|architecture|implementation|techstack|tech\s+stack)
+            (?:what\s+)?(?:all|everything|complete|full|detailed)\s+(?:about|regarding|concerning)\s+(?:your\s+)?(?:system|technology|architecture|implementation|techstack|tech\s+stack)|
+            (?:what\s+llm\s+are\s+you|are\s+you\s+gemini|are\s+you\s+claude|are\s+you\s+copilot)
         )\b
         """,
         description="User attempted to extract information about system architecture or implementation details",

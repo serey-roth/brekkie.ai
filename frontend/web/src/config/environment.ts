@@ -59,14 +59,14 @@ const productionConfig: EnvironmentConfig = {
     maxMessageCountAnonymous: 10,
     maxMessageCountAuthenticated: 25,
     featureFlags: {
-        enableAuth: false,
+        enableAuth: true,
     },
 };
 
 const stagingConfig: EnvironmentConfig = {
     auth0Domain: 'auth0_domain',
     auth0ClientId: 'auth0_client_id',
-    auth0Audience: 'https://brekkie-a.fly.dev/api',
+    auth0Audience: 'https://brekkie-ai.fly.dev/api',
     appBaseUrl: 'https://brekkie-ai-staging.fly.dev',
     apiBaseUrl: 'https://brekkie-ai-staging.fly.dev/api',
     wsBaseUrl: 'wss://brekkie-ai-staging.fly.dev/ws',

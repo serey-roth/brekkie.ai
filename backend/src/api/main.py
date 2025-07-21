@@ -4,10 +4,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
@@ -192,7 +193,24 @@ app.include_router(recipes_router, prefix="/api")
 # Mount static files - this will serve the frontend
 # Only mount if the directory exists to prevent startup failures
 if os.path.exists("frontend/dist"):
-    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+    # Mount static files for assets (JS, CSS, images, etc.)
+    app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
+    
+    # Serve index.html for all frontend routes (client-side routing)
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Skip API and WebSocket routes
+        if full_path.startswith(("api/", "ws/")):
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        # Serve index.html for all other routes
+        index_path = "frontend/dist/index.html"
+        if os.path.exists(index_path):
+            with open(index_path, "r") as f:
+                content = f.read()
+            return HTMLResponse(content=content)
+        else:
+            raise HTTPException(status_code=404, detail="Frontend not found")
 else:
     # Fallback route for when frontend is not built
     @app.get("/")

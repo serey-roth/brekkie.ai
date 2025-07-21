@@ -8,6 +8,8 @@ primary_region = "iad"
 [build.args]
   VITE_API_BASE_URL = "https://brekkie-ai-staging.fly.dev/api"
   VITE_WS_BASE_URL = "wss://brekkie-ai-staging.fly.dev/ws"
+  VITE_AUTH0_DOMAIN = "dev-1oqfxpe3kn4ryzgd.us.auth0.com"
+  VITE_AUTH0_CLIENT_ID = "vafgkJisEfwLdFqUtG2xW3Lbi63XaxYr"
   MODE = "staging"
 
 [env]

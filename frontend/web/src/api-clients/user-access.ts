@@ -3,7 +3,7 @@ import { type UserAccess, UserAccessSchema } from '@/data/schemas/user-access';
 
 export interface IUserAccessApiClient {
     ensureUserAccess(): Promise<UserAccess>;
-    resetUserAccess(): Promise<UserAccess>;
+    createAnonymousAccess(): Promise<UserAccess>;
 }
 
 export class UserAccessApiClient implements IUserAccessApiClient {
@@ -43,13 +43,13 @@ export class UserAccessApiClient implements IUserAccessApiClient {
         return result.data;
     }
 
-    async resetUserAccess(): Promise<UserAccess> {
+    async createAnonymousAccess(): Promise<UserAccess> {
         const headers = {
             'Content-Type': 'application/json',
             Accept: 'application/json',
         } as Record<string, string>;
 
-        const response = await fetch(`${this._baseUrl}/access/reset-access`, {
+        const response = await fetch(`${this._baseUrl}/access/create-anonymous-access`, {
             method: 'POST',
             headers,
             credentials: 'include',

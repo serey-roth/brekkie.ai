@@ -1,8 +1,6 @@
-from uuid import uuid4
-from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 
 from config.settings import Settings
 
@@ -14,6 +12,7 @@ from schemas.user_access import UserAccess
 from services.service_container import ServiceContainer
 
 from utils.logger import Logger
+from utils.date_utils import to_utc_isostring
 
 
 logger = Logger("api.routes.access")
@@ -65,8 +64,8 @@ async def ensure_access(
     return user_access
 
 
-@router.post("/reset-access")
-async def reset_access(
+@router.post("/create-anonymous-access")
+async def create_anonymous_access(
     response: Response,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -106,6 +105,6 @@ async def reset_access(
         raise
 
     except Exception as e:
-        logger.error(f"Unexpected error during revoke access: {e}")
+        logger.error(f"Unexpected error during create anonymous access: {e}")
         raise HTTPException(status_code=500, detail={"message": "Internal server error"})
 

@@ -106,9 +106,9 @@ export class UserAccessManager {
         }
     }
 
-    async resetUserAccess() {
+    async createAnonymousAccess() {
         try {
-            const accessData = await this._userAccessApiClient.resetUserAccess();
+            const accessData = await this._userAccessApiClient.createAnonymousAccess();
             this.setUserAccess(accessData);
         } catch (error) {
             this._eventManager.publish(

@@ -252,7 +252,7 @@ export function Sidebar(props: SidebarProps) {
                                 onClick={async () => {
                                     try {
                                         await logout(window.location.origin);
-                                        await userAccessManager.resetUserAccess();
+                                        await userAccessManager.createAnonymousAccess();
                                         resetCurrentThread();
                                     } catch (error) {
                                         console.error('Logout failed:', error);

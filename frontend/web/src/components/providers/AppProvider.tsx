@@ -20,8 +20,6 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
         [customConfig],
     );
 
-    console.log('config', config);
-
     const threadsApiClient = useRef<ThreadsApiClient>(new ThreadsApiClient(config.apiBaseUrl));
     const userAccessApiClient = useRef<UserAccessApiClient>(
         new UserAccessApiClient(config.apiBaseUrl),

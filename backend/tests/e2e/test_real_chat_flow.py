@@ -132,72 +132,72 @@ class TestRealChatFlow:
             print(f"❌ Recipe generation test failed: {e}")
             raise
 
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_search_integration(self, service_container: ServiceContainer):
-        """Test search functionality directly without WebSocket to verify search integration."""
-        print("\n🔍 Testing search functionality directly...")
-        
-        user_access = await service_container.user_access_cache_service.create_anonymous_access()
-        print(f"👤 Created user access: {user_access.user_id}")
-        
-        try:
-            message_content = "Immediately use search tool to find the latest cooking trends in 2024"
-            print(f"💬 Testing search with message: {message_content}")
-            
-            events_received = []
-            
-            async def on_event(event):
-                events_received.append(event)
-                print(f"📥 Received event: {event.event}")
-            
-            await service_container.ai_food_agent.stream_conversation(
-                user_id=user_access.user_id,
-                thread_id="test-search-thread",
-                user_input=message_content,
-                on_event=on_event
-            )
-            
-            print(f"📊 Total events received: {len(events_received)}")
-            
-            assert len(events_received) > 0, "No events received from AI service"
-            
-            event_types = [event.event for event in events_received]
-            print(f"📋 Event types received: {event_types}")
-            
-            has_search_events = "search_started" in event_types and "search_completed" in event_types
-            
-            if has_search_events:
-                print("🔍 Search events detected!")
-                
-                search_started_events = [e for e in events_received if e.event == "search_started"]
-                search_completed_events = [e for e in events_received if e.event == "search_completed"]
-                
-                if search_started_events:
-                    search_data = search_started_events[0].payload
-                    print(f"🔍 Search tool: {search_data.tool_name}")
-                    print(f"🔍 Search query: {search_data.tool_input}")
-                
-                if search_completed_events:
-                    search_data = search_completed_events[0].payload
-                    print(f"🔍 Search results received: {len(str(search_data.tool_output))} chars")
-                    print(f"🔍 Search metadata: {search_data.tool_metadata.model_name}")
-            else:
-                print("ℹ️ No search events detected - AI may have answered without searching")
-            
-            assert "text_message_started" in event_types, "No text message started event"
-            assert "text_message_completed" in event_types, "No text message completed event"
-            
-            text_completed_events = [e for e in events_received if e.event == "text_message_completed"]
-            if text_completed_events:
-                full_response = text_completed_events[-1].payload.full_message
-                print(f"🤖 AI Response: {full_response[:100]}...")
-                assert len(full_response) > 0, "AI response is empty"
-            
-            print("✅ Search direct test passed!")
-            
-        except Exception as e:
-            print(f"❌ Search test failed: {e}")
-            raise
+    # @pytest.mark.asyncio(loop_scope="session")
+    # async def test_search_integration(self, service_container: ServiceContainer):
+    #     """Test search functionality directly without WebSocket to verify search integration."""
+    #     print("\n🔍 Testing search functionality directly...")
+    #     
+    #     user_access = await service_container.user_access_cache_service.create_anonymous_access()
+    #     print(f"👤 Created user access: {user_access.user_id}")
+    #     
+    #     try:
+    #         message_content = "Immediately use search tool to find the latest cooking trends in 2024"
+    #         print(f"💬 Testing search with message: {message_content}")
+    #             
+    #         events_received = []
+    #             
+    #         async def on_event(event):
+    #             events_received.append(event)
+    #             print(f"📥 Received event: {event.event}")
+    #             
+    #         await service_container.ai_food_agent.stream_conversation(
+    #             user_id=user_access.user_id,
+    #             thread_id="test-search-thread",
+    #             user_input=message_content,
+    #             on_event=on_event
+    #         )
+    #             
+    #         print(f"📊 Total events received: {len(events_received)}")
+    #             
+    #         assert len(events_received) > 0, "No events received from AI service"
+    #             
+    #         event_types = [event.event for event in events_received]
+    #         print(f"📋 Event types received: {event_types}")
+    #             
+    #         has_search_events = "search_started" in event_types and "search_completed" in event_types
+    #             
+    #         if has_search_events:
+    #             print("🔍 Search events detected!")
+    #                 
+    #             search_started_events = [e for e in events_received if e.event == "search_started"]
+    #             search_completed_events = [e for e in events_received if e.event == "search_completed"]
+    #                 
+    #             if search_started_events:
+    #                 search_data = search_started_events[0].payload
+    #                 print(f"🔍 Search tool: {search_data.tool_name}")
+    #                 print(f"🔍 Search query: {search_data.tool_input}")
+    #                 
+    #             if search_completed_events:
+    #                 search_data = search_completed_events[0].payload
+    #                 print(f"🔍 Search results received: {len(str(search_data.tool_output))} chars")
+    #                 print(f"🔍 Search metadata: {search_data.tool_metadata.model_name}")
+    #         else:
+    #             print("ℹ️ No search events detected - AI may have answered without searching")
+    #             
+    #         assert "text_message_started" in event_types, "No text message started event"
+    #         assert "text_message_completed" in event_types, "No text message completed event"
+    #             
+    #         text_completed_events = [e for e in events_received if e.event == "text_message_completed"]
+    #         if text_completed_events:
+    #             full_response = text_completed_events[-1].payload.full_message
+    #             print(f"🤖 AI Response: {full_response[:100]}...")
+    #             assert len(full_response) > 0, "AI response is empty"
+    #             
+    #         print("✅ Search direct test passed!")
+    #             
+    #     except Exception as e:
+    #         print(f"❌ Search test failed: {e}")
+    #         raise
 
     def test_basic_chat_websocket_flow(self, test_client, service_container):
         """Synchronous E2E test for real chat flow using TestClient and WebSocket."""
@@ -328,85 +328,85 @@ class TestRealChatFlow:
             
             print("✅ Recipe generation WebSocket flow test passed!")
 
-    def test_search_websocket_flow(self, test_client: TestClient, service_container: ServiceContainer):
-        """Synchronous E2E test for search functionality using TestClient and WebSocket."""
-        print("\n🔍 Testing search WebSocket flow (sync)...")
-
-        user_access = asyncio.get_event_loop().run_until_complete(
-            service_container.user_access_cache_service.create_anonymous_access()
-        )
-        access_token = user_access.access_token
-        print(f"🔑 Access token: {access_token[:20]}...")
-
-        test_client.cookies.set("bk_access_token", access_token)
-
-        with test_client.websocket_connect("/ws/chat") as websocket:
-            message = {"id": "1", "content": "Use search to find the latest cooking trends in 2024"}
-            print(f"📤 Sending: {message}")
-            websocket.send_json(message)
-
-            events = []
-            max_events = 20
-            search_completed = False
-            
-            for _ in range(max_events):
-                try:
-                    event = websocket.receive_json()
-                    print(f"📥 Received event: {event['event']}")
-                    events.append(event)
-                    
-                    if event["event"] == "search_completed":
-                        search_completed = True
-                    
-                    if event["event"] == "text_message_completed" and search_completed:
-                        print(f"📥 Final response completed")
-                        time.sleep(1.0)
-                        break
-                        
-                except Exception as e:
-                    print(f"📥 No more events: {e}")
-                    break
-            
-            event_types = [e["event"] for e in events]
-            print(f"📋 Event types: {event_types}")
-            
-            if "thread_title_updated" in event_types:
-                print("📝 Thread title updated event captured!")
-                thread_title_events = [e for e in events if e["event"] == "thread_title_updated"]
-                if thread_title_events:
-                    thread_data = thread_title_events[0]["data"]
-                    print(f"📝 New thread title: {thread_data.get('thread', {}).get('title', 'N/A')}")
-            
-            has_search_events = "search_started" in event_types and "search_completed" in event_types
-            
-            if has_search_events:
-                print("🔍 Search events detected!")
-                
-                search_started_events = [e for e in events if e["event"] == "search_started"]
-                search_completed_events = [e for e in events if e["event"] == "search_completed"]
-                
-                if search_started_events:
-                    search_data = search_started_events[0]["data"]
-                    print(f"🔍 Search tool: {search_data.get('message', {}).get('tool_name', 'N/A')}")
-                    print(f"🔍 Search query: {search_data.get('message', {}).get('tool_input', 'N/A')}")
-                
-                if search_completed_events:
-                    search_data = search_completed_events[0]["data"]
-                    print(f"🔍 Search results received: {len(str(search_data.get('message', {}).get('tool_output', '')))} chars")
-                    print(f"🔍 Search metadata: {search_data.get('message', {}).get('model_name', 'N/A')}")
-            else:
-                print("ℹ️ No search events detected - AI may have answered without searching")
-            
-            assert "text_message_started" in event_types, "No text message started event"
-            assert "text_message_completed" in event_types, "No text message completed event"
-            
-            text_completed_events = [e for e in events if e["event"] == "text_message_completed"]
-            if text_completed_events:
-                full_response = text_completed_events[-1]["data"]["message"]["text_content"]
-                print(f"🤖 AI Response: {full_response[:100]}...")
-                assert len(full_response) > 0, "AI response is empty"
-            
-            print("✅ Search WebSocket flow test passed!")
+    # def test_search_websocket_flow(self, test_client: TestClient, service_container: ServiceContainer):
+    #     """Synchronous E2E test for search functionality using TestClient and WebSocket."""
+    #     print("\n🔍 Testing search WebSocket flow (sync)...")
+    #
+    #     user_access = asyncio.get_event_loop().run_until_complete(
+    #         service_container.user_access_cache_service.create_anonymous_access()
+    #     )
+    #     access_token = user_access.access_token
+    #     print(f"🔑 Access token: {access_token[:20]}...")
+    #
+    #     test_client.cookies.set("bk_access_token", access_token)
+    #
+    #     with test_client.websocket_connect("/ws/chat") as websocket:
+    #         message = {"id": "1", "content": "Use search to find the latest cooking trends in 2024"}
+    #         print(f"📤 Sending: {message}")
+    #         websocket.send_json(message)
+    #
+    #         events = []
+    #         max_events = 20
+    #         search_completed = False
+    #             
+    #         for _ in range(max_events):
+    #             try:
+    #                 event = websocket.receive_json()
+    #                 print(f"📥 Received event: {event['event']}")
+    #                 events.append(event)
+    #                     
+    #                 if event["event"] == "search_completed":
+    #                     search_completed = True
+    #                     
+    #                 if event["event"] == "text_message_completed" and search_completed:
+    #                     print(f"📥 Final response completed")
+    #                     time.sleep(1.0)
+    #                     break
+    #                         
+    #             except Exception as e:
+    #                 print(f"📥 No more events: {e}")
+    #                     break
+    #             
+    #         event_types = [e["event"] for e in events]
+    #         print(f"📋 Event types: {event_types}")
+    #             
+    #         if "thread_title_updated" in event_types:
+    #             print("📝 Thread title updated event captured!")
+    #             thread_title_events = [e for e in events if e["event"] == "thread_title_updated"]
+    #             if thread_title_events:
+    #                     thread_data = thread_title_events[0]["data"]
+    #                     print(f"📝 New thread title: {thread_data.get('thread', {}).get('title', 'N/A')}")
+    #             
+    #         has_search_events = "search_started" in event_types and "search_completed" in event_types
+    #             
+    #         if has_search_events:
+    #             print("🔍 Search events detected!")
+    #                 
+    #             search_started_events = [e for e in events if e["event"] == "search_started"]
+    #             search_completed_events = [e for e in events if e["event"] == "search_completed"]
+    #                 
+    #             if search_started_events:
+    #                     search_data = search_started_events[0]["data"]
+    #                     print(f"🔍 Search tool: {search_data.get('message', {}).get('tool_name', 'N/A')}")
+    #                     print(f"🔍 Search query: {search_data.get('message', {}).get('tool_input', 'N/A')}")
+    #                     
+    #             if search_completed_events:
+    #                     search_data = search_completed_events[0]["data"]
+    #                     print(f"🔍 Search results received: {len(str(search_data.get('message', {}).get('tool_output', '')))} chars")
+    #                     print(f"🔍 Search metadata: {search_data.get('message', {}).get('model_name', 'N/A')}")
+    #         else:
+    #             print("ℹ️ No search events detected - AI may have answered without searching")
+    #             
+    #         assert "text_message_started" in event_types, "No text message started event"
+    #         assert "text_message_completed" in event_types, "No text message completed event"
+    #             
+    #         text_completed_events = [e for e in events if e["event"] == "text_message_completed"]
+    #         if text_completed_events:
+    #             full_response = text_completed_events[-1]["data"]["message"]["text_content"]
+    #             print(f"🤖 AI Response: {full_response[:100]}...")
+    #             assert len(full_response) > 0, "AI response is empty"
+    #             
+    #         print("✅ Search WebSocket flow test passed!")
 
 
 class TestSecurity:

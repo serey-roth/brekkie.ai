@@ -9,9 +9,9 @@ from services.service_container import ServiceContainer
 from utils.date_utils import to_utc_isostring
 
 
-class TestResetAccess:
+class TestCreateAnonymousAccess:
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_successful_reset_access(self, async_client, service_container: ServiceContainer):
+    async def test_successful_create_anonymous_access(self, async_client, service_container: ServiceContainer):
         sample_ip_address = "127.0.0.1"
         
         user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
@@ -28,13 +28,13 @@ class TestResetAccess:
         
         async_client.cookies.set("bk_access_token", user_access.access_token)
 
-        response = await async_client.post("/api/access/reset-access", headers=headers)
+        response = await async_client.post("/api/access/create-anonymous-access", headers=headers)
 
         assert response.status_code == status.HTTP_200_OK
         response_data = response.json()
         assert response_data["access_token"] != user_access.access_token
-        assert response_data["user_id"] == user_access.user_id
-        assert response_data["is_authenticated"] is True
+        assert response_data["user_id"] != user_access.user_id  # New anonymous session gets new user_id
+        assert response_data["is_authenticated"] is False
         assert response_data["user_message_count"] == 0
         assert response_data["created_at"] is not None
         assert response_data["updated_at"] is not None
@@ -58,7 +58,7 @@ class TestResetAccess:
             "fly-client-ip": sample_ip_address
         }
 
-        response = await async_client.post("/api/access/reset-access", headers=headers)
+        response = await async_client.post("/api/access/create-anonymous-access", headers=headers)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.json()["detail"]["message"] == "Missing access token"
@@ -73,13 +73,13 @@ class TestResetAccess:
         
         async_client.cookies.set("bk_access_token", "invalid_token")
 
-        response = await async_client.post("/api/access/reset-access", headers=headers)
+        response = await async_client.post("/api/access/create-anonymous-access", headers=headers)
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.json()["detail"]["message"] == "Access token not found"
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_reset_token_clears_rate_limiter(self, async_client, service_container: ServiceContainer):
+    async def test_create_anonymous_access_clears_rate_limiter(self, async_client, service_container: ServiceContainer):
         sample_ip_address = "127.0.0.5"
         
         user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
@@ -98,7 +98,7 @@ class TestResetAccess:
         
         async_client.cookies.set("bk_access_token", user_access.access_token)
 
-        response = await async_client.post("/api/access/reset-access", headers=headers)
+        response = await async_client.post("/api/access/create-anonymous-access", headers=headers)
 
         assert response.status_code == status.HTTP_200_OK
         
@@ -123,7 +123,7 @@ class TestResetAccess:
         
         async_client.cookies.set("bk_access_token", user_access.access_token)
 
-        response = await async_client.post("/api/access/reset-access", headers=headers)
+        response = await async_client.post("/api/access/create-anonymous-access", headers=headers)
 
         assert response.status_code == status.HTTP_200_OK
         response_data = response.json()
@@ -133,7 +133,7 @@ class TestResetAccess:
         assert new_token_ttl > 0
 
     @pytest.mark.asyncio(loop_scope="session")
-    async def test_reset_access_preserves_user_id(self, async_client, service_container: ServiceContainer):
+    async def test_create_anonymous_access_creates_new_user_id(self, async_client, service_container: ServiceContainer):
         sample_ip_address = "127.0.0.7"
         
         user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
@@ -152,9 +152,9 @@ class TestResetAccess:
         
         async_client.cookies.set("bk_access_token", user_access.access_token)
 
-        response = await async_client.post("/api/access/reset-access", headers=headers)
+        response = await async_client.post("/api/access/create-anonymous-access", headers=headers)
 
         assert response.status_code == status.HTTP_200_OK
         response_data = response.json()
-        assert response_data["user_id"] == original_user_id
+        assert response_data["user_id"] != original_user_id  # Creates new anonymous session with new user_id
         

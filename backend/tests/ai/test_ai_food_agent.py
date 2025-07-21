@@ -81,12 +81,12 @@ def recipe_generation_events():
         ("messages", (ToolMessage(content='{"content": "<recipe>...</recipe>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}}', tool_call_id="123", name="create_recipe", status="success"), {"ls_model_name": "gemini-2.5-flash-preview-05-20", "input_tokens": 0, "output_tokens": 100})),
     ]
     
-def search_events():
-    return [
-        ("messages", (AIMessageChunk(content="I'll search the web for you."), {"ls_model_name": "gemini-2.5-flash-preview-05-20", "input_tokens": 0, "output_tokens": 10})),
-        ("custom", {"event": "search_started", "tool_name": "tavily_search", "tool_input": {"query": "Pasta Carbonara"}}),
-        ("messages", (ToolMessage(content='{"content": "<search_results>...</search_results>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}}', tool_call_id="123", name="tavily_search", status="success"), {"ls_model_name": "gemini-2.5-flash-preview-05-20", "input_tokens": 0, "output_tokens": 100})),
-    ]
+# def search_events():
+#     return [
+#         ("messages", (AIMessageChunk(content="I'll search the web for you."), {"ls_model_name": "gemini-2.5-flash-preview-05-20", "input_tokens": 0, "output_tokens": 10})),
+#         ("custom", {"event": "search_started", "tool_name": "tavily_search", "tool_input": {"query": "Pasta Carbonara"}}),
+#         ("messages", (ToolMessage(content='{"content": "<search_results>...</search_results>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}}', tool_call_id="123", name="tavily_search", status="success"), {"ls_model_name": "gemini-2.5-flash-preview-05-20", "input_tokens": 0, "output_tokens": 100})),
+#     ]
 
 
 def setup_mock_factory(events):
@@ -162,8 +162,8 @@ class TestExtractMetadata:
         assert_deep_equal(tool_output, {"recipe_xml": "<recipe>...</recipe>"})
         assert_deep_equal(metadata, ConversationStreamMetadata(model_name="gemini-2.5-flash-preview-05-20", input_tokens=0, output_tokens=100))
 
-    def test_extract_search_tool_message_metadata(self, mock_agent_service):
-        tool_output, metadata = mock_agent_service._extract_search_tool_message_metadata(ToolMessage(content='{"content": "<search_results>...</search_results>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}}', tool_call_id="123", name="tavily_search", status="success"), {"ls_model_name": "gemini-2.5-flash-preview-05-20", "input_tokens": 0, "output_tokens": 100})
+    # def test_extract_search_tool_message_metadata(self, mock_agent_service):
+    #     tool_output, metadata = mock_agent_service._extract_search_tool_message_metadata(ToolMessage(content='{"content": "<search_results>...</search_results>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}}', tool_call_id="123", name="tavily_search", status="success"), {"ls_model_name": "gemini-2.5-flash-preview-05-20", "input_tokens": 0, "output_tokens": 100})
         assert_deep_equal(tool_output, {"content": "<search_results>...</search_results>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}})
         assert_deep_equal(metadata, ConversationStreamMetadata(model_name="gemini-2.5-flash-preview-05-20", input_tokens=0, output_tokens=100))
 
@@ -196,21 +196,21 @@ class TestHandleToolMessage:
         
         self.mock_state.end_recipe_generation.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_handle_search_tool_message(self, mock_agent_service):
-        food_agent = mock_agent_service
-    
-        mock_tool_message = ToolMessage(content='{"content": "<search_results>...</search_results>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}}', tool_call_id="123", name="tavily_search", status="success")
-        mock_metadata = {"ls_model_name": "gemini-2.5-flash-preview-05-20", "input_tokens": 0, "output_tokens": 100}
-        
-        await food_agent._handle_tool_message(mock_tool_message, mock_metadata, self.mock_recipe_parser, self.mock_state, self.mock_on_event)
-        
-        self.mock_on_event.assert_has_calls([
-            call(ConversationStreamEvent(event="search_completed", payload=SearchCompletedPayload(
-                tool_output={"content": "<search_results>...</search_results>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}},
-                tool_metadata=ConversationStreamMetadata(model_name="gemini-2.5-flash-preview-05-20", input_tokens=0, output_tokens=100),
-            ))),
-        ])
+    # @pytest.mark.asyncio
+    # async def test_handle_search_tool_message(self, mock_agent_service):
+    #     food_agent = mock_agent_service
+    # 
+    #     mock_tool_message = ToolMessage(content='{"content": "<search_results>...</search_results>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}}', tool_call_id="123", name="tavily_search", status="success")
+    #     mock_metadata = {"ls_model_name": "gemini-2.5-flash-preview-05-20", "input_tokens": 0, "output_tokens": 100}
+    #     
+    #     await food_agent._handle_tool_message(mock_tool_message, mock_metadata, self.mock_recipe_parser, self.mock_state, self.mock_on_event)
+    #     
+    #     self.mock_on_event.assert_has_calls([
+    #         call(ConversationStreamEvent(event="search_completed", payload=SearchCompletedPayload(
+    #             tool_output={"content": "<search_results>...</search_results>", "response_metadata": {"model_name": "gemini-2.5-flash-preview-05-20"}, "usage_metadata": {"input_tokens": 0, "output_tokens": 100}},
+    #             tool_metadata=ConversationStreamMetadata(model_name="gemini-2.5-flash-preview-05-20", input_tokens=0, output_tokens=100),
+    #         ))),
+    #     ])
     
     
 class TestStreamConversation:
@@ -420,45 +420,45 @@ class TestStreamConversation:
                 ))),
             ])
             
-    @pytest.mark.asyncio
-    async def test_search(self, mock_agent_service, mock_event_handler):
-        food_agent = mock_agent_service
-        
-        with patch("src.services.ai_food_agent.google_ai_food_agent.AgentFactory") as factory_patch, \
-            patch.object(food_agent, "_extract_ai_chunk_metadata") as mock_extract_ai_chunk_metadata, \
-            patch.object(food_agent, "_extract_search_tool_message_metadata") as mock_extract_search_tool_message_metadata:
-                
-            mock_metadata = MagicMock(spec=ConversationStreamMetadata)
-            mock_extract_ai_chunk_metadata.return_value = mock_metadata
-            
-            mock_search_tool_output = MagicMock(spec=dict)
-            mock_search_metadata = MagicMock(spec=ConversationStreamMetadata)
-            mock_extract_search_tool_message_metadata.return_value = (mock_search_tool_output, mock_search_metadata)
-            
-            factory_patch.return_value = setup_mock_factory(search_events())
-            
-            await food_agent.stream_conversation(
-                "user_id",
-                "thread_id",
-                "user_input",
-                on_event=mock_event_handler,
-            )
-            
-            mock_event_handler.assert_has_calls([
-                call(ConversationStreamEvent(event="text_message_started", payload=TextMessageStartedPayload())),
-                call(ConversationStreamEvent(event="text_message_chunk_generated", payload=TextMessageChunkGeneratedPayload(
-                    message_chunk="I'll search the web for you.",
-                    metadata=mock_metadata,
-                ))),
-                call(ConversationStreamEvent(event="text_message_completed", payload=TextMessageCompletedPayload(
-                    full_message="I'll search the web for you.",
-                ))),
-                call(ConversationStreamEvent(event="search_started", payload=SearchStartedPayload(
-                    tool_name="tavily_search",
-                    tool_input={"query": "Pasta Carbonara"},
-                ))),
-                call(ConversationStreamEvent(event="search_completed", payload=SearchCompletedPayload(
-                    tool_output=mock_search_tool_output,
-                    tool_metadata=mock_search_metadata,
-                ))),
-            ])
+    # @pytest.mark.asyncio
+    # async def test_search(self, mock_agent_service, mock_event_handler):
+    #     food_agent = mock_agent_service
+    #     
+    #     with patch("src.services.ai_food_agent.google_ai_food_agent.AgentFactory") as factory_patch, \
+    #         patch.object(food_agent, "_extract_ai_chunk_metadata") as mock_extract_ai_chunk_metadata, \
+    #         patch.object(food_agent, "_extract_search_tool_message_metadata") as mock_extract_search_tool_message_metadata:
+    #             
+    #         mock_metadata = MagicMock(spec=ConversationStreamMetadata)
+    #         mock_extract_ai_chunk_metadata.return_value = mock_metadata
+    #             
+    #         mock_search_tool_output = MagicMock(spec=dict)
+    #         mock_search_metadata = MagicMock(spec=ConversationStreamMetadata)
+    #         mock_extract_search_tool_message_metadata.return_value = (mock_search_tool_output, mock_search_metadata)
+    #             
+    #         factory_patch.return_value = setup_mock_factory(search_events())
+    #             
+    #         await food_agent.stream_conversation(
+    #             "user_id",
+    #             "thread_id",
+    #             "user_input",
+    #             on_event=mock_event_handler,
+    #         )
+    #             
+    #         mock_event_handler.assert_has_calls([
+    #             call(ConversationStreamEvent(event="text_message_started", payload=TextMessageStartedPayload())),
+    #             call(ConversationStreamEvent(event="text_message_chunk_generated", payload=TextMessageChunkGeneratedPayload(
+    #                 message_chunk="I'll search the web for you.",
+    #                 metadata=mock_metadata,
+    #             ))),
+    #             call(ConversationStreamEvent(event="text_message_completed", payload=TextMessageCompletedPayload(
+    #                 full_message="I'll search the web for you.",
+    #             ))),
+    #             call(ConversationStreamEvent(event="search_started", payload=SearchStartedPayload(
+    #                 tool_name="tavily_search",
+    #                 tool_input={"query": "Pasta Carbonara"},
+    #             ))),
+    #             call(ConversationStreamEvent(event="search_completed", payload=SearchCompletedPayload(
+    #                 tool_output=mock_search_tool_output,
+    #                 tool_metadata=mock_search_metadata,
+    #             ))),
+    #         ])

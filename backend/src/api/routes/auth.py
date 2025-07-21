@@ -1,14 +1,19 @@
+import json
+import ssl
+from urllib.request import urlopen
 from uuid import uuid4
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Response
 from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, Response
+from jose import jwt, JWTError, jwk
 
 from config.settings import Settings
 
-from api.deps import get_client_ip, get_service_container, get_access_token, get_settings
+from api.deps import get_client_ip, get_service_container, get_access_token, get_settings, get_auth0_token
 
-from schemas.users import CreateUserParams, UserSignup, UserLogin
-from schemas.user_access import UserAccessData
+from schemas.users import CreateUserParams
+from schemas.user_access import UserAccess
 from schemas.threads import CreateThreadParams
 from schemas.recipes import CreateRecipeParams
 from schemas.messages import CreateMessageParams
@@ -143,215 +148,136 @@ async def _migrate_user_data(
         raise
 
 
-router = APIRouter()
+router = APIRouter()    
 
-# TODO: Add email verification
-
-
-@router.post("/login", response_model=UserAccessData)
-async def login(
+@router.post("/verify-token")
+async def verify(
     response: Response,
-    payload: UserLogin,
-    service_container: Annotated[ServiceContainer, Depends(get_service_container)],
-    settings: Annotated[Settings, Depends(get_settings)],
-    ip_address: Annotated[str, Depends(get_client_ip)],
-    access_token: Annotated[str | None, Depends(get_access_token)] = None,
-) -> UserAccessData:
-    logger.debug(f"Login attempt for email: {payload.email}")
-
-    if not settings.is_auth_enabled():
-        raise HTTPException(
-            status_code=403,
-            detail={"message": "Feature temporarily unavailable. Please check back later."},
-        )
-
-    try:
-        user_service = service_container.user_service
-        async with service_container.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
-            user = await user_service.get_user_by_email(db, payload.email)
-            if user is None:
-                logger.error(f"User with email {payload.email} not found")
-                raise HTTPException(status_code=401, detail={"message": "User does not exist"})
-
-            if not await user_service.verify_password(db, user.id, payload.password):
-                logger.error(f"Invalid password for user {payload.email}")
-                raise HTTPException(status_code=401, detail={"message": "Invalid credentials"})
-
-            user_message_count = (
-                await service_container.message_service.count_total_messages_sent_by_user(
-                    db, user.id
-                )
-            )
-
-            timestamp = datetime.now(timezone.utc)
-
-            new_access_data = await service_container.user_access_cache_service.create_user_access(
-                access_token=str(uuid4()),
-                user_id=user.id,
-                email=user.email,
-                name=user.name,
-                is_authenticated=True,
-                user_message_count=user_message_count,
-                created_at=to_utc_isostring(timestamp),
-                updated_at=to_utc_isostring(timestamp),
-                ip_address=ip_address,
-            )
-
-            if access_token:
-                await service_container.user_access_cache_service.revoke_access(access_token)
-
-            await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
-
-            response.set_cookie(
-                settings.cookie_name,
-                new_access_data.access_token,
-                secure=settings.get_cookie_secure(),
-                samesite=settings.cookie_samesite,  # type: ignore
-                max_age=settings.cookie_max_age,
-                httponly=settings.get_cookie_httponly(),
-                path=settings.cookie_path,
-            )
-
-            logger.info(f"User {user.id} ({user.email}) logged in successfully")
-            return new_access_data
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        logger.error(f"Unexpected error during login: {e}")
-        raise HTTPException(status_code=500, detail={"message": "Internal server error"})
-
-
-@router.post("/signup", response_model=UserAccessData)
-async def signup(
-    response: Response,
-    payload: UserSignup,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
     settings: Annotated[Settings, Depends(get_settings)],
     background_tasks: BackgroundTasks,
     ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
-) -> UserAccessData:
-    logger.debug(f"Signup attempt for email: {payload.email}")
-
-    if not settings.is_auth_enabled():
-        raise HTTPException(
-            status_code=403,
-            detail={"message": "Feature temporarily unavailable. Please check back later."},
-        )
-
-    try:
-        if not access_token:
-            raise HTTPException(status_code=401, detail={"message": "Missing access token"})
-
-        user_access_data = await service_container.user_access_cache_service.get_user_access(
-            access_token
-        )
-        if user_access_data is None:
-            raise HTTPException(status_code=401, detail={"message": "Access token not found"})
-
-        if user_access_data.is_authenticated:
-            return user_access_data
-
-        old_user_id = user_access_data.user_id
-
-        timestamp = datetime.now(timezone.utc)
-
-        user_service = service_container.user_service
-        async with service_container.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
-            existing = await user_service.get_user_by_email(db, payload.email)
-            if existing:
-                logger.error(f"User with email {payload.email} already exists")
-                raise HTTPException(status_code=400, detail={"message": "User already exists"})
-
-            user = await user_service.create_user(
-                db,
-                CreateUserParams(
-                    id=old_user_id,
-                    created_at=timestamp,
-                    updated_at=timestamp,
-                    email=payload.email,
-                    name=payload.name,
-                    password=payload.password,
-                    # TODO: Add ip address
-                ),
-            )
-
-            old_user_message_count = (
-                await service_container.message_cache_service.count_total_messages_sent_by_user(
-                    old_user_id
-                )
-            )
-
-            new_access_data = await service_container.user_access_cache_service.create_user_access(
-                access_token=str(uuid4()),
-                user_id=user.id,
-                email=user.email,
-                name=user.name,
-                is_authenticated=True,
-                user_message_count=old_user_message_count,
-                created_at=to_utc_isostring(timestamp),
-                updated_at=to_utc_isostring(timestamp),
-                ip_address=ip_address,
-            )
-
-            await service_container.user_access_cache_service.revoke_access(access_token)
-            await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
-
-            response.set_cookie(
-                settings.cookie_name,
-                new_access_data.access_token,
-                secure=settings.get_cookie_secure(),
-                samesite=settings.cookie_samesite,  # type: ignore
-                max_age=settings.cookie_max_age,
-                httponly=settings.get_cookie_httponly(),
-                path=settings.cookie_path,
-            )
-
-            logger.info(f"User {user.id} ({user.email}) signed up successfully")
-            background_tasks.add_task(_migrate_user_data, old_user_id, user.id, service_container)
-
-            return new_access_data
-
-    except HTTPException:
-        raise
-
-    except Exception as e:
-        logger.error(f"Unexpected error during signup: {e}")
-        raise HTTPException(status_code=500, detail={"message": "Internal server error"})
-
-
-@router.post("/logout")
-async def logout(
-    service_container: Annotated[ServiceContainer, Depends(get_service_container)],
-    settings: Annotated[Settings, Depends(get_settings)],
-    access_token: Annotated[str | None, Depends(get_access_token)] = None,
+    auth0_token: Annotated[str | None, Depends(get_auth0_token)] = None,
 ):
     if not settings.is_auth_enabled():
-        raise HTTPException(
-            status_code=403,
-            detail={"message": "Feature temporarily unavailable. Please check back later."},
-        )
+        raise HTTPException(status_code=403, detail={"message": "Auth is disabled"})
+    
+    if auth0_token is None:
+        logger.error(f"Missing auth0 token")
+        raise HTTPException(status_code=401, detail={"message": "Missing auth0 token"})
+
+    if access_token is None:
+        logger.error(f"Missing access token")
+        raise HTTPException(status_code=401, detail={"message": "Missing access token"})
 
     try:
-        if not access_token:
-            raise HTTPException(status_code=401, detail={"message": "Missing access token"})
-
-        user_access_data = await service_container.user_access_cache_service.get_user_access(
+        current_user_access = await service_container.user_access_cache_service.get_user_access(
             access_token
         )
-        if user_access_data is None:
-            raise HTTPException(status_code=401, detail={"message": "Access token not found"})
+        if current_user_access is None:
+            raise HTTPException(status_code=401, detail={"message": "Access record not found"})
+        
+        auth0_domain = settings.auth0_domain
+        auth0_audience = settings.auth0_audience
+        
+        # Handle SSL certificate verification based on environment
+        if settings.is_development():
+            # For development, disable SSL verification to avoid certificate issues
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            jsonurl = urlopen("https://"+auth0_domain+"/.well-known/jwks.json", context=ssl_context)
+        else:
+            # For production/staging, use proper SSL verification
+            jsonurl = urlopen("https://"+auth0_domain+"/.well-known/jwks.json")
+            
+        jwks = json.loads(jsonurl.read())
+        unverified_header = jwt.get_unverified_header(auth0_token)
+        public_key = None
+        for key in jwks["keys"]:
+            if key["kid"] == unverified_header["kid"]:
+                public_key = jwk.construct(key)
+                break
+                
+        if public_key:
+            payload = jwt.decode(
+                auth0_token,
+                public_key,
+                algorithms=["RS256"],
+                audience=auth0_audience,
+                issuer="https://"+auth0_domain+"/"
+            )
+            
+            logger.info(f"Auth0 token verified successfully for user: {payload}")
+            
+            # Extract user ID from Auth0 payload
+            auth0_user_id = payload.get("sub")  # This is the unique Auth0 user ID
+            expires_at = payload.get("exp")
+            if auth0_user_id is None:
+                raise HTTPException(status_code=400, detail={"message": "Invalid token: missing user ID"})
+            
+            old_user_id = current_user_access.user_id
+            timestamp = datetime.now(timezone.utc)
+            needs_migration = False
+            
+            async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
+                user = await service_container.user_service.get_user_by_external_id(db, auth0_user_id)
+                if user is None:
+                    user = await service_container.user_service.create_user(db, CreateUserParams(
+                        id=current_user_access.user_id,
+                        external_id=auth0_user_id,
+                        created_at=timestamp,
+                        updated_at=timestamp
+                    ))
+                    needs_migration = True
+                    
+            if not current_user_access.is_authenticated:
+                await service_container.user_access_cache_service.revoke_access(access_token)
+                await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
+                
+                ttl = int(expires_at) - int(timestamp.timestamp()) if expires_at is not None else None
+                if ttl is not None and ttl < 0:
+                    ttl = None
+                    
+                current_message_count = await service_container.message_cache_service.count_total_messages_sent_by_user(current_user_access.user_id)
+                current_user_access = await service_container.user_access_cache_service.create_user_access(
+                    access_token=str(uuid4()),
+                    user_id=user.id,
+                    created_at=to_utc_isostring(timestamp),
+                    updated_at=to_utc_isostring(timestamp),
+                    is_authenticated=True,
+                    ip_address=ip_address,
+                    user_message_count=current_message_count,
+                    ttl=ttl
+                )
+                
 
-        if not user_access_data.is_authenticated:
-            raise HTTPException(status_code=400, detail={"message": "User not authenticated"})
-
-        await service_container.user_access_cache_service.revoke_access(access_token)
-
-    except HTTPException:
-        raise
-
+                response.set_cookie(
+                    settings.cookie_name,
+                    current_user_access.access_token,
+                    secure=settings.get_cookie_secure(),
+                    samesite=settings.cookie_samesite,  # type: ignore
+                    max_age=settings.cookie_max_age,
+                    httponly=settings.get_cookie_httponly(),
+                    path=settings.cookie_path,
+                )
+        
+            if needs_migration:
+                background_tasks.add_task(_migrate_user_data, old_user_id, user.id, service_container)
+            
+            return current_user_access
+        
+        logger.error(f"JWTError: Invalid token {auth0_token}")
+        raise HTTPException(status_code=401, detail={"message": "Invalid token"})
+        
+    except JWTError as e:
+        logger.error(f"JWTError: Invalid token {auth0_token}")
+        raise HTTPException(status_code=401, detail={"message": "Invalid token"})
+    
+    except HTTPException as e:
+        raise e
+    
     except Exception as e:
-        logger.error(f"Unexpected error during logout: {e}")
-        raise HTTPException(status_code=500, detail={"message": "Internal server error"})
+        logger.error(f"Error verifying Auth0 token: {e}")
+        raise HTTPException(status_code=500, detail={"message": "Token verification failed"})

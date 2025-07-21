@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
 from services.data_services.user_access_cache_service import UserAccessCacheService
-from schemas.user_access import UserAccessData
+from schemas.user_access import UserAccess
 from schemas.chat_session_errors import AccessTokenNotFoundError
 
 
@@ -25,16 +25,14 @@ class TestHasMessageLimitReached:
     @pytest.mark.asyncio
     async def test_authenticated_user_below_limit(self, chat_session_limit_checker, mock_user_access_cache_service):
         access_token = "test_token"
-        user_access_data = UserAccessData(
+        user_access = UserAccess(
             access_token=access_token,
             user_id="user_id",
-            name="Test User",
-            email="test@example.com",
             is_authenticated=True,
             user_message_count=50
         )
         
-        mock_user_access_cache_service.get_user_access.return_value = user_access_data
+        mock_user_access_cache_service.get_user_access.return_value = user_access
         
         result = await chat_session_limit_checker.has_message_limit_reached(access_token)
         
@@ -44,16 +42,14 @@ class TestHasMessageLimitReached:
     @pytest.mark.asyncio
     async def test_authenticated_user_at_limit(self, chat_session_limit_checker, mock_user_access_cache_service):
         access_token = "test_token"
-        user_access_data = UserAccessData(
+        user_access = UserAccess(
             access_token=access_token,
             user_id="user_id",
-            name="Test User",
-            email="test@example.com",
             is_authenticated=True,
             user_message_count=100
         )
         
-        mock_user_access_cache_service.get_user_access.return_value = user_access_data
+        mock_user_access_cache_service.get_user_access.return_value = user_access
         
         result = await chat_session_limit_checker.has_message_limit_reached(access_token)
         
@@ -63,16 +59,14 @@ class TestHasMessageLimitReached:
     @pytest.mark.asyncio
     async def test_authenticated_user_above_limit(self, chat_session_limit_checker, mock_user_access_cache_service):
         access_token = "test_token"
-        user_access_data = UserAccessData(
+        user_access = UserAccess(
             access_token=access_token,
             user_id="user_id",
-            name="Test User",
-            email="test@example.com",
             is_authenticated=True,
             user_message_count=150
         )
         
-        mock_user_access_cache_service.get_user_access.return_value = user_access_data
+        mock_user_access_cache_service.get_user_access.return_value = user_access
         
         result = await chat_session_limit_checker.has_message_limit_reached(access_token)
         
@@ -82,16 +76,14 @@ class TestHasMessageLimitReached:
     @pytest.mark.asyncio
     async def test_unauthenticated_user_below_limit(self, chat_session_limit_checker, mock_user_access_cache_service):
         access_token = "test_token"
-        user_access_data = UserAccessData(
+        user_access = UserAccess(
             access_token=access_token,
             user_id="user_id",
-            name=None,
-            email=None,
             is_authenticated=False,
             user_message_count=5
         )
         
-        mock_user_access_cache_service.get_user_access.return_value = user_access_data
+        mock_user_access_cache_service.get_user_access.return_value = user_access
         
         result = await chat_session_limit_checker.has_message_limit_reached(access_token)
         
@@ -101,16 +93,14 @@ class TestHasMessageLimitReached:
     @pytest.mark.asyncio
     async def test_unauthenticated_user_at_limit(self, chat_session_limit_checker, mock_user_access_cache_service):
         access_token = "test_token"
-        user_access_data = UserAccessData(
+        user_access = UserAccess(
             access_token=access_token,
             user_id="user_id",
-            name=None,
-            email=None,
             is_authenticated=False,
             user_message_count=10
         )
         
-        mock_user_access_cache_service.get_user_access.return_value = user_access_data
+        mock_user_access_cache_service.get_user_access.return_value = user_access
         
         result = await chat_session_limit_checker.has_message_limit_reached(access_token)
         
@@ -120,16 +110,14 @@ class TestHasMessageLimitReached:
     @pytest.mark.asyncio
     async def test_unauthenticated_user_above_limit(self, chat_session_limit_checker, mock_user_access_cache_service):
         access_token = "test_token"
-        user_access_data = UserAccessData(
+        user_access = UserAccess(
             access_token=access_token,
             user_id="user_id",
-            name=None,
-            email=None,
             is_authenticated=False,
             user_message_count=15
         )
         
-        mock_user_access_cache_service.get_user_access.return_value = user_access_data
+        mock_user_access_cache_service.get_user_access.return_value = user_access
         
         result = await chat_session_limit_checker.has_message_limit_reached(access_token)
         
@@ -152,16 +140,14 @@ class TestGetMessageLimit:
     @pytest.mark.asyncio
     async def test_authenticated_user_limit(self, chat_session_limit_checker, mock_user_access_cache_service):
         access_token = "test_token"
-        user_access_data = UserAccessData(
+        user_access = UserAccess(
             access_token=access_token,
             user_id="user_id",
-            name="Test User",
-            email="test@example.com",
             is_authenticated=True,
             user_message_count=50
         )
         
-        mock_user_access_cache_service.get_user_access.return_value = user_access_data
+        mock_user_access_cache_service.get_user_access.return_value = user_access
         
         result = await chat_session_limit_checker.get_message_limit(access_token)
         
@@ -171,16 +157,14 @@ class TestGetMessageLimit:
     @pytest.mark.asyncio
     async def test_unauthenticated_user_limit(self, chat_session_limit_checker, mock_user_access_cache_service):
         access_token = "test_token"
-        user_access_data = UserAccessData(
+        user_access = UserAccess(
             access_token=access_token,
-            user_id="user_id",
-            name=None,
-            email=None,
+            user_id="user_id", 
             is_authenticated=False,
             user_message_count=5
         )
         
-        mock_user_access_cache_service.get_user_access.return_value = user_access_data
+        mock_user_access_cache_service.get_user_access.return_value = user_access
         
         result = await chat_session_limit_checker.get_message_limit(access_token)
         

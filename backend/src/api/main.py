@@ -13,7 +13,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from api.routes.chats import router as chats_router
 from api.routes.auth import router as auth_router
-from api.routes.access_token import router as access_token_router
+from api.routes.access import router as access_router
 from api.routes.threads import router as threads_router
 from api.routes.health import router as health_router
 from api.routes.recipes import router as recipes_router
@@ -185,7 +185,7 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api")
 app.include_router(chats_router, prefix="/ws")
 app.include_router(auth_router, prefix="/api/auth")
-app.include_router(access_token_router, prefix="/api/access-token")
+app.include_router(access_router, prefix="/api/access")
 app.include_router(threads_router, prefix="/api")
 app.include_router(recipes_router, prefix="/api")
 

@@ -11,7 +11,7 @@ from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_message_processor import ChatSessionMessageProcessor
 
-from schemas.user_access import UserAccessData
+from schemas.user_access import UserAccess
 from schemas.recipes import Recipe, RecipeField, RecipeIngredient, RecipeInstruction, RecipeCategory
 from schemas.conversation_stream_events import (
     ConversationStreamEvent, 
@@ -54,8 +54,8 @@ def chat_session_message_processor(mock_ai_food_agent, mock_chat_session_handler
     )
     
 @pytest.fixture
-def sample_user_access_data():
-    return UserAccessData(
+def sample_user_access():
+    return UserAccess(
         user_id="123",
         access_token="123",
         is_authenticated=False,
@@ -99,11 +99,11 @@ def sample_user_message_id():
     
 class TestTextMessageStarted:
     @pytest.mark.asyncio
-    async def test_text_message_started(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_text_message_started(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         assert chat_session_message_processor.assistant_message_id is None
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -118,7 +118,7 @@ class TestTextMessageStarted:
         mock_chat_session_handlers.handle_text_message_started.assert_called_once()
         call_args = mock_chat_session_handlers.handle_text_message_started.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert call_args.kwargs["user_message_id"] == sample_user_message_id
         assert call_args.kwargs["payload"] == TextMessageStartedPayload()
@@ -135,11 +135,11 @@ class TestTextMessageStarted:
 
 class TestTextMessageChunkGenerated:
     @pytest.mark.asyncio
-    async def test_text_message_chunk_generated(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_text_message_chunk_generated(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = "123"
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id, 
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -154,7 +154,7 @@ class TestTextMessageChunkGenerated:
         mock_chat_session_handlers.handle_text_message_chunk_generated.assert_called_once()
         call_args = mock_chat_session_handlers.handle_text_message_chunk_generated.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert call_args.kwargs["assistant_message_id"] == chat_session_message_processor.assistant_message_id
         assert call_args.kwargs["payload"] == TextMessageChunkGeneratedPayload(
@@ -165,12 +165,12 @@ class TestTextMessageChunkGenerated:
         assert "user_message_id" not in call_args.kwargs
 
     @pytest.mark.asyncio
-    async def test_text_message_chunk_generated_with_missing_assistant_message_id(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_text_message_chunk_generated_with_missing_assistant_message_id(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = None
         
         with pytest.raises(ValueError):
             await chat_session_message_processor._handle_event(
-                user_access_data=sample_user_access_data,
+                user_access=sample_user_access,
                 thread_id=sample_thread_id,
                 user_message_id=sample_user_message_id,
                 event=ConversationStreamEvent(
@@ -188,12 +188,12 @@ class TestTextMessageChunkGenerated:
 
 class TestTextMessageCompleted:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = "123"
         original_assistant_message_id = chat_session_message_processor.assistant_message_id
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -207,7 +207,7 @@ class TestTextMessageCompleted:
         mock_chat_session_handlers.handle_text_message_completed.assert_called_once()
         call_args = mock_chat_session_handlers.handle_text_message_completed.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert call_args.kwargs["assistant_message_id"] == original_assistant_message_id
         assert call_args.kwargs["payload"] == TextMessageCompletedPayload(
@@ -226,12 +226,12 @@ class TestTextMessageCompleted:
         assert chat_session_message_processor.assistant_message_id is None
         
     @pytest.mark.asyncio
-    async def test_missing_assistant_message_id_raises_value_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_missing_assistant_message_id_raises_value_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = None
         
         with pytest.raises(ValueError):
             await chat_session_message_processor._handle_event(
-                user_access_data=sample_user_access_data,
+                user_access=sample_user_access,
                 thread_id=sample_thread_id,
                 user_message_id=sample_user_message_id,
                 event=ConversationStreamEvent(
@@ -248,11 +248,11 @@ class TestTextMessageCompleted:
         
 class TestRecipeGenerationStarted:
     @pytest.mark.asyncio
-    async def test_recipe_generation_started(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_recipe_generation_started(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = "123"
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -267,7 +267,7 @@ class TestRecipeGenerationStarted:
         mock_chat_session_handlers.handle_recipe_generation_started.assert_called_once()
         call_args = mock_chat_session_handlers.handle_recipe_generation_started.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert call_args.kwargs["user_message_id"] == sample_user_message_id
         assert call_args.kwargs["assistant_message_id"] == chat_session_message_processor.assistant_message_id
@@ -287,11 +287,11 @@ class TestRecipeGenerationStarted:
 
 class TestRecipeFieldDetected:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id, sample_recipe):
+    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id, sample_recipe):
         chat_session_message_processor.assistant_message_id = "123"
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -308,7 +308,7 @@ class TestRecipeFieldDetected:
         mock_chat_session_handlers.handle_recipe_field_detected.assert_called_once()
         call_args = mock_chat_session_handlers.handle_recipe_field_detected.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert call_args.kwargs["assistant_message_id"] == chat_session_message_processor.assistant_message_id
         assert call_args.kwargs["payload"] == RecipeFieldDetectedPayload(
@@ -328,12 +328,12 @@ class TestRecipeFieldDetected:
         assert "timestamp" in processing_result
         
     @pytest.mark.asyncio
-    async def test_missing_assistant_message_id_raises_value_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_missing_assistant_message_id_raises_value_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = None
         
         with pytest.raises(ValueError):
             await chat_session_message_processor._handle_event(
-                user_access_data=sample_user_access_data,
+                user_access=sample_user_access,
                 thread_id=sample_thread_id,
                 user_message_id=sample_user_message_id,
                 event=ConversationStreamEvent(
@@ -353,12 +353,12 @@ class TestRecipeFieldDetected:
         
 class TestRecipeGenerationCompleted:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id, sample_recipe):
+    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id, sample_recipe):
         chat_session_message_processor.assistant_message_id = "123"
         original_assistant_message_id = chat_session_message_processor.assistant_message_id
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -374,7 +374,7 @@ class TestRecipeGenerationCompleted:
         mock_chat_session_handlers.handle_recipe_generation_completed.assert_called_once()
         call_args = mock_chat_session_handlers.handle_recipe_generation_completed.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert call_args.kwargs["assistant_message_id"] == original_assistant_message_id
         assert call_args.kwargs["payload"] == RecipeGenerationCompletedPayload(
@@ -395,12 +395,12 @@ class TestRecipeGenerationCompleted:
         assert chat_session_message_processor.assistant_message_id is None
         
     @pytest.mark.asyncio
-    async def test_missing_assistant_message_id_raises_value_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id, sample_recipe):
+    async def test_missing_assistant_message_id_raises_value_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id, sample_recipe):
         chat_session_message_processor.assistant_message_id = None
         
         with pytest.raises(ValueError):
             await chat_session_message_processor._handle_event(
-                user_access_data=sample_user_access_data,
+                user_access=sample_user_access,
                 thread_id=sample_thread_id,
                 user_message_id=sample_user_message_id,
                 event=ConversationStreamEvent(
@@ -416,11 +416,11 @@ class TestRecipeGenerationCompleted:
             
 class TestSearchStarted:
     @pytest.mark.asyncio
-    async def test_search_started(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_search_started(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = "123"
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -435,7 +435,7 @@ class TestSearchStarted:
         mock_chat_session_handlers.handle_search_started.assert_called_once()
         call_args = mock_chat_session_handlers.handle_search_started.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert call_args.kwargs["user_message_id"] == sample_user_message_id
         assert call_args.kwargs["assistant_message_id"] == chat_session_message_processor.assistant_message_id
@@ -455,12 +455,12 @@ class TestSearchStarted:
 
 class TestSearchCompleted:
     @pytest.mark.asyncio
-    async def test_search_completed(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_search_completed(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = "123"
         original_assistant_message_id = chat_session_message_processor.assistant_message_id
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -475,7 +475,7 @@ class TestSearchCompleted:
         mock_chat_session_handlers.handle_search_completed.assert_called_once()
         call_args = mock_chat_session_handlers.handle_search_completed.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert call_args.kwargs["assistant_message_id"] == original_assistant_message_id
         assert call_args.kwargs["payload"] == SearchCompletedPayload(
@@ -493,12 +493,12 @@ class TestSearchCompleted:
         assert "timestamp" in processing_result
         
     @pytest.mark.asyncio
-    async def test_search_completed_with_missing_assistant_message_id(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_search_completed_with_missing_assistant_message_id(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = None
         
         with pytest.raises(ValueError):
             await chat_session_message_processor._handle_event(
-                user_access_data=sample_user_access_data,
+                user_access=sample_user_access,
                 thread_id=sample_thread_id,
                 user_message_id=sample_user_message_id,
                 event=ConversationStreamEvent(
@@ -516,14 +516,14 @@ class TestSearchCompleted:
         
 class TestAiAgentError:
     @pytest.mark.asyncio
-    async def test_ai_agent_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_user_message_id):
+    async def test_ai_agent_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_user_message_id):
         thread_id = "123"   
         error_message = "AI agent error"
         
         mock_ai_food_agent.stream_conversation.side_effect = Exception(error_message)
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -535,7 +535,7 @@ class TestAiAgentError:
         mock_chat_session_handlers.handle_ai_agent_error.assert_called_once()   
         call_args = mock_chat_session_handlers.handle_ai_agent_error.call_args
 
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == thread_id
         assert call_args.kwargs["payload"].error_message == error_message
         assert "timestamp" in call_args.kwargs
@@ -545,11 +545,11 @@ class TestAiAgentError:
 
 class TestSummaryUpdated:
     @pytest.mark.asyncio
-    async def test_summary_updated(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_summary_updated(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = "123"
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -563,7 +563,7 @@ class TestSummaryUpdated:
         mock_chat_session_handlers.handle_summary_updated.assert_called_once()
         call_args = mock_chat_session_handlers.handle_summary_updated.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert "assistant_message_id" not in call_args.kwargs
         assert call_args.kwargs["payload"] == SummaryUpdatedPayload(
@@ -582,11 +582,11 @@ class TestSummaryUpdated:
 
 class TestThreadTitleUpdated:
     @pytest.mark.asyncio
-    async def test_thread_title_updated(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_thread_id, sample_user_message_id):
+    async def test_thread_title_updated(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_thread_id, sample_user_message_id):
         chat_session_message_processor.assistant_message_id = "123"
         
         await chat_session_message_processor._handle_event(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=sample_thread_id,
             user_message_id=sample_user_message_id,
             event=ConversationStreamEvent(
@@ -600,7 +600,7 @@ class TestThreadTitleUpdated:
         mock_chat_session_handlers.handle_thread_title_updated.assert_called_once()
         call_args = mock_chat_session_handlers.handle_thread_title_updated.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == sample_thread_id
         assert "assistant_message_id" not in call_args.kwargs
         assert call_args.kwargs["payload"] == ThreadTitleUpdatedPayload(
@@ -619,12 +619,12 @@ class TestThreadTitleUpdated:
         
 class TestProcessUserMessage:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_user_message_id):
+    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_user_message_id):
         thread_id = "123"
         user_input = "Hello, can you help me with a recipe?"
         
         await chat_session_message_processor.process_user_message(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=thread_id,
             user_message_id=sample_user_message_id,
             user_input=user_input,
@@ -633,14 +633,14 @@ class TestProcessUserMessage:
         mock_ai_food_agent.stream_conversation.assert_called_once()
         call_args = mock_ai_food_agent.stream_conversation.call_args
         
-        assert call_args.kwargs["user_id"] == sample_user_access_data.user_id
+        assert call_args.kwargs["user_id"] == sample_user_access.user_id
         assert call_args.kwargs["thread_id"] == thread_id
         assert call_args.kwargs["user_input"] == user_input
         assert call_args.kwargs["on_event"] is not None
         
         
     @pytest.mark.asyncio
-    async def test_ai_agent_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_user_message_id):
+    async def test_ai_agent_error(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_user_message_id):
         thread_id = "123"
         user_input = "Hello, can you help me with a recipe?"
         error_message = "AI agent error"
@@ -648,7 +648,7 @@ class TestProcessUserMessage:
         mock_ai_food_agent.stream_conversation.side_effect = Exception(error_message)
         
         await chat_session_message_processor.process_user_message(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=thread_id,
             user_message_id=sample_user_message_id,
             user_input=user_input,
@@ -657,19 +657,19 @@ class TestProcessUserMessage:
         mock_chat_session_handlers.handle_ai_agent_error.assert_called_once()
         call_args = mock_chat_session_handlers.handle_ai_agent_error.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == thread_id
         assert call_args.kwargs["payload"].error_message == error_message
         assert "timestamp" in call_args.kwargs
     
 class TestRejectUserMessage:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access_data, sample_user_message_id):
+    async def test_success(self, chat_session_message_processor, mock_ai_food_agent, mock_chat_session_handlers, mock_on_message_processed, sample_user_access, sample_user_message_id):
         thread_id = "123"
         rejection_message = "I'm sorry, I can't help with that."
         
         await chat_session_message_processor.reject_user_message(
-            user_access_data=sample_user_access_data,
+            user_access=sample_user_access,
             thread_id=thread_id,
             user_message_id=sample_user_message_id,
             rejection_message=rejection_message
@@ -678,7 +678,7 @@ class TestRejectUserMessage:
         mock_chat_session_handlers.handle_user_message_rejected.assert_called_once()
         call_args = mock_chat_session_handlers.handle_user_message_rejected.call_args
         
-        assert call_args.kwargs["user_access_data"] == sample_user_access_data
+        assert call_args.kwargs["user_access"] == sample_user_access
         assert call_args.kwargs["thread_id"] == thread_id
         assert call_args.kwargs["user_message_id"] == sample_user_message_id
         assert call_args.kwargs["payload"] == UserMessageRejectedPayload(

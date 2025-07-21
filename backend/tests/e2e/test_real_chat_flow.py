@@ -25,8 +25,8 @@ class TestRealChatFlow:
         
         print(f"🔍 AI Food Agent type: {type(service_container.ai_food_agent)}")
         
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
-        print(f"👤 Created user access: {user_access_data.user_id}")
+        user_access = await service_container.user_access_cache_service.create_anonymous_access()
+        print(f"👤 Created user access: {user_access.user_id}")
         
         try:
             message_content = "Hello! Can you help me with cooking?"
@@ -39,7 +39,7 @@ class TestRealChatFlow:
                 print(f"📥 Received event: {event.event}")
             
             await service_container.ai_food_agent.stream_conversation(
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id="test-thread",
                 user_input=message_content,
                 on_event=on_event
@@ -72,8 +72,8 @@ class TestRealChatFlow:
         """Test recipe generation directly without WebSocket to verify recipe generation integration."""
         print("\n🍳 Testing recipe generation directly...")
         
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
-        print(f"👤 Created user access: {user_access_data.user_id}")
+        user_access = await service_container.user_access_cache_service.create_anonymous_access()
+        print(f"👤 Created user access: {user_access.user_id}")
         
         try:
             message_content = "Use the create_recipe tool to create a recipe for chocolate chip cookies"
@@ -86,7 +86,7 @@ class TestRealChatFlow:
                 print(f"📥 Received event: {event.event}")
             
             await service_container.ai_food_agent.stream_conversation(
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id="test-recipe-thread",
                 user_input=message_content,
                 on_event=on_event
@@ -137,8 +137,8 @@ class TestRealChatFlow:
         """Test search functionality directly without WebSocket to verify search integration."""
         print("\n🔍 Testing search functionality directly...")
         
-        user_access_data = await service_container.user_access_cache_service.create_anonymous_access()
-        print(f"👤 Created user access: {user_access_data.user_id}")
+        user_access = await service_container.user_access_cache_service.create_anonymous_access()
+        print(f"👤 Created user access: {user_access.user_id}")
         
         try:
             message_content = "Immediately use search tool to find the latest cooking trends in 2024"
@@ -151,7 +151,7 @@ class TestRealChatFlow:
                 print(f"📥 Received event: {event.event}")
             
             await service_container.ai_food_agent.stream_conversation(
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id="test-search-thread",
                 user_input=message_content,
                 on_event=on_event
@@ -203,10 +203,10 @@ class TestRealChatFlow:
         """Synchronous E2E test for real chat flow using TestClient and WebSocket."""
         print("\n🧪 Testing basic chat WebSocket flow (sync)...")
 
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        access_token = user_access_data.access_token
+        access_token = user_access.access_token
         print(f"🔑 Access token: {access_token[:20]}...")
 
         test_client.cookies.set("bk_access_token", access_token)
@@ -257,10 +257,10 @@ class TestRealChatFlow:
         """Synchronous E2E test for recipe generation using TestClient and WebSocket."""
         print("\n🍳 Testing recipe generation WebSocket flow (sync)...")
 
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        access_token = user_access_data.access_token
+        access_token = user_access.access_token
         print(f"🔑 Access token: {access_token[:20]}...")
 
         test_client.cookies.set("bk_access_token", access_token)
@@ -332,10 +332,10 @@ class TestRealChatFlow:
         """Synchronous E2E test for search functionality using TestClient and WebSocket."""
         print("\n🔍 Testing search WebSocket flow (sync)...")
 
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        access_token = user_access_data.access_token
+        access_token = user_access.access_token
         print(f"🔑 Access token: {access_token[:20]}...")
 
         test_client.cookies.set("bk_access_token", access_token)
@@ -414,11 +414,11 @@ class TestSecurity:
         """Synchronous E2E test for blocked user message using TestClient and WebSocket."""
         print("\n🔍 Testing blocked user message WebSocket flow (sync)...")
         
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        access_token = user_access_data.access_token
-        user_id = user_access_data.user_id
+        access_token = user_access.access_token
+        user_id = user_access.user_id
         print(f"🔑 Access token: {access_token[:20]}...")
         print(f"👤 Anonymous user ID: {user_id}")
         
@@ -485,11 +485,11 @@ class TestSecurity:
         """Test real-world prompt extraction attempts based on actual user conversation."""
         print("\n🔍 Testing real-world prompt extraction attempts (based on actual user data)...")
         
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        access_token = user_access_data.access_token
-        user_id = user_access_data.user_id
+        access_token = user_access.access_token
+        user_id = user_access.user_id
         print(f"🔑 Access token: {access_token[:20]}...")
         print(f"👤 Anonymous user ID: {user_id}")
         
@@ -621,11 +621,11 @@ class TestSecurity:
         """Test real-world security attack vectors based on actual user conversation."""
         print("\n🛡️ Testing real-world security attack vectors (based on actual user data)...")
         
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        access_token = user_access_data.access_token
-        user_id = user_access_data.user_id
+        access_token = user_access.access_token
+        user_id = user_access.user_id
         print(f"🔑 Access token: {access_token[:20]}...")
         print(f"👤 Anonymous user ID: {user_id}")
         
@@ -732,11 +732,11 @@ class TestDataPersistence:
         """Test that messages are persisted in cache for anonymous users after basic chat."""
         print("\n💾 Testing message persistence for anonymous user...")
 
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        access_token = user_access_data.access_token
-        user_id = user_access_data.user_id
+        access_token = user_access.access_token
+        user_id = user_access.user_id
         print(f"🔑 Anonymous access token: {access_token[:20]}...")
         print(f"👤 Anonymous user ID: {user_id}")
 
@@ -811,11 +811,11 @@ class TestDataPersistence:
         """Test that messages are persisted in database for authenticated users after basic chat."""
         print("\n💾 Testing message persistence for authenticated user...")
 
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        access_token = user_access_data.access_token
-        user_id = user_access_data.user_id
+        access_token = user_access.access_token
+        user_id = user_access.user_id
         print(f"🔑 Access token: {access_token[:20]}...")
         print(f"👤 User ID: {user_id}")
 
@@ -825,21 +825,15 @@ class TestDataPersistence:
                 user = await service_container.user_service.create_user(
                     db=db,
                     params=CreateUserParams(
-                        email="test@example.com",
-                        name="Test User",
-                        password="hashed_password",
-                        id=user_access_data.user_id,
+                        id=user_access.user_id,
+                        external_id="test-user-id",
                         created_at=timestamp,
                         updated_at=timestamp,
                     )
                 )
-                assert user.email is not None
-                assert user.name is not None
                 await service_container.user_access_cache_service.promote_to_authenticated(
                     access_token=access_token,
                     user_id=user.id,
-                    email=user.email,
-                    name=user.name,
                     updated_at=to_utc_isostring(timestamp),
                     user_message_count=0,
                 )

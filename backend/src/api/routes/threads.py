@@ -31,15 +31,15 @@ async def get_user_threads(
     if access_token is None:
         raise HTTPException(status_code=401, detail={"message": "Missing access token"})
 
-    user_access_data = await service_container.user_access_cache_service.get_user_access(
+    user_access = await service_container.user_access_cache_service.get_user_access(
         access_token
     )
-    if user_access_data is None:
+    if user_access is None:
         raise HTTPException(status_code=401, detail={"message": "Access token not found"})
 
     try:
         logger.debug(
-            f"Getting threads for user {user_access_data.user_id} with limit {limit} and from_timestamp {from_timestamp}"
+            f"Getting threads for user {user_access.user_id} with limit {limit} and from_timestamp {from_timestamp}"
         )
 
         db_transaction_maker = service_container.db_transaction_maker
@@ -48,9 +48,9 @@ async def get_user_threads(
         async with db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             return await chat_session_store.get_paginated_threads(
                 db,
-                user_access_data,
+                user_access,
                 GetUserThreadsParams(
-                    user_id=user_access_data.user_id,
+                    user_id=user_access.user_id,
                     limit=limit,
                     from_timestamp=datetime.fromisoformat(from_timestamp).replace(
                         tzinfo=timezone.utc
@@ -64,7 +64,7 @@ async def get_user_threads(
             )
 
     except Exception as e:
-        logger.error(f"Error getting threads for user {user_access_data.user_id}: {e}")
+        logger.error(f"Error getting threads for user {user_access.user_id}: {e}")
         raise HTTPException(status_code=500, detail={"message": "Internal server error: " + str(e)})
 
 
@@ -81,15 +81,15 @@ async def get_thread_messages(
     if access_token is None:
         raise HTTPException(status_code=401, detail={"message": "Missing access token"})
 
-    user_access_data = await service_container.user_access_cache_service.get_user_access(
+    user_access = await service_container.user_access_cache_service.get_user_access(
         access_token
     )
-    if user_access_data is None:
+    if user_access is None:
         raise HTTPException(status_code=401, detail={"message": "Access token not found"})
 
     try:
         logger.debug(
-            f"Getting messages for thread {thread_id} for user {user_access_data.user_id} with limit {limit} and from_timestamp {from_timestamp}"
+            f"Getting messages for thread {thread_id} for user {user_access.user_id} with limit {limit} and from_timestamp {from_timestamp}"
         )
 
         db_transaction_maker = service_container.db_transaction_maker
@@ -98,9 +98,9 @@ async def get_thread_messages(
         async with db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             result = await chat_session_store.get_paginated_messages(
                 db,
-                user_access_data,
+                user_access,
                 GetMessagesParams(
-                    user_id=user_access_data.user_id,
+                    user_id=user_access.user_id,
                     thread_id=thread_id,
                     limit=limit,
                     from_timestamp=datetime.fromisoformat(from_timestamp).replace(
@@ -118,7 +118,7 @@ async def get_thread_messages(
             recipes = []
             if len(message_ids) > 0:
                 recipes = await chat_session_store.get_recipes_by_message_id(
-                    db, user_access_data, thread_id, message_ids
+                    db, user_access, thread_id, message_ids
                 )
 
             return GetThreadMessagesResponse(
@@ -128,6 +128,6 @@ async def get_thread_messages(
 
     except Exception as e:
         logger.error(
-            f"Error getting messages for thread {thread_id} for user { user_access_data.user_id}: {e}"
+            f"Error getting messages for thread {thread_id} for user { user_access.user_id}: {e}"
         )
         raise HTTPException(status_code=500, detail={"message": "Internal server error: " + str(e)})

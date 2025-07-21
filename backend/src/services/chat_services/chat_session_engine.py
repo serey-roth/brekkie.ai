@@ -22,10 +22,8 @@ from services.chat_services.chat_session_limit_checker import ChatSessionLimitCh
 from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from services.data_services.user_access_cache_service import UserAccessCacheService
 
-from schemas.threads import Thread
-from schemas.messages import Message, UserMessagePayload
-from schemas.recipes import UserRecipe
-from schemas.user_access import UserAccessData
+from schemas.messages import UserMessagePayload
+from schemas.user_access import UserAccess
 from schemas.chat_session_errors import (
     AccessTokenNotFoundError,
     ChatSessionError,
@@ -151,8 +149,8 @@ class ChatSessionEngine:
 
         handler_result = processing_result["result"]
 
-        user_access_data = await self._get_user_access_data()
-        payload: dict[str, Any] = {"user_access_data": user_access_data.model_dump()}
+        user_access = await self._get_user_access()
+        payload: dict[str, Any] = {"user_access": user_access.model_dump()}
 
         thread = handler_result.get("thread", None)
         message = handler_result.get("message", None)
@@ -196,15 +194,15 @@ class ChatSessionEngine:
         await self.websocket.close(code=error.code, reason=error.type.value)
         self.state.close()
 
-    async def _get_user_access_data(self) -> UserAccessData:
+    async def _get_user_access(self) -> UserAccess:
         try:
-            user_access_data = await self.user_access_cache_service.get_user_access(
+            user_access = await self.user_access_cache_service.get_user_access(
                 self.access_token
             )
-            if user_access_data is None:
+            if user_access is None:
                 raise AccessTokenNotFoundError(access_token=self.access_token)
 
-            return user_access_data
+            return user_access
 
         except AccessTokenNotFoundError as e:
             raise e
@@ -251,7 +249,7 @@ class ChatSessionEngine:
 
     async def _reject_user_message(
         self,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         user_message_id: str,
         user_input: str,
         safety_issues: List[SafetyIssue],
@@ -267,14 +265,14 @@ class ChatSessionEngine:
             rejection_message = "I can't respond to that message. Let's keep our conversation respectful and focused on food and cooking!"
 
         await self.message_processor.reject_user_message(
-            user_access_data, self.thread_id, user_message_id, rejection_message
+            user_access, self.thread_id, user_message_id, rejection_message
         )
 
     async def run(self):
         while not self.state.is_closed:
             try:
                 await self._check_message_limit()
-                user_access_data = await self._get_user_access_data()
+                user_access = await self._get_user_access()
 
                 user_message_payload = await self._receive_user_message()
                 user_message_id = user_message_payload.id
@@ -287,12 +285,12 @@ class ChatSessionEngine:
                 async with self.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
                     await self.session_store.create_user_message(
                         db,
-                        user_access_data,
+                        user_access,
                         self.thread_id,
                         user_message_id,
                         user_message_content,
                         timestamp,
-                        ip_address=user_access_data.ip_address,
+                        ip_address=user_access.ip_address,
                         safety_guard_result=safety_guard_result,
                     )
 
@@ -302,7 +300,7 @@ class ChatSessionEngine:
                     and len(safety_guard_result.issues) > 0
                 ):
                     await self._reject_user_message(
-                        user_access_data,
+                        user_access,
                         user_message_id,
                         user_message_content,
                         safety_guard_result.issues,
@@ -310,7 +308,7 @@ class ChatSessionEngine:
                     continue
 
                 await self.message_processor.process_user_message(
-                    user_access_data, self.thread_id, user_message_id, user_message_content
+                    user_access, self.thread_id, user_message_id, user_message_content
                 )
 
             except WebSocketDisconnect:

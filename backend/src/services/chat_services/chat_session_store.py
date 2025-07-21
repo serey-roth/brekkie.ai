@@ -27,7 +27,7 @@ from schemas.threads import (
     PaginatedThreads,
     GetUserThreadsParams,
 )
-from schemas.user_access import UserAccessData
+from schemas.user_access import UserAccess
 from schemas.safety_guards import SafetyGuardResult
 
 from services.data_services.message_service import MessageService
@@ -65,88 +65,88 @@ class ChatSessionStore:
 
     async def _dispatch(
         self,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         authenticated_func: Callable[..., Any],
         unauthenticated_func: Callable[..., Any],
         *args,
         **kwargs,
     ) -> Any:
         """Dispatch to either authenticated or unauthenticated function based on user access data."""
-        if user_access_data.is_authenticated:
+        if user_access.is_authenticated:
             return await authenticated_func(*args, **kwargs)
         else:
             return await unauthenticated_func(*args, **kwargs)
 
     async def get_thread(
-        self, db: AsyncSession, user_access_data: UserAccessData, thread_id: str
+        self, db: AsyncSession, user_access: UserAccess, thread_id: str
     ) -> Thread | None:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.thread_service.get_thread(db, thread_id),
-            lambda: self.thread_cache_service.get_thread(user_access_data.user_id, thread_id),
+            lambda: self.thread_cache_service.get_thread(user_access.user_id, thread_id),
         )
 
     async def create_thread(
-        self, db: AsyncSession, user_access_data: UserAccessData, params: CreateThreadParams
+        self, db: AsyncSession, user_access: UserAccess, params: CreateThreadParams
     ) -> Thread:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.thread_service.create_thread(db, params),
             lambda: self.thread_cache_service.create_thread(params),
         )
 
     async def is_thread_empty(
-        self, db: AsyncSession, user_access_data: UserAccessData, thread_id: str
+        self, db: AsyncSession, user_access: UserAccess, thread_id: str
     ) -> bool:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.thread_service.is_thread_empty(db, thread_id),
-            lambda: self.thread_cache_service.is_thread_empty(user_access_data.user_id, thread_id),
+            lambda: self.thread_cache_service.is_thread_empty(user_access.user_id, thread_id),
         )
 
     async def update_thread(
-        self, db: AsyncSession, user_access_data: UserAccessData, params: UpdateThreadParams
+        self, db: AsyncSession, user_access: UserAccess, params: UpdateThreadParams
     ) -> Thread:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.thread_service.update_thread(db, params),
-            lambda: self.thread_cache_service.update_thread(user_access_data.user_id, params),
+            lambda: self.thread_cache_service.update_thread(user_access.user_id, params),
         )
 
     async def resume_thread(
-        self, db: AsyncSession, user_access_data: UserAccessData, params: ResumeThreadParams
+        self, db: AsyncSession, user_access: UserAccess, params: ResumeThreadParams
     ) -> Thread:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.thread_service.resume_thread(db, params),
-            lambda: self.thread_cache_service.resume_thread(user_access_data.user_id, params),
+            lambda: self.thread_cache_service.resume_thread(user_access.user_id, params),
         )
 
-    # TODO: Weird that we're passing user_access_data and including user_id in params
+    # TODO: Weird that we're passing user_access and including user_id in params
     async def get_paginated_threads(
-        self, db: AsyncSession, user_access_data: UserAccessData, params: GetUserThreadsParams
+        self, db: AsyncSession, user_access: UserAccess, params: GetUserThreadsParams
     ) -> PaginatedThreads:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.thread_service.get_paginated_threads(db, params),
             lambda: self.thread_cache_service.get_paginated_threads(params),
         )
 
     async def get_message(
-        self, db: AsyncSession, user_access_data: UserAccessData, thread_id: str, message_id: str
+        self, db: AsyncSession, user_access: UserAccess, thread_id: str, message_id: str
     ) -> Message | None:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.message_service.get_message(db, message_id),
             lambda: self.message_cache_service.get_message(
-                user_access_data.user_id, thread_id, message_id
+                user_access.user_id, thread_id, message_id
             ),
         )
 
     async def create_user_message(
         self,
         db: AsyncSession,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         message_id: str,
         content: str,
@@ -159,10 +159,10 @@ class ChatSessionStore:
             if thread is None:
                 await self.create_thread(
                     db,
-                    user_access_data,
+                    user_access,
                     CreateThreadParams(
                         id=thread_id,
-                        user_id=user_access_data.user_id,
+                        user_id=user_access.user_id,
                         created_at=timestamp,
                         updated_at=timestamp,
                         is_empty=False,
@@ -173,7 +173,7 @@ class ChatSessionStore:
                 db,
                 CreateUserMessageParams(
                     id=message_id,
-                    user_id=user_access_data.user_id,
+                    user_id=user_access.user_id,
                     thread_id=thread_id,
                     text_content=content,
                     created_at=timestamp,
@@ -185,10 +185,10 @@ class ChatSessionStore:
 
         async def unauthenticated_create():
             message = await self.message_cache_service.create_user_message(
-                user_access_data.user_id,
+                user_access.user_id,
                 CreateUserMessageParams(
                     id=message_id,
-                    user_id=user_access_data.user_id,
+                    user_id=user_access.user_id,
                     thread_id=thread_id,
                     text_content=content,
                     created_at=timestamp,
@@ -198,113 +198,113 @@ class ChatSessionStore:
                 ),  # type: ignore
             )
             await self.thread_cache_service.update_thread(
-                user_access_data.user_id,
+                user_access.user_id,
                 UpdateThreadParams(id=thread_id, updated_at=timestamp, is_empty=False),
             )
             await self.user_access_cache_service.increment_user_message_count(
-                user_access_data.access_token
+                user_access.access_token
             )
             return message
 
-        return await self._dispatch(user_access_data, authenticated_create, unauthenticated_create)
+        return await self._dispatch(user_access, authenticated_create, unauthenticated_create)
 
     async def create_assistant_text_message(
         self,
         db: AsyncSession,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         params: CreateAssistantTextMessageParams,
     ) -> Message:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.message_service.create_assistant_text_message(db, params),
             lambda: self.message_cache_service.create_assistant_text_message(
-                user_access_data.user_id, params=params
+                user_access.user_id, params=params
             ),
         )
 
     async def create_assistant_recipe_message(
         self,
         db: AsyncSession,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         params: CreateAssistantRecipeMessageParams,
     ) -> Message:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.message_service.create_assistant_recipe_message(db, params),
             lambda: self.message_cache_service.create_assistant_recipe_message(
-                user_access_data.user_id, params=params
+                user_access.user_id, params=params
             ),
         )
 
     async def create_assistant_tool_message(
         self,
         db: AsyncSession,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         params: CreateAssistantToolMessageParams,
     ) -> Message:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.message_service.create_assistant_tool_message(db, params),
             lambda: self.message_cache_service.create_assistant_tool_message(
-                user_access_data.user_id, params=params
+                user_access.user_id, params=params
             ),
         )
 
     async def update_message(
         self,
         db: AsyncSession,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         params: UpdateMessageParams,
     ) -> Message:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.message_service.update_message(db, params),
             lambda: self.message_cache_service.update_message(
-                user_access_data.user_id, thread_id, params=params
+                user_access.user_id, thread_id, params=params
             ),
         )
 
     async def get_paginated_messages(
-        self, db: AsyncSession, user_access_data: UserAccessData, params: GetMessagesParams
+        self, db: AsyncSession, user_access: UserAccess, params: GetMessagesParams
     ) -> PaginatedMessages:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.message_service.get_paginated_messages(db, params),
             lambda: self.message_cache_service.get_paginated_messages(params),
         )
 
     async def count_total_messages_sent_by_user(
-        self, db: AsyncSession, user_access_data: UserAccessData
+        self, db: AsyncSession, user_access: UserAccess
     ) -> int:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.message_service.count_total_messages_sent_by_user(
-                db, user_access_data.user_id
+                db, user_access.user_id
             ),
             lambda: self.message_cache_service.count_total_messages_sent_by_user(
-                user_access_data.user_id
+                user_access.user_id
             ),
         )
 
     async def create_recipe(
         self,
         db: AsyncSession,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         recipe_id: str,
         timestamp: datetime,
     ) -> UserRecipe:
         params = CreateRecipeParams(
             id=recipe_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             thread_id=thread_id,
             created_at=timestamp,
             updated_at=timestamp,
         )
 
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.recipe_service.create_recipe(db, params),
             lambda: self.recipe_cache_service.create_recipe(params),
         )
@@ -312,37 +312,37 @@ class ChatSessionStore:
     async def update_recipe(
         self,
         db: AsyncSession,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         params: UpdateRecipeParams,
     ) -> UserRecipe:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.recipe_service.update_recipe(db, params),
             lambda: self.recipe_cache_service.update_recipe(
-                user_access_data.user_id, thread_id, params
+                user_access.user_id, thread_id, params
             ),
         )
 
     async def update_recipe_field(
         self,
         db: AsyncSession,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         params: UpdateRecipeFieldParams,
     ) -> UserRecipe:
         return await self._dispatch(
-            user_access_data,
+            user_access,
             lambda: self.recipe_service.update_recipe_field(db, params),
             lambda: self.recipe_cache_service.update_recipe_field(
-                user_access_data.user_id, thread_id, params
+                user_access.user_id, thread_id, params
             ),
         )
 
     async def get_recipes_by_message_id(
         self,
         db: AsyncSession,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         message_ids: list[str],
     ) -> list[UserRecipe]:
@@ -351,13 +351,13 @@ class ChatSessionStore:
 
         async def unauthenticated_get():
             messages = await self.message_cache_service.get_messages_by_id(
-                user_access_data.user_id, thread_id, message_ids
+                user_access.user_id, thread_id, message_ids
             )
             recipe_ids = [message.recipe_id for message in messages if message.recipe_id]
             if len(recipe_ids) == 0:
                 return []
             return await self.recipe_cache_service.get_recipes_by_ids(
-                user_access_data.user_id, thread_id, recipe_ids
+                user_access.user_id, thread_id, recipe_ids
             )
 
-        return await self._dispatch(user_access_data, authenticated_get, unauthenticated_get)
+        return await self._dispatch(user_access, authenticated_get, unauthenticated_get)

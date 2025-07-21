@@ -10,7 +10,7 @@ from fastapi.websockets import WebSocketState, WebSocketDisconnect
 
 from services.chat_services.chat_session_engine import ChatSessionEngine, ChatSessionEngineState
 
-from schemas.user_access import UserAccessData
+from schemas.user_access import UserAccess
 from schemas.messages import UserMessagePayload, MessageResponse
 from schemas.message_role import MessageRole
 from schemas.message_content_type import MessageContentType
@@ -80,8 +80,8 @@ async def chat_session_engine(mock_dependencies):
 
 
 @pytest.fixture
-def sample_user_access_data(sample_access_token, sample_user_id):
-    return UserAccessData(
+def sample_user_access(sample_access_token, sample_user_id):
+    return UserAccess(
         access_token=sample_access_token,
         user_id=sample_user_id,
         is_authenticated=False,
@@ -457,8 +457,8 @@ class TestHandleMessageProcessed:
             mock_send.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_text_message_started(self, chat_session_engine, sample_thread, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_text_message_started(self, chat_session_engine, sample_thread, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -466,13 +466,13 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "text_message_started", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_text_message_chunk_generated(self, chat_session_engine, sample_thread, sample_message, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_text_message_chunk_generated(self, chat_session_engine, sample_thread, sample_message, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -480,14 +480,14 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "text_message_chunk_generated", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "message": sample_message.model_dump(exclude={"ip_address", "safety_guard_result"}),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_text_message_completed(self, chat_session_engine, sample_thread, sample_message, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_text_message_completed(self, chat_session_engine, sample_thread, sample_message, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -495,14 +495,14 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "text_message_completed", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "message": sample_message.model_dump(exclude={"ip_address", "safety_guard_result"}),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_recipe_generation_started(self, chat_session_engine, sample_thread, sample_recipe, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_recipe_generation_started(self, chat_session_engine, sample_thread, sample_recipe, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -510,14 +510,14 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "recipe_generation_started", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "recipe": sample_recipe.model_dump(),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_recipe_field_detected(self, chat_session_engine, sample_thread, sample_message, sample_recipe, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_recipe_field_detected(self, chat_session_engine, sample_thread, sample_message, sample_recipe, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -525,15 +525,15 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "recipe_field_detected", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "recipe": sample_recipe.model_dump(),
                 "message": sample_message.model_dump(exclude={"ip_address", "safety_guard_result"}),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_recipe_generation_completed(self, chat_session_engine, sample_thread, sample_message, sample_recipe, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_recipe_generation_completed(self, chat_session_engine, sample_thread, sample_message, sample_recipe, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -541,15 +541,15 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "recipe_generation_completed", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "recipe": sample_recipe.model_dump(),
                 "message": sample_message.model_dump(exclude={"ip_address", "safety_guard_result"}),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_search_started(self, chat_session_engine, sample_thread, sample_message, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_search_started(self, chat_session_engine, sample_thread, sample_message, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -557,14 +557,14 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "search_started", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "message": sample_message.model_dump(exclude={"ip_address", "safety_guard_result"}),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_search_completed(self, chat_session_engine, sample_thread, sample_message, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_search_completed(self, chat_session_engine, sample_thread, sample_message, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -572,14 +572,14 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "search_completed", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "message": sample_message.model_dump(exclude={"ip_address", "safety_guard_result"}),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_summary_updated(self, chat_session_engine, sample_thread, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_summary_updated(self, chat_session_engine, sample_thread, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -587,13 +587,13 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "summary_updated", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_thread_title_updated(self, chat_session_engine, sample_thread, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_thread_title_updated(self, chat_session_engine, sample_thread, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -601,13 +601,13 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "thread_title_updated", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "thread": sample_thread.model_dump()
             })
 
     @pytest.mark.asyncio
-    async def test_error_message(self, chat_session_engine, sample_thread, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_error_message(self, chat_session_engine, sample_thread, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
         
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -615,14 +615,14 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "ai_agent_error", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "error_message": "Something went wrong",
                 "thread": sample_thread.model_dump()
             })
             
     @pytest.mark.asyncio
-    async def test_user_message_rejected(self, chat_session_engine, sample_thread, sample_user_access_data, sample_message, sample_malicious_safety_guard_result):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_user_message_rejected(self, chat_session_engine, sample_thread, sample_user_access, sample_message, sample_malicious_safety_guard_result):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
                 
         with patch.object(chat_session_engine.websocket_event_sender, 'send_event', new_callable=AsyncMock) as mock_send:
@@ -630,7 +630,7 @@ class TestHandleMessageProcessed:
             await chat_session_engine._handle_message_processed(result)
             
             mock_send.assert_called_once_with(chat_session_engine.websocket, "user_message_rejected", {
-                "user_access_data": sample_user_access_data.model_dump(),
+                "user_access": sample_user_access.model_dump(),
                 "thread": sample_thread.model_dump(),
                 "message": sample_message.model_dump(),
             })
@@ -683,25 +683,25 @@ class TestHandleChatSessionError:
             mock_close.assert_called_once_with(code=4000, reason="err")
 
 
-class TestGetUserAccessData:
+class TestGetUserAccess:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_engine, sample_user_access_data):
-        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access_data
+    async def test_success(self, chat_session_engine, sample_user_access):
+        chat_session_engine.user_access_cache_service.get_user_access.return_value = sample_user_access
         chat_session_engine.limit_checker.has_message_limit_reached.return_value = False
-        result = await chat_session_engine._get_user_access_data()
-        assert result == sample_user_access_data
+        result = await chat_session_engine._get_user_access()
+        assert result == sample_user_access
 
     @pytest.mark.asyncio
     async def test_access_token_not_found(self, chat_session_engine):
         chat_session_engine.user_access_cache_service.get_user_access.return_value = None
         with pytest.raises(AccessTokenNotFoundError):
-            await chat_session_engine._get_user_access_data()
+            await chat_session_engine._get_user_access()
             
     @pytest.mark.asyncio
     async def test_internal_error(self, chat_session_engine):
         chat_session_engine.user_access_cache_service.get_user_access.side_effect = Exception("fail")
         with pytest.raises(InternalServerError):
-            await chat_session_engine._get_user_access_data()
+            await chat_session_engine._get_user_access()
 
 
 class TestCheckMessageLimit:
@@ -763,7 +763,7 @@ class TestRun:
     async def run_chat_session_engine(self, mock_dependencies, mock_websocket, sample_user_id):
         mock_dependencies['websocket'] = mock_websocket
         engine = ChatSessionEngine(**mock_dependencies)
-        engine._get_user_access_data = AsyncMock(return_value=UserAccessData(
+        engine._get_user_access = AsyncMock(return_value=UserAccess(
             access_token="test_token",
             user_id=sample_user_id,
             is_authenticated=False,
@@ -791,7 +791,7 @@ class TestRun:
         await run_chat_session_engine.run()
 
         run_chat_session_engine._check_message_limit.assert_awaited_once()
-        run_chat_session_engine._get_user_access_data.assert_awaited_once()
+        run_chat_session_engine._get_user_access.assert_awaited_once()
         run_chat_session_engine._receive_user_message.assert_awaited_once()
         run_chat_session_engine.message_guard.check_message_safety.assert_called_once()
         run_chat_session_engine.session_store.create_user_message.assert_awaited_once()
@@ -845,15 +845,15 @@ class TestRun:
         
     @pytest.mark.asyncio
     async def test_ws_disconnect(self, run_chat_session_engine):
-        run_chat_session_engine._get_user_access_data.side_effect = WebSocketDisconnect()
+        run_chat_session_engine._get_user_access.side_effect = WebSocketDisconnect()
             
         await run_chat_session_engine.run()
-        run_chat_session_engine._get_user_access_data.assert_awaited_once()
+        run_chat_session_engine._get_user_access.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_access_token_not_found(self, run_chat_session_engine):
         error = AccessTokenNotFoundError(access_token="bad_token")
-        run_chat_session_engine._get_user_access_data.side_effect = error
+        run_chat_session_engine._get_user_access.side_effect = error
         run_chat_session_engine._handle_chat_session_error = AsyncMock()
         
         await run_chat_session_engine.run()
@@ -862,7 +862,7 @@ class TestRun:
     @pytest.mark.asyncio
     async def test_over_message_limit(self, run_chat_session_engine):
         error = OverMessageLimitError(message_limit=5)
-        run_chat_session_engine._get_user_access_data.side_effect = error
+        run_chat_session_engine._get_user_access.side_effect = error
         run_chat_session_engine._handle_chat_session_error = AsyncMock()
         
         await run_chat_session_engine.run()

@@ -59,7 +59,7 @@ class Settings(BaseSettings):
 
     # Session and Limits
     session_ttl: int = 60 * 30  # 30 minutes
-    authenticated_user_message_limit: int = 50
+    authenticated_user_message_limit: int = 25
     unauthenticated_user_message_limit: int = 10
 
     # Cookie Settings
@@ -79,6 +79,8 @@ class Settings(BaseSettings):
 
     # Feature Flags
     enable_auth: bool = Field(default=True, alias="ENABLE_AUTH")
+    auth0_domain: str = Field(default="auth0_domain", alias="AUTH0_DOMAIN")
+    auth0_audience: str = Field(default="auth0_audience", alias="AUTH0_API_AUDIENCE")
 
     model_config = SettingsConfigDict(
         env_file=".env",

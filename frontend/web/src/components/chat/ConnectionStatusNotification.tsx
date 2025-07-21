@@ -79,9 +79,7 @@ export function ConnectionStatusNotification({ status }: ConnectionStatusProps) 
             }}
         >
             <motion.div
-                animate={
-                    status === 'connected' ? { scale: [1, 1.2, 1] } : {}
-                }
+                animate={status === 'connected' ? { scale: [1, 1.2, 1] } : {}}
                 transition={{ duration: 0.5, ease: 'easeInOut' }}
                 className="flex items-center justify-center"
             >

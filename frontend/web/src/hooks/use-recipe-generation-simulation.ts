@@ -4,16 +4,16 @@ import { type ChatEvent } from '@/data/schemas/chat-events';
 import { type Message } from '@/data/schemas/messages';
 import { type UserRecipe } from '@/data/schemas/recipes';
 import { type Thread } from '@/data/schemas/threads';
-import { type UserAccessData } from '@/data/schemas/user-access';
+import { type UserAccess } from '@/data/schemas/user-access';
 import { evolvingRecipeList } from '@/data/tests/recipes/evolving-recipe';
 
-const userAccessData: UserAccessData = {
-    access_token: 'mock-access-token',
+const userAccess: UserAccess = {
+    access_token: '123',
     is_authenticated: true,
     user_id: '1',
-    email: null,
-    name: null,
-    user_message_count: 0,
+    user_message_count: 5,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
 };
 
 export function useRecipeGenerationSimulation() {
@@ -84,7 +84,7 @@ export function useRecipeGenerationSimulation() {
         chatStateManager.handleChatEvent({
             event: 'recipe_generation_started',
             data: {
-                user_access_data: userAccessData,
+                user_access: userAccess,
                 thread: thread,
                 message: recipeMessage,
                 recipe: userRecipe,
@@ -107,7 +107,7 @@ export function useRecipeGenerationSimulation() {
                 chatStateManager.handleChatEvent({
                     event: 'recipe_generation_completed',
                     data: {
-                        user_access_data: userAccessData,
+                        user_access: userAccess,
                         thread: thread,
                         message: newMessage,
                         recipe: newUserRecipe,
@@ -130,7 +130,7 @@ export function useRecipeGenerationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'recipe_field_detected',
                 data: {
-                    user_access_data: userAccessData,
+                    user_access: userAccess,
                     thread: thread,
                     message: newMessage,
                     recipe: newUserRecipe,

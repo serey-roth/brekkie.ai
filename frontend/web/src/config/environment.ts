@@ -1,4 +1,8 @@
 export interface EnvironmentConfig {
+    auth0Domain: string;
+    auth0ClientId: string;
+    auth0Audience: string;
+    appBaseUrl: string;
     apiBaseUrl: string;
     wsBaseUrl: string;
     isDevelopment: boolean;
@@ -20,6 +24,10 @@ function getEnvVar(key: string, fallback: string): string {
 }
 
 const developmentConfig: EnvironmentConfig = {
+    auth0Domain: 'auth0_domain',
+    auth0ClientId: 'auth0_client_id',
+    auth0Audience: 'https://brekkie-ai.fly.dev/api',
+    appBaseUrl: 'http://localhost:5173',
     apiBaseUrl: 'http://localhost:8000/api',
     wsBaseUrl: 'ws://localhost:8000/ws',
     isDevelopment: true,
@@ -29,13 +37,17 @@ const developmentConfig: EnvironmentConfig = {
     enableDebugLogging: true,
     enableAnalytics: false,
     maxMessageCountAnonymous: 10,
-    maxMessageCountAuthenticated: 50,
+    maxMessageCountAuthenticated: 25,
     featureFlags: {
         enableAuth: true,
     },
 };
 
 const productionConfig: EnvironmentConfig = {
+    auth0Domain: 'auth0_domain',
+    auth0ClientId: 'auth0_client_id',
+    auth0Audience: 'https://brekkie-ai.fly.dev/api',
+    appBaseUrl: 'https://brekkie-ai.fly.dev',
     apiBaseUrl: 'https://brekkie-ai.fly.dev/api',
     wsBaseUrl: 'wss://brekkie-ai.fly.dev/ws',
     isDevelopment: false,
@@ -45,13 +57,17 @@ const productionConfig: EnvironmentConfig = {
     enableDebugLogging: false,
     enableAnalytics: true,
     maxMessageCountAnonymous: 10,
-    maxMessageCountAuthenticated: 50,
+    maxMessageCountAuthenticated: 25,
     featureFlags: {
         enableAuth: false,
     },
 };
 
 const stagingConfig: EnvironmentConfig = {
+    auth0Domain: 'auth0_domain',
+    auth0ClientId: 'auth0_client_id',
+    auth0Audience: 'https://brekkie-a.fly.dev/api',
+    appBaseUrl: 'https://brekkie-ai-staging.fly.dev',
     apiBaseUrl: 'https://brekkie-ai-staging.fly.dev/api',
     wsBaseUrl: 'wss://brekkie-ai-staging.fly.dev/ws',
     isDevelopment: false,
@@ -69,6 +85,10 @@ const stagingConfig: EnvironmentConfig = {
 
 // Test configuration
 const testConfig: EnvironmentConfig = {
+    auth0Domain: 'auth0_domain',
+    auth0ClientId: 'auth0_client_id',
+    auth0Audience: 'https://brekkie-ai.fly.dev/api',
+    appBaseUrl: 'http://localhost:5173',
     apiBaseUrl: 'http://localhost:8000/api',
     wsBaseUrl: 'ws://localhost:8000/ws',
     isDevelopment: false,
@@ -78,7 +98,7 @@ const testConfig: EnvironmentConfig = {
     enableDebugLogging: true,
     enableAnalytics: false,
     maxMessageCountAnonymous: 10,
-    maxMessageCountAuthenticated: 50,
+    maxMessageCountAuthenticated: 25,
     featureFlags: {
         enableAuth: true,
     },
@@ -102,6 +122,8 @@ export function getConfigWithOverrides(): EnvironmentConfig {
 
     return {
         ...baseConfig,
+        auth0Domain: getEnvVar('VITE_AUTH0_DOMAIN', baseConfig.auth0Domain),
+        auth0ClientId: getEnvVar('VITE_AUTH0_CLIENT_ID', baseConfig.auth0ClientId),
         apiBaseUrl: getEnvVar('VITE_API_BASE_URL', baseConfig.apiBaseUrl),
         wsBaseUrl: getEnvVar('VITE_WS_BASE_URL', baseConfig.wsBaseUrl),
         maxMessageCountAnonymous: parseInt(

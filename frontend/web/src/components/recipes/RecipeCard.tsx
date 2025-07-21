@@ -48,7 +48,10 @@ export const RecipeCard = ({
             {recipe.categories && recipe.categories.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                     {recipe.categories.map((category) => (
-                        <div key={category.name} className="bg-accent-dark text-accent-light rounded-full px-2 py-0.5 text-xs">
+                        <div
+                            key={category.name}
+                            className="bg-accent-dark text-accent-light rounded-full px-2 py-0.5 text-xs"
+                        >
                             <Markdown>{formatRecipeCategory(category.name)}</Markdown>
                         </div>
                     ))}

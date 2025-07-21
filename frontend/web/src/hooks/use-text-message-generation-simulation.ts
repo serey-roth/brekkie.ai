@@ -2,16 +2,16 @@ import { useEffect, useRef, useState } from 'react';
 import { useChatStateManager } from '@/context/chat-context';
 import { type ChatEvent } from '@/data/schemas/chat-events';
 import { type Thread } from '@/data/schemas/threads';
-import { type UserAccessData } from '@/data/schemas/user-access';
+import { type UserAccess } from '@/data/schemas/user-access';
 import { evolvingAssistantTextMessage } from '@/data/tests/messages/evolving-assistant-text-message';
 
-const userAccessData: UserAccessData = {
-    access_token: 'mock-access-token',
+const userAccess: UserAccess = {
+    access_token: '123',
     is_authenticated: true,
     user_id: '1',
-    email: null,
-    name: null,
-    user_message_count: 0,
+    user_message_count: 5,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
 };
 
 export function useTextMessageGenerationSimulation() {
@@ -40,7 +40,7 @@ export function useTextMessageGenerationSimulation() {
         chatStateManager.handleChatEvent({
             event: 'text_message_started',
             data: {
-                user_access_data: userAccessData,
+                user_access: userAccess,
                 thread: thread,
                 message: evolvingAssistantTextMessage[0],
             },
@@ -54,7 +54,7 @@ export function useTextMessageGenerationSimulation() {
                     chatStateManager.handleChatEvent({
                         event: 'text_message_completed',
                         data: {
-                            user_access_data: userAccessData,
+                            user_access: userAccess,
                             thread: thread,
                             message: message,
                         },
@@ -69,7 +69,7 @@ export function useTextMessageGenerationSimulation() {
                 chatStateManager.handleChatEvent({
                     event: 'text_message_chunk_generated',
                     data: {
-                        user_access_data: userAccessData,
+                        user_access: userAccess,
                         thread: thread,
                         message: evolvingAssistantTextMessage[currentMessageIndex.current],
                     },

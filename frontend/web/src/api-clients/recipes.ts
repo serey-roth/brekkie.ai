@@ -5,7 +5,7 @@ export interface IRecipesClient {
     getUserRecipes(): Promise<GetUserRecipesResponse>;
 }
 
-export class HttpRecipesClient implements IRecipesClient {
+export class RecipesApiClient implements IRecipesClient {
     private _baseUrl: string;
 
     constructor(baseUrl: string) {

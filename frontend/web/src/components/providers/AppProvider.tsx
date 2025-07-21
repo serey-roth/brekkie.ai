@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { HttpAccessTokenClient } from '@/api-clients/access-token-client';
-import { HttpAuthClient } from '@/api-clients/auth-client';
-import { HttpRecipesClient } from '@/api-clients/recipes-client';
-import { HttpThreadsClient } from '@/api-clients/threads-client';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RecipesApiClient } from '@/api-clients/recipes';
+import { ThreadsApiClient } from '@/api-clients/threads';
+import { UserAccessApiClient } from '@/api-clients/user-access';
 import { getConfigWithOverrides, type EnvironmentConfig } from '@/config/environment';
 import { AppContext, type AppContextType } from '@/context/app-context';
 import { UserAccessManager } from '@/managers/user-access-manager';
@@ -21,39 +20,58 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
         [customConfig],
     );
 
-    const authClient = useRef<HttpAuthClient>(new HttpAuthClient(config.apiBaseUrl));
-    const threadsClient = useRef<HttpThreadsClient>(new HttpThreadsClient(config.apiBaseUrl));
-    const accessTokenClient = useRef<HttpAccessTokenClient>(
-        new HttpAccessTokenClient(config.apiBaseUrl),
+    console.log('config', config);
+
+    const threadsApiClient = useRef<ThreadsApiClient>(new ThreadsApiClient(config.apiBaseUrl));
+    const userAccessApiClient = useRef<UserAccessApiClient>(
+        new UserAccessApiClient(config.apiBaseUrl),
     );
-    const recipesClient = useRef<HttpRecipesClient>(new HttpRecipesClient(config.apiBaseUrl));
+    const recipesApiClient = useRef<RecipesApiClient>(new RecipesApiClient(config.apiBaseUrl));
 
     const userAccessManager = useRef<UserAccessManager>(
-        new UserAccessManager(accessTokenClient.current, {
+        new UserAccessManager(userAccessApiClient.current, {
             maxMessageCountAnonymous: config.maxMessageCountAnonymous,
             maxMessageCountAuthenticated: config.maxMessageCountAuthenticated,
         }),
     );
 
+    const [isSidebarOpen, setIsSidebarOpen] = useState(
+        localStorage.getItem('brekkie-sidebar-state') === 'open',
+    );
+
+    const openSidebar = useCallback(() => {
+        setIsSidebarOpen(true);
+        localStorage.setItem('brekkie-sidebar-state', 'open');
+    }, [setIsSidebarOpen]);
+
+    const closeSidebar = useCallback(() => {
+        setIsSidebarOpen(false);
+        localStorage.setItem('brekkie-sidebar-state', 'closed');
+    }, [setIsSidebarOpen]);
+
     const value = useMemo<AppContextType>(
         () => ({
             config,
             apiClients: {
-                authClient: authClient.current,
-                threadsClient: threadsClient.current,
-                accessTokenClient: accessTokenClient.current,
-                recipesClient: recipesClient.current,
+                threadsApiClient: threadsApiClient.current,
+                userAccessApiClient: userAccessApiClient.current,
+                recipesApiClient: recipesApiClient.current,
             },
             managers: {
                 userAccessManager: userAccessManager.current,
             },
+            state: {
+                isSidebarOpen,
+                openSidebar,
+                closeSidebar,
+            },
         }),
-        [config, authClient, threadsClient, accessTokenClient, userAccessManager],
+        [config, isSidebarOpen, openSidebar, closeSidebar],
     );
 
     useEffect(() => {
         userAccessManager.current.ensureUserAccess();
-    }, [userAccessManager]);
+    }, []);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

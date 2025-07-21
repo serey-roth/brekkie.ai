@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AuthScreen } from '@/components/auth/AuthScreen';
 import { MessageList } from '@/components/chat/MessageList';
 import { ChatLayout } from '@/components/layout/ChatLayout';
 import { WelcomeScreen } from '@/components/layout/WelcomeScreen';
 import { RecipePanel } from '@/components/recipes/RecipePanel';
-import { useAppConfig, useThreadsApiClient, useUserAccessManager } from '@/context/app-context';
-import { useAuth, useAuthModal } from '@/context/auth-context';
+import {
+    useAppConfig,
+    useAppState,
+    useThreadsApiClient,
+    useUserAccessManager,
+} from '@/context/app-context';
 import {
     useChatContext,
     useChatStateManager,
@@ -18,7 +21,8 @@ import type { ConnectionState } from '@/data/schemas/connection-state';
 import type { ChatLimitMessage, ChatSessionError } from '@/data/schemas/errors';
 import type { Message, RoleMessageGroup } from '@/data/schemas/messages';
 import type { Thread } from '@/data/schemas/threads';
-import type { UserAccessData } from '@/data/schemas/user-access';
+import type { UserAccess } from '@/data/schemas/user-access';
+import { useAuth } from '@/hooks/useAuth';
 import { groupMessagesByRole } from '@/utils/message-utils';
 import { RecipeListView } from './RecipeListView';
 import { Sidebar } from './Sidebar';
@@ -26,13 +30,11 @@ import { Sidebar } from './Sidebar';
 export function Main() {
     const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
     const [showRecipeListView, setShowRecipeListView] = useState(false);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [scrollToBottomMessage, setScrollToBottomMessage] = useState<string | null>(null);
 
-    const { featureFlags } = useAppConfig();
-    const userAccessManager = useUserAccessManager();
-    const { isAuthModalOpen, openAuthModal, closeAuthModal } = useAuthModal();
-    const { signin, signup } = useAuth();
+    const { isSidebarOpen } = useAppState();
+
+    const { login, isAuthenticated } = useAuth();
 
     const connectionState = useConnectionState();
 
@@ -58,7 +60,7 @@ export function Main() {
     }, []);
 
     // TODO: Auto scroll to bottom should happens once at the beginning and message change when no manual scroll happens
-    const { currentChatState, chatSessionErrorMessage, resetChatState } = useChatState({
+    const { currentChatState, chatSessionErrorMessage } = useChatState({
         onThreadResumed: scrollToBottom,
     });
     const { threadTitle, threadTitleState } = useThreadTitle();
@@ -97,11 +99,8 @@ export function Main() {
     });
 
     return (
-        <div className="bg-background px-safe pb-safe pt-safe min-h-screen">
+        <div className="bg-background px-safe pb-safe min-h-screen">
             <Sidebar
-                isOpen={isSidebarOpen}
-                openSidebar={() => setIsSidebarOpen(true)}
-                closeSidebar={() => setIsSidebarOpen(false)}
                 showRecipeListView={() => setShowRecipeListView(true)}
                 hideRecipeListView={() => setShowRecipeListView(false)}
             />
@@ -125,7 +124,6 @@ export function Main() {
                         onScrollToBottom={scrollToBottom}
                         onSendMessage={sendMessage}
                         connectionStatus={connectionState.status}
-                        isAuthenticated={userAccessManager.isAuthenticated() ?? false}
                         appErrorMessage={accessErrorMessage ?? connectionState.errorMessage}
                         chatLimitMessage={chatLimitMessage ?? null}
                         chatSessionErrorMessage={chatSessionErrorMessage ?? null}
@@ -134,7 +132,8 @@ export function Main() {
                             isLoadingMoreMessages ||
                             !connectionState.isConnected
                         }
-                        onSignIn={openAuthModal}
+                        isAuthenticated={isAuthenticated}
+                        onSignIn={login}
                         threadTitle={threadTitle}
                         threadTitleState={threadTitleState}
                     >
@@ -165,21 +164,6 @@ export function Main() {
                     onClose={() => setSelectedRecipeId(null)}
                 />
             </div>
-
-            {featureFlags.enableAuth && (
-                <AuthScreen
-                    isOpen={isAuthModalOpen}
-                    onClose={closeAuthModal}
-                    onSignIn={async (payload) => {
-                        await signin(payload);
-                        resetChatState();
-                    }}
-                    onSignUp={async (payload) => {
-                        await signup(payload);
-                        resetChatState();
-                    }}
-                />
-            )}
         </div>
     );
 }
@@ -263,21 +247,22 @@ function useChatState({ onThreadResumed }: { onThreadResumed: () => void }) {
         };
     }, [chatStateManager, onThreadResumed]);
 
-    const resetChatState = useCallback(() => {
-        chatStateManager.resetState();
-    }, [chatStateManager]);
-
-    return { currentChatState, chatSessionErrorMessage, resetChatState };
+    return { currentChatState, chatSessionErrorMessage };
 }
 
 function useThreadTitle() {
     const chatStateManager = useChatStateManager();
+    const userAccessManager = useUserAccessManager();
     const [threadTitle, setThreadTitle] = useState<string | null>(null);
     const [threadTitleState, setThreadTitleState] = useState<'empty' | 'loading' | 'complete'>(
         'empty',
     );
 
     useEffect(() => {
+        const accessChangedListener = () => {
+            setThreadTitle(null);
+            setThreadTitleState('empty');
+        };
         const updateTitle = (thread: Thread | null) => {
             if (thread?.title) {
                 setThreadTitle(thread.title);
@@ -312,6 +297,7 @@ function useThreadTitle() {
             updateTitle(state.thread);
         };
         const threadTitleUpdatedListener = (thread: Thread) => updateTitle(thread);
+        userAccessManager.subscribe('accessChanged', accessChangedListener);
         chatStateManager.subscribe('chatStateReady', chatStateListener);
         chatStateManager.subscribe('chatStateChanged', chatStateListener);
         chatStateManager.subscribe('firstMessageSent', firstMessageSentListener);
@@ -321,8 +307,9 @@ function useThreadTitle() {
             chatStateManager.unsubscribe('chatStateChanged', chatStateListener);
             chatStateManager.unsubscribe('firstMessageSent', firstMessageSentListener);
             chatStateManager.unsubscribe('threadTitleUpdated', threadTitleUpdatedListener);
+            userAccessManager.unsubscribe('accessChanged', accessChangedListener);
         };
-    }, [chatStateManager, threadTitleState]);
+    }, [chatStateManager, threadTitleState, userAccessManager]);
 
     return { threadTitle, threadTitleState };
 }
@@ -362,7 +349,7 @@ function useChatLimit() {
     const [chatLimitMessage, setChatLimitMessage] = useState<ChatLimitMessage | null>(null);
 
     const { featureFlags } = useAppConfig();
-    
+
     useEffect(() => {
         const limitReachedListener = (error: ChatSessionError) => {
             if (error.type === 'over_message_limit') {
@@ -388,10 +375,10 @@ function useChatLimit() {
             return null;
         };
 
-        const accessEnsuredListener = (userAccessData: UserAccessData) => {
+        const accessEnsuredListener = (userAccess: UserAccess) => {
             const limit = userAccessManager.getMessageLimit();
-            const isAuthenticated = userAccessData.is_authenticated;
-            const messageCount = userAccessData.user_message_count;
+            const isAuthenticated = userAccess.is_authenticated;
+            const messageCount = userAccess.user_message_count;
             const limitMessage = createLimitMessage(limit, messageCount, isAuthenticated);
             if (limitMessage) {
                 setChatLimitMessage({ type: 'warning', message: limitMessage });
@@ -399,11 +386,11 @@ function useChatLimit() {
                 setChatLimitMessage(null);
             }
         };
-        const accessChangedListener = (userAccessData: UserAccessData | null) => {
-            if (userAccessData) {
+        const accessChangedListener = (userAccess: UserAccess | null) => {
+            if (userAccess) {
                 const limit = userAccessManager.getMessageLimit();
-                const isAuthenticated = userAccessData.is_authenticated;
-                const messageCount = userAccessData.user_message_count;
+                const isAuthenticated = userAccess.is_authenticated;
+                const messageCount = userAccess.user_message_count;
                 const limitMessage = createLimitMessage(limit, messageCount, isAuthenticated);
                 if (limitMessage) {
                     setChatLimitMessage({ type: 'warning', message: limitMessage });

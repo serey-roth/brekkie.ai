@@ -1,26 +1,31 @@
 import { createContext, useContext } from 'react';
-import { HttpAccessTokenClient } from '@/api-clients/access-token-client';
-import { HttpAuthClient } from '@/api-clients/auth-client';
-import { HttpRecipesClient } from '@/api-clients/recipes-client';
-import { HttpThreadsClient } from '@/api-clients/threads-client';
+import { RecipesApiClient } from '@/api-clients/recipes';
+import { ThreadsApiClient } from '@/api-clients/threads';
+import { UserAccessApiClient } from '@/api-clients/user-access';
 import { type EnvironmentConfig } from '@/config/environment';
 import type { UserAccessManager } from '@/managers/user-access-manager';
 
 interface ApiClients {
-    authClient: HttpAuthClient;
-    threadsClient: HttpThreadsClient;
-    accessTokenClient: HttpAccessTokenClient;
-    recipesClient: HttpRecipesClient;
+    threadsApiClient: ThreadsApiClient;
+    userAccessApiClient: UserAccessApiClient;
+    recipesApiClient: RecipesApiClient;
 }
 
 interface AppManagers {
     userAccessManager: UserAccessManager;
 }
 
+export interface AppState {
+    isSidebarOpen: boolean;
+    openSidebar: () => void;
+    closeSidebar: () => void;
+}
+
 export interface AppContextType {
     config: EnvironmentConfig;
     apiClients: ApiClients;
     managers: AppManagers;
+    state: AppState;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -43,27 +48,27 @@ export function useApiClients() {
     return apiClients;
 }
 
-export function useAuthApiClient() {
-    const { apiClients } = useAppContext();
-    return apiClients.authClient;
-}
-
 export function useThreadsApiClient() {
     const { apiClients } = useAppContext();
-    return apiClients.threadsClient;
+    return apiClients.threadsApiClient;
 }
 
-export function useAccessTokenApiClient() {
+export function useUserAccessApiClient() {
     const { apiClients } = useAppContext();
-    return apiClients.accessTokenClient;
+    return apiClients.userAccessApiClient;
 }
 
 export function useRecipesApiClient() {
     const { apiClients } = useAppContext();
-    return apiClients.recipesClient;
+    return apiClients.recipesApiClient;
 }
 
 export function useUserAccessManager() {
     const { managers } = useAppContext();
     return managers.userAccessManager;
+}
+
+export function useAppState() {
+    const { state } = useAppContext();
+    return state;
 }

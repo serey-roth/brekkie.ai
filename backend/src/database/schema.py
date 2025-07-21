@@ -87,9 +87,7 @@ class DBUser(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    email = Column(String, nullable=True, unique=True)
-    name = Column(String, nullable=True)
-    password_hash = Column(String, nullable=True)
+    external_id = Column(String, nullable=True, unique=True)
     created_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
     updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
 
@@ -98,8 +96,8 @@ class DBUser(Base):
     recipes = relationship("DBRecipe", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<DBUser(id='{self.id}', email='{self.email}', name='{self.name}')>"
-
+        return f"<DBUser(id='{self.id}', external_id='{self.external_id}')>"
+    
 
 class DBRecipe(Base):
     __tablename__ = "recipes"

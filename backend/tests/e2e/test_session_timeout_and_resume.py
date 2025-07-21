@@ -22,16 +22,16 @@ class TestSessionTimeoutAndResume:
         print("\n🔄 Testing session resume flow...")
         
         # Step 1: Create user access and start a new thread
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        print(f"👤 Created user access: {user_access_data.user_id}")
+        print(f"👤 Created user access: {user_access.user_id}")
         
         # Start a new thread
         print("🧵 Starting new thread...")
         
         # Set the access token as a cookie
-        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        test_client.cookies.set("bk_access_token", user_access.access_token)
         
         # Create WebSocket connection for new thread
         with test_client.websocket_connect("/ws/chat") as websocket:
@@ -78,7 +78,7 @@ class TestSessionTimeoutAndResume:
             
             # Verify thread exists in cache
             cached_threads = asyncio.get_event_loop().run_until_complete(
-                service_container.thread_cache_service.get_threads(user_access_data.user_id)
+                service_container.thread_cache_service.get_threads(user_access.user_id)
             )
             assert len(cached_threads) == 1
             assert cached_threads[0].id == thread_id
@@ -123,7 +123,7 @@ class TestSessionTimeoutAndResume:
         print("🔄 Resuming the disconnected thread...")
         
         # Set the access token as a cookie for resume
-        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        test_client.cookies.set("bk_access_token", user_access.access_token)
         
         # Create a new WebSocket connection to resume the thread
         with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
@@ -142,7 +142,7 @@ class TestSessionTimeoutAndResume:
             
             # Verify the thread is still accessible
             cached_threads = asyncio.get_event_loop().run_until_complete(
-                service_container.thread_cache_service.get_threads(user_access_data.user_id)
+                service_container.thread_cache_service.get_threads(user_access.user_id)
             )
             assert len(cached_threads) == 1
             assert cached_threads[0].id == thread_id
@@ -182,7 +182,7 @@ class TestSessionTimeoutAndResume:
             
             # Verify new message was added
             cached_messages = asyncio.get_event_loop().run_until_complete(
-                service_container.message_cache_service.get_messages_by_user_id(user_access_data.user_id)
+                service_container.message_cache_service.get_messages_by_user_id(user_access.user_id)
             )
             assert len(cached_messages) == 6  # 3 user messages + 3 AI responses
             print(f"💬 Total messages after resumption: {len(cached_messages)}")
@@ -194,7 +194,7 @@ class TestSessionTimeoutAndResume:
         print("\n🔐 Testing session resume with authenticated user...")
         
         # Create authenticated user
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
         
@@ -205,23 +205,17 @@ class TestSessionTimeoutAndResume:
                 user = await service_container.user_service.create_user(
                     db,
                     CreateUserParams(
-                        id="test-user-resume",
-                        email="resume@example.com",
-                        name="Resume Test User",
-                        password="password123",
+                        id=user_access.user_id,
+                        external_id="test-user-resume",
                         created_at=timestamp,
                         updated_at=timestamp
                     )
                 )
                 
                 # Promote to authenticated
-                assert user.email is not None
-                assert user.name is not None
                 authenticated_access = await service_container.user_access_cache_service.promote_to_authenticated(
-                    access_token=user_access_data.access_token,
+                    access_token=user_access.access_token,
                     user_id=user.id,
-                    email=user.email,
-                    name=user.name,
                     updated_at=to_utc_isostring(timestamp),
                     user_message_count=0,
                 )
@@ -396,10 +390,10 @@ class TestSessionTimeoutAndResume:
         """Test session resume with recipe generation."""
         print("\n🍳 Testing session resume with recipe generation...")
         
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        access_token = user_access_data.access_token
+        access_token = user_access.access_token
         print(f"🔑 Access token: {access_token[:20]}...")
 
         # Set the access token as a cookie
@@ -474,7 +468,7 @@ class TestSessionTimeoutAndResume:
             # The recipe generation should be incomplete since it was interrupted
             # We can verify that the thread state is preserved
             cached_threads = asyncio.get_event_loop().run_until_complete(
-                service_container.thread_cache_service.get_threads(user_access_data.user_id)
+                service_container.thread_cache_service.get_threads(user_access.user_id)
             )
             assert len(cached_threads) == 1
             assert cached_threads[0].id == thread_id
@@ -521,16 +515,16 @@ class TestSessionTimeoutAndResume:
         """Test error handling during session resume scenarios."""
         print("\n⚠️ Testing session resume error handling...")
         
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        print(f"👤 Created user access: {user_access_data.user_id}")
+        print(f"👤 Created user access: {user_access.user_id}")
         
         # Test 1: Try to resume a non-existent thread
         print("🔍 Testing resume of non-existent thread...")
         
         # Set the access token as a cookie
-        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        test_client.cookies.set("bk_access_token", user_access.access_token)
         
         fake_thread_id = "non-existent-thread-id"
         with test_client.websocket_connect(f"/ws/chat/{fake_thread_id}") as websocket:
@@ -544,7 +538,7 @@ class TestSessionTimeoutAndResume:
         
         # First create a real thread
         # Set the access token as a cookie
-        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        test_client.cookies.set("bk_access_token", user_access.access_token)
         
         with test_client.websocket_connect("/ws/chat") as websocket:
             websocket.send_json({
@@ -617,16 +611,16 @@ class TestSessionTimeoutAndResume:
         """Test that data persists correctly across session disconnections."""
         print("\n💾 Testing data persistence across session disconnections...")
         
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        print(f"👤 Created user access: {user_access_data.user_id}")
+        print(f"👤 Created user access: {user_access.user_id}")
         
         # Start thread and send multiple messages
         print("🧵 Starting thread with multiple messages...")
         
         # Set the access token as a cookie
-        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        test_client.cookies.set("bk_access_token", user_access.access_token)
         
         with test_client.websocket_connect("/ws/chat") as websocket:
             # Send first message
@@ -700,13 +694,13 @@ class TestSessionTimeoutAndResume:
         
         # Check cache for anonymous user
         cached_threads = asyncio.get_event_loop().run_until_complete(
-            service_container.thread_cache_service.get_threads(user_access_data.user_id)
+            service_container.thread_cache_service.get_threads(user_access.user_id)
         )
         assert len(cached_threads) == 1
         assert cached_threads[0].id == thread_id
         
         cached_messages = asyncio.get_event_loop().run_until_complete(
-            service_container.message_cache_service.get_messages_by_user_id(user_access_data.user_id)
+            service_container.message_cache_service.get_messages_by_user_id(user_access.user_id)
         )
         assert len(cached_messages) == 4  # 2 user messages + 2 AI responses
         print(f"💬 Cached messages: {len(cached_messages)}")
@@ -715,7 +709,7 @@ class TestSessionTimeoutAndResume:
         print("🔄 Resuming thread to verify data integrity...")
         
         # Set the access token as a cookie for resume
-        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        test_client.cookies.set("bk_access_token", user_access.access_token)
         
         with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
             event = websocket.receive_json()
@@ -768,7 +762,7 @@ class TestSessionTimeoutAndResume:
         
         # Final verification
         final_messages = asyncio.get_event_loop().run_until_complete(
-            service_container.message_cache_service.get_messages_by_user_id(user_access_data.user_id)
+            service_container.message_cache_service.get_messages_by_user_id(user_access.user_id)
         )
         assert len(final_messages) == 6  # 3 user messages + 3 AI responses
         print(f"💬 Final message count: {len(final_messages)}")
@@ -779,17 +773,17 @@ class TestSessionTimeoutAndResume:
         """Test the session timeout mechanism with a shorter TTL for testing."""
         print("\n⏰ Testing session timeout mechanism...")
         
-        user_access_data = asyncio.get_event_loop().run_until_complete(
+        user_access = asyncio.get_event_loop().run_until_complete(
             service_container.user_access_cache_service.create_anonymous_access()
         )
-        print(f"👤 Created user access: {user_access_data.user_id}")
+        print(f"👤 Created user access: {user_access.user_id}")
         
         # Override the session TTL to a shorter duration for testing
         with patch.object(service_container.chat_session_orchestrator, 'session_ttl', 10):  # 10 seconds timeout
             print("🧵 Starting thread with 10-second timeout...")
             
             # Set the access token as a cookie
-            test_client.cookies.set("bk_access_token", user_access_data.access_token)
+            test_client.cookies.set("bk_access_token", user_access.access_token)
             
             with test_client.websocket_connect("/ws/chat") as websocket:
                 websocket.send_json({
@@ -845,7 +839,7 @@ class TestSessionTimeoutAndResume:
         print("🔄 Resuming thread after timeout...")
         
         # Set the access token as a cookie for resume
-        test_client.cookies.set("bk_access_token", user_access_data.access_token)
+        test_client.cookies.set("bk_access_token", user_access.access_token)
         
         with test_client.websocket_connect(f"/ws/chat/{thread_id}") as websocket:
             event = websocket.receive_json()

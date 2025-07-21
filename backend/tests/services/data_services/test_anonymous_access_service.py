@@ -5,7 +5,7 @@ from unittest.mock import patch
 from fakeredis import FakeRedis
 
 from schemas.api_error import RateLimitError
-from schemas.user_access import UserAccessData
+from schemas.user_access import UserAccess
 
 from services.data_services.ip_address_rate_limiter import IpAddressRateLimiter, IpAddressRateLimitConfig
 from services.data_services.anonymous_access_service import AnonymousAccessService
@@ -42,11 +42,9 @@ class TestAnonymousAccessService:
         now = to_utc_isostring(datetime.now(timezone.utc))
         access_token = "sample_access_token"
         user_id = "sample_user_id"
-        await user_access_cache_service.set_user_access(access_token, UserAccessData(
+        await user_access_cache_service.set_user_access(access_token, UserAccess(
             access_token=access_token,
             user_id=user_id,
-            email=None,
-            name=None,
             is_authenticated=False,
             user_message_count=0,
             created_at=now,
@@ -54,12 +52,10 @@ class TestAnonymousAccessService:
             ip_address=sample_ip_address,
         ))
         
-        user_access_data = await anonymous_access_service.get_or_create_user_access("127.0.0.1", access_token)
-        assert_deep_equal(user_access_data, UserAccessData(
+        user_access = await anonymous_access_service.get_or_create_user_access("127.0.0.1", access_token)
+        assert_deep_equal(user_access, UserAccess(
             access_token=access_token,
             user_id=user_id,
-            email=None,
-            name=None,
             is_authenticated=False,
             user_message_count=0,
             created_at=now,
@@ -74,16 +70,14 @@ class TestAnonymousAccessService:
             now = datetime.now(timezone.utc)
             mock_datetime.now.return_value = now
             
-            user_access_data = await anonymous_access_service.get_or_create_user_access(sample_ip_address)
-            assert user_access_data.access_token is not None
-            assert user_access_data.user_id is not None
-            assert user_access_data.email is None
-            assert user_access_data.name is None
-            assert user_access_data.is_authenticated is False
-            assert user_access_data.user_message_count == 0
-            assert user_access_data.created_at == to_utc_isostring(now)
-            assert user_access_data.updated_at == to_utc_isostring(now)
-            assert user_access_data.ip_address == sample_ip_address
+            user_access = await anonymous_access_service.get_or_create_user_access(sample_ip_address)
+            assert user_access.access_token is not None
+            assert user_access.user_id is not None
+            assert user_access.is_authenticated is False
+            assert user_access.user_message_count == 0
+            assert user_access.created_at == to_utc_isostring(now)
+            assert user_access.updated_at == to_utc_isostring(now)
+            assert user_access.ip_address == sample_ip_address
             
             # After the call, the rate limiter should be at the limit (1)
             assert await ip_address_rate_limiter.is_anonymous_access_rate_limited(sample_ip_address)
@@ -109,16 +103,14 @@ class TestAnonymousAccessService:
             now = datetime.now(timezone.utc)
             mock_datetime.now.return_value = now
             
-            user_access_data = await anonymous_access_service.get_or_create_user_access(ip_address, access_token)
-            assert user_access_data.access_token is not None
-            assert user_access_data.user_id is not None
-            assert user_access_data.email is None
-            assert user_access_data.name is None
-            assert user_access_data.is_authenticated is False
-            assert user_access_data.user_message_count == 0
-            assert user_access_data.created_at == to_utc_isostring(now)
-            assert user_access_data.updated_at == to_utc_isostring(now)
-            assert user_access_data.ip_address == ip_address
+            user_access = await anonymous_access_service.get_or_create_user_access(ip_address, access_token)
+            assert user_access.access_token is not None
+            assert user_access.user_id is not None
+            assert user_access.is_authenticated is False
+            assert user_access.user_message_count == 0
+            assert user_access.created_at == to_utc_isostring(now)
+            assert user_access.updated_at == to_utc_isostring(now)
+            assert user_access.ip_address == ip_address
             
             # After the call, the rate limiter should be at the limit (1)
             assert await ip_address_rate_limiter.is_anonymous_access_rate_limited(ip_address)

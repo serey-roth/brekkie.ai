@@ -7,7 +7,7 @@ import { ConnectionStatusNotification } from '@/components/chat/ConnectionStatus
 import { ErrorNotification } from '@/components/ui/ErrorNotification';
 import { ThreadTitle } from '@/components/ui/ThreadTitle';
 import { useAppConfig } from '@/context/app-context';
-import type { ConnectionStatus  } from '@/data/schemas/connection-state';
+import type { ConnectionStatus } from '@/data/schemas/connection-state';
 import type { ChatLimitMessage } from '@/data/schemas/errors';
 
 interface ChatLayoutProps {
@@ -18,13 +18,13 @@ interface ChatLayoutProps {
     onSendMessage: (message: string) => void;
     scrollRef: React.RefObject<HTMLDivElement | null>;
     connectionStatus: ConnectionStatus;
-    isAuthenticated: boolean;
     threadTitle: string | null;
     threadTitleState: 'empty' | 'loading' | 'complete';
     appErrorMessage: string | null;
     chatSessionErrorMessage: string | null;
     chatLimitMessage: ChatLimitMessage | null;
     disableSendButton?: boolean;
+    isAuthenticated?: boolean;
     onSignIn?: () => void;
 }
 
@@ -40,10 +40,10 @@ export function ChatLayout({
     threadTitleState,
     chatSessionErrorMessage,
     chatLimitMessage,
-    isAuthenticated,
-    onSignIn,
     onScrollToBottom,
     onSendMessage,
+    isAuthenticated,
+    onSignIn,
 }: ChatLayoutProps) {
     const { featureFlags } = useAppConfig();
     const { messageInputGapRef } = useMessageInputGapResize({
@@ -68,13 +68,11 @@ export function ChatLayout({
                 x: selectedRecipeId ? '0%' : '0%',
                 width: selectedRecipeId ? '100%' : '100%',
             }}
-            transition={{ type: "tween", duration: 0.2 }}
+            transition={{ type: 'tween', duration: 0.2 }}
         >
             <div className={`absolute top-5 right-4 z-50 flex flex-col items-end gap-1`}>
                 <ConnectionStatusNotification status={connectionStatus} />
-                {appErrorMessage && (
-                    <ErrorNotification errorMessage={appErrorMessage} />
-                )}
+                {appErrorMessage && <ErrorNotification errorMessage={appErrorMessage} />}
             </div>
             <div
                 className={`bg-background absolute top-0 right-0 bottom-0 left-0 z-10 h-20 w-full transition-all duration-300 ease-in-out ${threadTitle || threadTitleState !== 'empty' ? 'border-border border-b shadow-sm' : 'border-b border-transparent shadow-none'}`}
@@ -133,7 +131,9 @@ export function ChatLayout({
                                                     )}
                                                     <span>{chatLimitMessage.message}</span>
                                                 </div>
-                                                {featureFlags.enableAuth && !isAuthenticated && onSignIn ? (
+                                                {featureFlags.enableAuth &&
+                                                !isAuthenticated &&
+                                                onSignIn ? (
                                                     <div className="flex items-center gap-1 text-sm">
                                                         <button
                                                             onClick={onSignIn}
@@ -143,9 +143,13 @@ export function ChatLayout({
                                                         </button>
                                                         <span> to unlock a higher limit.</span>
                                                     </div>
-                                                ): chatLimitMessage.type === 'error' && <div className="flex items-center gap-1 text-sm">
-                                                    <span>Please check back later.</span>
-                                                </div>}
+                                                ) : (
+                                                    chatLimitMessage.type === 'error' && (
+                                                        <div className="flex items-center gap-1 text-sm">
+                                                            <span>Please check back later.</span>
+                                                        </div>
+                                                    )
+                                                )}
                                             </div>
                                         </div>
                                     </div>

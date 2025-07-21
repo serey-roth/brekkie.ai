@@ -4,16 +4,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from api.routes.chats import router as chats_router
 from api.routes.auth import router as auth_router
-from api.routes.access_token import router as access_token_router
+from api.routes.access import router as access_router
 from api.routes.threads import router as threads_router
 from api.routes.health import router as health_router
 from api.routes.recipes import router as recipes_router
@@ -185,14 +186,31 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api")
 app.include_router(chats_router, prefix="/ws")
 app.include_router(auth_router, prefix="/api/auth")
-app.include_router(access_token_router, prefix="/api/access-token")
+app.include_router(access_router, prefix="/api/access")
 app.include_router(threads_router, prefix="/api")
 app.include_router(recipes_router, prefix="/api")
 
 # Mount static files - this will serve the frontend
 # Only mount if the directory exists to prevent startup failures
 if os.path.exists("frontend/dist"):
-    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+    # Mount static files for assets (JS, CSS, images, etc.)
+    app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
+    
+    # Serve index.html for all frontend routes (client-side routing)
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Skip API and WebSocket routes
+        if full_path.startswith(("api/", "ws/")):
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        # Serve index.html for all other routes
+        index_path = "frontend/dist/index.html"
+        if os.path.exists(index_path):
+            with open(index_path, "r") as f:
+                content = f.read()
+            return HTMLResponse(content=content)
+        else:
+            raise HTTPException(status_code=404, detail="Frontend not found")
 else:
     # Fallback route for when frontend is not built
     @app.get("/")

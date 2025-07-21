@@ -15,7 +15,7 @@ from services.chat_services.chat_session_store import ChatSessionStore
 
 from schemas.message_content_type import MessageContentType
 from schemas.message_role import MessageRole
-from schemas.user_access import UserAccessData
+from schemas.user_access import UserAccess
 from schemas.threads import CreateThreadParams, UpdateThreadParams
 from schemas.messages import CreateUserMessageParams, Message
 from schemas.recipes import UserRecipe, CreateRecipeParams
@@ -75,14 +75,14 @@ def chat_session_store(mock_thread_service, mock_thread_cache_service, mock_mess
 class TestDispatch:
     @pytest.mark.asyncio
     async def test_dispatch_authenticated_user(self, chat_session_store: ChatSessionStore):
-        user_access_data = MagicMock(spec=UserAccessData)
-        user_access_data.is_authenticated = True
+        user_access = MagicMock(spec=UserAccess)
+        user_access.is_authenticated = True
         
         authenticated_func = AsyncMock(return_value="authenticated_result")
         unauthenticated_func = AsyncMock(return_value="unauthenticated_result")
         
         result = await chat_session_store._dispatch(
-            user_access_data, 
+            user_access, 
             authenticated_func, 
             unauthenticated_func,
             "arg1", 
@@ -96,14 +96,14 @@ class TestDispatch:
 
     @pytest.mark.asyncio
     async def test_dispatch_unauthenticated_user(self, chat_session_store: ChatSessionStore):
-        user_access_data = MagicMock(spec=UserAccessData)
-        user_access_data.is_authenticated = False
+        user_access = MagicMock(spec=UserAccess)
+        user_access.is_authenticated = False
         
         authenticated_func = AsyncMock(return_value="authenticated_result")
         unauthenticated_func = AsyncMock(return_value="unauthenticated_result")
         
         result = await chat_session_store._dispatch(
-            user_access_data, 
+            user_access, 
             authenticated_func, 
             unauthenticated_func,
             "arg1", 
@@ -118,10 +118,10 @@ class TestDispatch:
 class TestCreateUserMessage:
     @pytest.mark.asyncio
     async def test_create_first_user_message_authenticated(self, chat_session_store: ChatSessionStore, mock_thread_service: ThreadService, mock_message_service: MessageService, mock_message_cache_service: MessageCacheService):
-        user_access_data = MagicMock(spec=UserAccessData)
-        user_access_data.is_authenticated = True
-        user_access_data.user_id = "user_id"
-        user_access_data.access_token = "access_token"
+        user_access = MagicMock(spec=UserAccess)
+        user_access.is_authenticated = True
+        user_access.user_id = "user_id"
+        user_access.access_token = "access_token"
         
         mock_db = MagicMock()
         mock_thread_service.get_thread.return_value = None
@@ -132,7 +132,7 @@ class TestCreateUserMessage:
         
         expected_message = Message(
             id=message_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             thread_id=thread_id,
             text_content="content_authenticated",
             role=MessageRole.user,
@@ -143,21 +143,21 @@ class TestCreateUserMessage:
         
         mock_message_service.create_user_message = AsyncMock(return_value=expected_message)
         
-        result = await chat_session_store.create_user_message(mock_db, user_access_data, thread_id, message_id, "content_authenticated", timestamp)
+        result = await chat_session_store.create_user_message(mock_db, user_access, thread_id, message_id, "content_authenticated", timestamp)
         
         assert result == expected_message
         
         mock_thread_service.get_thread.assert_called_once_with(mock_db, thread_id)
         mock_thread_service.create_thread.assert_called_once_with(mock_db, CreateThreadParams(
             id=thread_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             created_at=timestamp,
             updated_at=timestamp,
             is_empty=False,
         ))
         mock_message_service.create_user_message.assert_called_once_with(mock_db, CreateUserMessageParams(
             id=message_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             thread_id=thread_id,
             text_content="content_authenticated",
             created_at=timestamp,
@@ -169,10 +169,10 @@ class TestCreateUserMessage:
 
     @pytest.mark.asyncio
     async def test_create_user_message_unauthenticated(self, chat_session_store: ChatSessionStore, mock_thread_cache_service: ThreadCacheService, mock_message_cache_service: MessageCacheService, mock_user_access_cache_service: UserAccessCacheService, mock_thread_service: ThreadService, mock_message_service: MessageService):
-        user_access_data = MagicMock(spec=UserAccessData)
-        user_access_data.is_authenticated = False
-        user_access_data.user_id = "user_id"
-        user_access_data.access_token = "access_token"
+        user_access = MagicMock(spec=UserAccess)
+        user_access.is_authenticated = False
+        user_access.user_id = "user_id"
+        user_access.access_token = "access_token"
         
         mock_db = MagicMock()
         
@@ -182,7 +182,7 @@ class TestCreateUserMessage:
         
         expected_message = Message(
             id=message_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             thread_id=thread_id,
             text_content="content_unauthenticated",
             role=MessageRole.user,
@@ -193,14 +193,14 @@ class TestCreateUserMessage:
         
         mock_message_cache_service.create_user_message = AsyncMock(return_value=expected_message)
         
-        result = await chat_session_store.create_user_message(mock_db, user_access_data, thread_id, message_id, "content_unauthenticated", timestamp)
+        result = await chat_session_store.create_user_message(mock_db, user_access, thread_id, message_id, "content_unauthenticated", timestamp)
         
         assert result == expected_message
         
-        mock_thread_cache_service.update_thread.assert_called_once_with(user_access_data.user_id, UpdateThreadParams(id=thread_id, updated_at=timestamp, is_empty=False))
-        mock_message_cache_service.create_user_message.assert_called_once_with(user_access_data.user_id, CreateUserMessageParams(
+        mock_thread_cache_service.update_thread.assert_called_once_with(user_access.user_id, UpdateThreadParams(id=thread_id, updated_at=timestamp, is_empty=False))
+        mock_message_cache_service.create_user_message.assert_called_once_with(user_access.user_id, CreateUserMessageParams(
             id=message_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             thread_id=thread_id,
             text_content="content_unauthenticated",
             created_at=timestamp,
@@ -208,7 +208,7 @@ class TestCreateUserMessage:
             role=MessageRole.user,
             content_type=MessageContentType.text,
         ))
-        mock_user_access_cache_service.increment_user_message_count.assert_called_once_with(user_access_data.access_token)
+        mock_user_access_cache_service.increment_user_message_count.assert_called_once_with(user_access.access_token)
         mock_thread_service.get_thread.assert_not_called()
         mock_thread_service.create_thread.assert_not_called()
         mock_message_service.create_user_message.assert_not_called()
@@ -217,10 +217,10 @@ class TestCreateUserMessage:
 class TestCreateRecipe:
     @pytest.mark.asyncio
     async def test_create_recipe_authenticated(self, chat_session_store: ChatSessionStore, mock_recipe_service: RecipeService, mock_recipe_cache_service: RecipeCacheService):
-        user_access_data = MagicMock(spec=UserAccessData)
-        user_access_data.user_id = "user_id"
-        user_access_data.access_token = "access_token"
-        user_access_data.is_authenticated = True
+        user_access = MagicMock(spec=UserAccess)
+        user_access.user_id = "user_id"
+        user_access.access_token = "access_token"
+        user_access.is_authenticated = True
         
         mock_db = MagicMock()
         
@@ -230,7 +230,7 @@ class TestCreateRecipe:
         
         expected_recipe = UserRecipe(
             id=recipe_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             thread_id=thread_id,
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
@@ -238,13 +238,13 @@ class TestCreateRecipe:
         
         mock_recipe_service.create_recipe = AsyncMock(return_value=expected_recipe)
         
-        result = await chat_session_store.create_recipe(mock_db, user_access_data, thread_id, recipe_id, timestamp)
+        result = await chat_session_store.create_recipe(mock_db, user_access, thread_id, recipe_id, timestamp)
         
         assert result == expected_recipe
         
         mock_recipe_service.create_recipe.assert_called_once_with(mock_db, CreateRecipeParams(
             id=recipe_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             thread_id=thread_id,
             created_at=timestamp,
             updated_at=timestamp,
@@ -254,10 +254,10 @@ class TestCreateRecipe:
 
     @pytest.mark.asyncio
     async def test_create_recipe_unauthenticated(self, chat_session_store: ChatSessionStore, mock_recipe_cache_service: RecipeCacheService, mock_recipe_service: RecipeService):
-        user_access_data = MagicMock(spec=UserAccessData)
-        user_access_data.is_authenticated = False
-        user_access_data.user_id = "user_id"
-        user_access_data.access_token = "access_token"
+        user_access = MagicMock(spec=UserAccess)
+        user_access.is_authenticated = False
+        user_access.user_id = "user_id"
+        user_access.access_token = "access_token"
         
         mock_db = MagicMock()
         
@@ -267,7 +267,7 @@ class TestCreateRecipe:
         
         expected_recipe = UserRecipe(
             id=recipe_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             thread_id=thread_id,
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
@@ -275,13 +275,13 @@ class TestCreateRecipe:
         
         mock_recipe_cache_service.create_recipe = AsyncMock(return_value=expected_recipe)
         
-        result = await chat_session_store.create_recipe(mock_db, user_access_data, thread_id, recipe_id, timestamp)
+        result = await chat_session_store.create_recipe(mock_db, user_access, thread_id, recipe_id, timestamp)
         
         assert result == expected_recipe
         
         mock_recipe_cache_service.create_recipe.assert_called_once_with(CreateRecipeParams(
             id=recipe_id,
-            user_id=user_access_data.user_id,
+            user_id=user_access.user_id,
             thread_id=thread_id,
             created_at=timestamp,
             updated_at=timestamp,
@@ -292,10 +292,10 @@ class TestCreateRecipe:
 class TestGetRecipesByMessageId:
     @pytest.mark.asyncio
     async def test_get_recipes_by_message_id_authenticated(self, chat_session_store: ChatSessionStore, mock_recipe_service: RecipeService, mock_recipe_cache_service: RecipeCacheService, mock_message_cache_service: MessageCacheService):
-        user_access_data = MagicMock(spec=UserAccessData)
-        user_access_data.is_authenticated = True
-        user_access_data.user_id = "user_id"
-        user_access_data.access_token = "access_token"
+        user_access = MagicMock(spec=UserAccess)
+        user_access.is_authenticated = True
+        user_access.user_id = "user_id"
+        user_access.access_token = "access_token"
         
         mock_db = MagicMock()
         
@@ -306,14 +306,14 @@ class TestGetRecipesByMessageId:
         expected_recipes = [
             UserRecipe(
                 id="recipe_id_1",
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id=thread_id,
                 created_at=to_utc_isostring(timestamp),
                 updated_at=to_utc_isostring(timestamp),
             ),
             UserRecipe(
                 id="recipe_id_2",
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id=thread_id,
                 created_at=to_utc_isostring(timestamp),
                 updated_at=to_utc_isostring(timestamp),
@@ -322,7 +322,7 @@ class TestGetRecipesByMessageId:
         
         mock_recipe_service.get_recipes_by_message_id = AsyncMock(return_value=expected_recipes)
         
-        result = await chat_session_store.get_recipes_by_message_id(mock_db, user_access_data, thread_id, message_ids)
+        result = await chat_session_store.get_recipes_by_message_id(mock_db, user_access, thread_id, message_ids)
         
         assert result == expected_recipes
         
@@ -333,10 +333,10 @@ class TestGetRecipesByMessageId:
 
     @pytest.mark.asyncio
     async def test_get_recipes_by_message_id_unauthenticated(self, chat_session_store: ChatSessionStore, mock_recipe_cache_service: RecipeCacheService, mock_message_cache_service: MessageCacheService, mock_recipe_service: RecipeService):
-        user_access_data = MagicMock(spec=UserAccessData)
-        user_access_data.is_authenticated = False
-        user_access_data.user_id = "user_id"
-        user_access_data.access_token = "access_token"
+        user_access = MagicMock(spec=UserAccess)
+        user_access.is_authenticated = False
+        user_access.user_id = "user_id"
+        user_access.access_token = "access_token"
         
         mock_db = MagicMock()
         
@@ -347,7 +347,7 @@ class TestGetRecipesByMessageId:
         mock_messages = [
             Message(
                 id="message_id_1",
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id=thread_id,
                 text_content="content_1",
                 role=MessageRole.assistant,
@@ -358,7 +358,7 @@ class TestGetRecipesByMessageId:
             ),
             Message(
                 id="message_id_2",
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id=thread_id,
                 text_content="content_2",
                 role=MessageRole.assistant,
@@ -372,14 +372,14 @@ class TestGetRecipesByMessageId:
         expected_recipes = [
             UserRecipe(
                 id="recipe_id_1",
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id=thread_id,
                 created_at=to_utc_isostring(timestamp),
                 updated_at=to_utc_isostring(timestamp),
             ),
             UserRecipe(
                 id="recipe_id_2",
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id=thread_id,
                 created_at=to_utc_isostring(timestamp),
                 updated_at=to_utc_isostring(timestamp),
@@ -389,21 +389,21 @@ class TestGetRecipesByMessageId:
         mock_message_cache_service.get_messages_by_id.return_value = mock_messages
         mock_recipe_cache_service.get_recipes_by_ids = AsyncMock(return_value=expected_recipes)
         
-        result = await chat_session_store.get_recipes_by_message_id(mock_db, user_access_data, thread_id, message_ids)
+        result = await chat_session_store.get_recipes_by_message_id(mock_db, user_access, thread_id, message_ids)
         
         assert result == expected_recipes
         
-        mock_message_cache_service.get_messages_by_id.assert_called_once_with(user_access_data.user_id, thread_id, message_ids)
-        mock_recipe_cache_service.get_recipes_by_ids.assert_called_once_with(user_access_data.user_id, thread_id, ["recipe_id_1", "recipe_id_2"])
+        mock_message_cache_service.get_messages_by_id.assert_called_once_with(user_access.user_id, thread_id, message_ids)
+        mock_recipe_cache_service.get_recipes_by_ids.assert_called_once_with(user_access.user_id, thread_id, ["recipe_id_1", "recipe_id_2"])
         mock_recipe_service.get_recipes_by_message_id.assert_not_called()
 
 
     @pytest.mark.asyncio
     async def test_get_recipes_by_message_id_unauthenticated_empty_result(self, chat_session_store: ChatSessionStore, mock_recipe_cache_service: RecipeCacheService, mock_message_cache_service: MessageCacheService, mock_recipe_service: RecipeService):
-        user_access_data = MagicMock(spec=UserAccessData)
-        user_access_data.is_authenticated = False
-        user_access_data.user_id = "user_id"
-        user_access_data.access_token = "access_token"
+        user_access = MagicMock(spec=UserAccess)
+        user_access.is_authenticated = False
+        user_access.user_id = "user_id"
+        user_access.access_token = "access_token"
         
         mock_db = MagicMock()
         
@@ -413,11 +413,11 @@ class TestGetRecipesByMessageId:
         
         mock_message_cache_service.get_messages_by_id.return_value = []
         
-        result = await chat_session_store.get_recipes_by_message_id(mock_db, user_access_data, thread_id, message_ids)
+        result = await chat_session_store.get_recipes_by_message_id(mock_db, user_access, thread_id, message_ids)
         
         assert result == []
         
-        mock_message_cache_service.get_messages_by_id.assert_called_once_with(user_access_data.user_id, thread_id, message_ids)
+        mock_message_cache_service.get_messages_by_id.assert_called_once_with(user_access.user_id, thread_id, message_ids)
         mock_recipe_cache_service.get_recipes_by_ids.assert_not_called()
         mock_recipe_service.get_recipes_by_message_id.assert_not_called()
 

@@ -9,7 +9,7 @@ from schemas.conversation_stream_events import (
     UserMessageRejectedPayload,
 )
 
-from schemas.user_access import UserAccessData
+from schemas.user_access import UserAccess
 
 from services.ai_food_agent.ai_food_agent import AIFoodAgent
 from services.chat_services.chat_session_handlers import (
@@ -111,7 +111,7 @@ class ChatSessionMessageProcessor:
 
     async def _call_handler(
         self,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         user_message_id: str,
         assistant_message_id: str | None,
@@ -125,7 +125,7 @@ class ChatSessionMessageProcessor:
             raise ValueError(f"Unknown event name: {event_name}")
 
         kwargs = {
-            "user_access_data": user_access_data,
+            "user_access": user_access,
             "thread_id": thread_id,
             "payload": event.payload,
             "timestamp": timestamp,
@@ -144,7 +144,7 @@ class ChatSessionMessageProcessor:
 
     async def _handle_event(
         self,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         user_message_id: str,
         event: ConversationStreamEvent,
@@ -161,7 +161,7 @@ class ChatSessionMessageProcessor:
         timestamp = datetime.now(timezone.utc)
 
         result = await self._call_handler(
-            user_access_data=user_access_data,
+            user_access=user_access,
             thread_id=thread_id,
             user_message_id=user_message_id,
             assistant_message_id=assistant_message_id,
@@ -179,21 +179,21 @@ class ChatSessionMessageProcessor:
 
     async def process_user_message(
         self,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         user_message_id: str,
         user_input: str,
     ):
         try:
             logger.debug(
-                f"Processing chat message from user {user_access_data.user_id}: {user_input[:50]}..."
+                f"Processing chat message from user {user_access.user_id}: {user_input[:50]}..."
             )
 
             async def on_event(event: ConversationStreamEvent):
-                await self._handle_event(user_access_data, thread_id, user_message_id, event)
+                await self._handle_event(user_access, thread_id, user_message_id, event)
 
             await self.ai_food_agent.stream_conversation(
-                user_id=user_access_data.user_id,
+                user_id=user_access.user_id,
                 thread_id=thread_id,
                 user_input=user_input,
                 on_event=on_event,
@@ -202,7 +202,7 @@ class ChatSessionMessageProcessor:
         except Exception as e:
             logger.error(f"Error processing user message: {str(e)}")
             await self._handle_event(
-                user_access_data=user_access_data,
+                user_access=user_access,
                 thread_id=thread_id,
                 user_message_id=user_message_id,
                 event=ConversationStreamEvent(
@@ -212,13 +212,13 @@ class ChatSessionMessageProcessor:
 
     async def reject_user_message(
         self,
-        user_access_data: UserAccessData,
+        user_access: UserAccess,
         thread_id: str,
         user_message_id: str,
         rejection_message: str,
     ):
         await self._handle_event(
-            user_access_data=user_access_data,
+            user_access=user_access,
             thread_id=thread_id,
             user_message_id=user_message_id,
             event=ConversationStreamEvent(

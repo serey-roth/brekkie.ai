@@ -1,10 +1,10 @@
-import type { IAccessTokenClient } from '@/api-clients/access-token-client';
-import { type UserAccessData } from '@/data/schemas/user-access';
+import type { IUserAccessApiClient } from '@/api-clients/user-access';
+import { type UserAccess } from '@/data/schemas/user-access';
 import { EventManager } from '@/utils/event-manager';
 
 type UserAccessEvents = {
-    accessEnsured: UserAccessData;
-    accessChanged: UserAccessData | null;
+    accessEnsured: UserAccess;
+    accessChanged: UserAccess | null;
     limitReached: string;
     errorOccurred: string;
 };
@@ -15,30 +15,30 @@ type UserAccessManagerConfig = {
 };
 
 export class UserAccessManager {
-    private _accessData: UserAccessData | null = null;
-    private _accessTokenClient: IAccessTokenClient;
+    private _userAccess: UserAccess | null = null;
+    private _userAccessApiClient: IUserAccessApiClient;
     private _eventManager = new EventManager<UserAccessEvents>();
     private _config: UserAccessManagerConfig;
 
-    constructor(accessTokenClient: IAccessTokenClient, config: UserAccessManagerConfig) {
-        this._accessTokenClient = accessTokenClient;
+    constructor(userAccessApiClient: IUserAccessApiClient, config: UserAccessManagerConfig) {
+        this._userAccessApiClient = userAccessApiClient;
         this._config = config;
     }
 
     isAccessEnsured(): boolean {
-        return this._accessData !== null;
+        return this._userAccess !== null;
     }
 
     getAccessToken(): string | null {
-        return this._accessData?.access_token ?? null;
+        return this._userAccess?.access_token ?? null;
     }
 
     getUserId(): string | null {
-        return this._accessData?.user_id ?? null;
+        return this._userAccess?.user_id ?? null;
     }
 
-    getUserAccessData(): UserAccessData | null {
-        return this._accessData;
+    getUserAccess(): UserAccess | null {
+        return this._userAccess;
     }
 
     subscribe<K extends keyof UserAccessEvents>(
@@ -55,29 +55,29 @@ export class UserAccessManager {
         this._eventManager.unsubscribe(event, callback);
     }
 
-    setUserAccessData(accessData: UserAccessData) {
-        this._accessData = accessData;
-        this._eventManager.publish('accessChanged', accessData);
+    setUserAccess(userAccess: UserAccess | null) {
+        this._userAccess = userAccess;
+        this._eventManager.publish('accessChanged', userAccess);
     }
 
     isAuthenticated(): boolean | null {
-        return this._accessData?.is_authenticated ?? null;
+        return this._userAccess?.is_authenticated ?? null;
     }
 
     getUserMessageCount(): number | null {
-        return this._accessData?.user_message_count ?? null;
+        return this._userAccess?.user_message_count ?? null;
     }
 
     optimisticIncrementUserMessageCount() {
-        if (this._accessData) {
-            this._accessData.user_message_count++;
-            this._eventManager.publish('accessChanged', this._accessData);
+        if (this._userAccess) {
+            this._userAccess.user_message_count++;
+            this._eventManager.publish('accessChanged', this._userAccess);
         }
     }
 
-    hasReachedMessageLimit(userAccessData: UserAccessData): boolean | null {
-        const messageCount = userAccessData.user_message_count;
-        const messageLimit = userAccessData.is_authenticated
+    hasReachedMessageLimit(userAccess: UserAccess): boolean | null {
+        const messageCount = userAccess.user_message_count;
+        const messageLimit = userAccess.is_authenticated
             ? this._config.maxMessageCountAuthenticated
             : this._config.maxMessageCountAnonymous;
         return messageCount >= messageLimit;
@@ -95,16 +95,31 @@ export class UserAccessManager {
 
     async ensureUserAccess() {
         try {
-            const accessData = await this._accessTokenClient.ensureUserAccess();
-            this._accessData = accessData;
+            const accessData = await this._userAccessApiClient.ensureUserAccess();
+            this.setUserAccess(accessData);
             this._eventManager.publish('accessEnsured', accessData);
         } catch (error) {
-            this._eventManager.publish('errorOccurred', error instanceof Error ? error.message : 'Something went wrong. Please try again.');
+            this._eventManager.publish(
+                'errorOccurred',
+                error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+            );
+        }
+    }
+
+    async createAnonymousAccess() {
+        try {
+            const accessData = await this._userAccessApiClient.createAnonymousAccess();
+            this.setUserAccess(accessData);
+        } catch (error) {
+            this._eventManager.publish(
+                'errorOccurred',
+                error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+            );
         }
     }
 
     resetState() {
-        this._accessData = null;
+        this.setUserAccess(null);
     }
 
     dispose() {

@@ -1,5 +1,5 @@
 from schemas.api_error import RateLimitError
-from schemas.user_access import UserAccessData
+from schemas.user_access import UserAccess
 
 from services.data_services.user_access_cache_service import UserAccessCacheService
 from services.data_services.ip_address_rate_limiter import IpAddressRateLimiter
@@ -16,7 +16,7 @@ class AnonymousAccessService:
 
     async def get_or_create_user_access(
         self, ip_address: str, access_token: str | None = None
-    ) -> UserAccessData:
+    ) -> UserAccess:
         if access_token:
             user_access = await self.user_access_cache_service.get_user_access(access_token)
             if user_access is not None:

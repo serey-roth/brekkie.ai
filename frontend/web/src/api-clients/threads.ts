@@ -15,7 +15,7 @@ export interface IThreadsClient {
     getThreadMessages(payload: GetThreadMessagesPayload): Promise<GetThreadMessagesResponse>;
 }
 
-export class HttpThreadsClient implements IThreadsClient {
+export class ThreadsApiClient implements IThreadsClient {
     private _baseUrl: string;
 
     constructor(baseUrl: string) {

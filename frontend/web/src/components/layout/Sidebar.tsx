@@ -1,10 +1,8 @@
-import { motion, AnimatePresence, easeInOut } from 'framer-motion';
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
     LuPanelLeftClose,
     LuMessageSquare,
     LuMessageSquarePlus,
-    LuUser,
     LuLogOut,
     LuLogIn,
     LuMessageSquareWarning,
@@ -13,120 +11,61 @@ import {
     LuMessageSquareX,
     LuUtensils,
 } from 'react-icons/lu';
-import { useAppConfig, useThreadsApiClient, useUserAccessManager } from '@/context/app-context';
-import { useAuthModal, useAuth } from '@/context/auth-context';
+import {
+    useAppConfig,
+    useAppState,
+    useThreadsApiClient,
+    useUserAccessManager,
+} from '@/context/app-context';
 import { useChatStateManager } from '@/context/chat-context';
 import type { ChatState } from '@/data/schemas/chat-state';
 import type { ChatSessionError } from '@/data/schemas/errors';
 import { type Thread } from '@/data/schemas/threads';
-import { type UserAccessData } from '@/data/schemas/user-access';
+import { type UserAccess } from '@/data/schemas/user-access';
+import { useAuth } from '@/hooks/useAuth';
 import { getThreadGroups, formatThreadTimestamp } from '@/utils/thread-utils';
 
-const ANIMATION_CONFIG = {
-    sidebar: {
-        open: { width: '20rem' },
-        closed: { width: '4rem' },
-    },
-    content: {
-        open: { opacity: 1, x: 0 },
-        closed: { opacity: 0, x: -20 },
-    },
-    overlay: {
-        open: { opacity: 1 },
-        closed: { opacity: 0 },
-    },
-    mobileButtons: {
-        open: { opacity: 1, x: 0 },
-        closed: { opacity: 0, x: -20 },
-    },
-    threadGroup: {
-        initial: { opacity: 0, y: 10 },
-        animate: { opacity: 1, y: 0 },
-    },
-    loading: {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-        exit: { opacity: 0 },
-    },
-};
-
-const TRANSITIONS = {
-    fast: { duration: 0.2, ease: easeInOut },
-    medium: { duration: 0.3, ease: easeInOut },
-    slow: { duration: 0.4, ease: easeInOut },
-};
-
 interface SidebarProps {
-    isOpen: boolean;
-    openSidebar: () => void;
-    closeSidebar: () => void;
     showRecipeListView: () => void;
     hideRecipeListView: () => void;
 }
 
-export function Sidebar({
-    isOpen,
-    openSidebar,
-    closeSidebar,
-    showRecipeListView,
-    hideRecipeListView,
-}: SidebarProps) {
+export function Sidebar(props: SidebarProps) {
+    const { showRecipeListView, hideRecipeListView } = props;
+    const { isSidebarOpen: isOpen, openSidebar, closeSidebar } = useAppState();
     const { featureFlags } = useAppConfig();
-
-    const { openAuthModal } = useAuthModal();
-    const { signout } = useAuth();
-    const userAccessData = useUserAccessData();
+    const { login, logout, isAuthenticated } = useAuth();
+    const userAccessManager = useUserAccessManager();
+    const userAccess = useUserAccess();
     const { hasLimitReached } = useChatLimit();
     const { currentThreadId, startThread, resumeThread, resetCurrentThread } = useCurrentThread();
     const { threadGroups, isFetching, error, fetchMoreObserverTarget } = useFetchThreads(
         isOpen,
-        userAccessData,
+        userAccess,
     );
 
     return (
         <>
-            <AnimatePresence>
-                {!isOpen && (
-                    <motion.div
-                        variants={ANIMATION_CONFIG.mobileButtons}
-                        initial="closed"
-                        animate="open"
-                        exit="closed"
-                        transition={TRANSITIONS.fast}
-                        className="fixed top-4 left-4 z-50 flex flex-row gap-2 md:hidden"
+            {!isOpen && (
+                <div className="fixed top-4 left-4 z-50 flex flex-row gap-2 md:hidden">
+                    <button
+                        onClick={openSidebar}
+                        className="text-contrast hover:text-primary bg-background/95 focus:ring-primary/20 border-border flex h-10 w-10 items-center justify-center rounded-xl border shadow-lg backdrop-blur-sm transition-transform duration-150 hover:scale-102 focus:ring-2 focus:outline-none active:scale-98"
                     >
-                        <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={openSidebar}
-                            className="text-contrast hover:text-primary bg-background/95 focus:ring-primary/20 border-border flex h-10 w-10 items-center justify-center rounded-xl border shadow-lg backdrop-blur-sm transition-colors duration-200 focus:ring-2 focus:outline-none"
-                        >
-                            <LuPanelLeftClose size={20} />
-                        </motion.button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        <LuPanelLeftClose size={20} />
+                    </button>
+                </div>
+            )}
 
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        variants={ANIMATION_CONFIG.overlay}
-                        initial="closed"
-                        animate="open"
-                        exit="closed"
-                        transition={TRANSITIONS.fast}
-                        onClick={closeSidebar}
-                        className="bg-contrast/20 fixed inset-0 z-40 backdrop-blur-[1px] md:hidden"
-                    />
-                )}
-            </AnimatePresence>
+            {isOpen && (
+                <div
+                    onClick={closeSidebar}
+                    className="bg-contrast/20 fixed inset-0 z-40 backdrop-blur-[1px] md:hidden"
+                />
+            )}
 
-            <motion.div
-                initial={false}
-                animate={isOpen ? 'open' : 'closed'}
-                variants={ANIMATION_CONFIG.sidebar}
-                transition={TRANSITIONS.medium}
-                className={`bg-background/95 border-border fixed top-0 left-0 z-40 flex h-screen flex-col border-r shadow-lg backdrop-blur-sm transition-transform duration-200 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+            <div
+                className={`bg-background/95 border-border fixed top-0 left-0 z-40 flex h-screen flex-col border-r shadow-lg backdrop-blur-sm transition-[transform,width] duration-250 ease-in-out ${isOpen ? 'w-80 translate-x-0' : 'w-16 -translate-x-full md:translate-x-0'}`}
             >
                 <div className={`mt-4 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
                     {isOpen && (
@@ -139,9 +78,7 @@ export function Sidebar({
                             </span>
                         </div>
                     )}
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                    <button
                         onClick={isOpen ? closeSidebar : openSidebar}
                         className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border border-transparent p-2 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
                     >
@@ -150,65 +87,47 @@ export function Sidebar({
                         ) : (
                             <LuArrowRightFromLine size={20} />
                         )}
-                    </motion.button>
+                    </button>
                 </div>
 
                 <div className={`mt-2 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
-                    <motion.button
+                    <button
                         onClick={() => {
                             showRecipeListView();
                             if (isOpen) {
                                 closeSidebar();
                             }
                         }}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={TRANSITIONS.fast}
-                        animate={{
-                            width: isOpen ? '100%' : '2.5rem',
-                        }}
-                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
-                        style={{ minWidth: '2.5rem', maxWidth: '100%' }}
+                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 items-center rounded-xl border border-transparent transition-transform duration-150 hover:scale-102 focus:ring-0 focus:outline-none active:scale-98 md:flex ${!isOpen ? 'md:bg-primary/10 w-10' : 'w-full'}`}
                         tabIndex={0}
                     >
                         <div className="flex h-10 w-10 items-center justify-center">
                             <LuUtensils size={20} />
                         </div>
                         {isOpen && <span className="whitespace-nowrap">Recipes</span>}
-                    </motion.button>
+                    </button>
                 </div>
 
-                <div className={`mt-2 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'} ${hasLimitReached ? 'opacity-50 pointer-events-none cursor-not-allowed' : ''}`}>
-                    <motion.button
+                <div
+                    className={`mt-2 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'} ${hasLimitReached ? 'pointer-events-none cursor-not-allowed opacity-50' : ''}`}
+                >
+                    <button
                         disabled={hasLimitReached}
                         onClick={() => {
                             startThread();
                             hideRecipeListView();
                         }}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={TRANSITIONS.fast}
-                        animate={{
-                            width: isOpen ? '100%' : '2.5rem',
-                        }}
-                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
-                        style={{ minWidth: '2.5rem', maxWidth: '100%' }}
+                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 items-center rounded-xl border border-transparent transition-transform duration-150 hover:scale-102 focus:ring-0 focus:outline-none active:scale-98 md:flex ${!isOpen ? 'md:bg-primary/10 w-10' : 'w-full'}`}
                         tabIndex={0}
                     >
                         <div className="flex h-10 w-10 items-center justify-center">
                             <LuMessageSquarePlus size={20} />
                         </div>
                         {isOpen && <span className="whitespace-nowrap">New Chat</span>}
-                    </motion.button>
+                    </button>
                 </div>
 
-                <motion.div
-                    variants={ANIMATION_CONFIG.content}
-                    initial="closed"
-                    animate={isOpen ? 'open' : 'closed'}
-                    transition={TRANSITIONS.medium}
-                    className="flex-1 overflow-hidden"
-                >
+                <div className="flex-1 overflow-hidden">
                     {isOpen && threadGroups.length > 0 && (
                         <div className="mt-2 flex flex-row items-center justify-between px-6">
                             <h2 className="text-contrast text-sm tracking-wider">Recent chats</h2>
@@ -249,158 +168,123 @@ export function Sidebar({
                                 </p>
                             </div>
                         )}
-                        {threadGroups.map((group, index) => (
-                            <motion.div
-                                key={group.label}
-                                variants={ANIMATION_CONFIG.threadGroup}
-                                initial="initial"
-                                animate="animate"
-                                transition={TRANSITIONS.medium}
-                                className={`${index < threadGroups.length - 1 ? 'mb-3' : ''}`}
-                            >
-                                <h3
-                                    className={`text-contrast-subtle mx-2 mb-2 text-sm tracking-wider`}
+                        {isOpen &&
+                            threadGroups.map((group, index) => (
+                                <div
+                                    key={group.label}
+                                    className={`${index < threadGroups.length - 1 ? 'mb-3' : ''}`}
                                 >
-                                    {group.label}
-                                </h3>
-                                <div className="space-y-0.5">
-                                    {group.items.map((thread) => (
-                                        <motion.button
-                                            key={thread.id}
-                                            whileHover={{ scale: 1.01 }}
-                                            whileTap={{ scale: 0.99 }}
-                                            onClick={() => {
-                                                if (currentThreadId !== thread.id) {
-                                                    resumeThread(thread.id);
-                                                }
-                                                hideRecipeListView();
-                                            }}
-                                            className={`hover:bg-primary/10 hover:border-primary/20 flex w-full items-center gap-2 rounded-xl border border-transparent p-1 text-left text-sm transition-colors duration-200 sm:p-2 ${currentThreadId === thread.id ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : ''}`}
-                                        >
-                                            <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
-                                                <LuMessageSquare
-                                                    size={16}
-                                                    className="text-primary/80"
-                                                />
-                                            </div>
-                                            <div className="ml-2 min-w-0 flex-1">
-                                                <div className="text-contrast truncate font-medium">
-                                                    {thread.title ?? 'New Chat'}
+                                    <h3
+                                        className={`text-contrast-subtle mx-2 mb-2 text-sm tracking-wider`}
+                                    >
+                                        {group.label}
+                                    </h3>
+                                    <div className="space-y-0.5">
+                                        {group.items.map((thread) => (
+                                            <button
+                                                key={thread.id}
+                                                onClick={() => {
+                                                    if (currentThreadId !== thread.id) {
+                                                        resumeThread(thread.id);
+                                                    }
+                                                    hideRecipeListView();
+                                                }}
+                                                className={`hover:bg-primary/10 hover:border-primary/20 flex w-full items-center gap-2 rounded-xl border border-transparent p-1 text-left text-sm transition-transform duration-150 hover:scale-102 active:scale-98 sm:p-2 ${currentThreadId === thread.id ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : ''}`}
+                                            >
+                                                <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
+                                                    <LuMessageSquare
+                                                        size={16}
+                                                        className="text-primary/80"
+                                                    />
                                                 </div>
-                                                <div className="text-contrast-subtle text-xs italic">
-                                                    {formatThreadTimestamp(thread.updated_at)}
+                                                <div className="ml-2 min-w-0 flex-1">
+                                                    <div className="text-contrast truncate font-medium">
+                                                        {thread.title ?? 'New Chat'}
+                                                    </div>
+                                                    <div className="text-contrast-subtle text-xs italic">
+                                                        {formatThreadTimestamp(thread.updated_at)}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </motion.button>
-                                    ))}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </motion.div>
-                        ))}
+                            ))}
                         <div
                             ref={fetchMoreObserverTarget}
                             className="flex h-4 items-center justify-center"
                         >
-                            {isFetching && (
-                                <motion.div
-                                    variants={ANIMATION_CONFIG.loading}
-                                    initial="initial"
-                                    animate="animate"
-                                    exit="exit"
-                                    className="text-contrast-subtle flex items-center gap-2 text-sm"
-                                >
+                            {isOpen && isFetching && (
+                                <div className="text-contrast-subtle flex items-center gap-2 text-sm">
                                     <div className="border-primary/20 border-t-primary h-4 w-4 animate-spin rounded-full border-2" />
                                     <span>Loading more chats...</span>
-                                </motion.div>
+                                </div>
                             )}
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                {isOpen && userAccessData?.is_authenticated && userAccessData?.name && (
-                    <motion.div
-                        variants={ANIMATION_CONFIG.content}
-                        initial="closed"
-                        animate="open"
-                        transition={TRANSITIONS.medium}
-                        className="border-border/50 h-12 flex-shrink-0 border-t"
+                {featureFlags.enableAuth && (
+                    <div
+                        className={`mt-2 mb-4 flex flex-shrink-0 items-center gap-2 ${isOpen ? 'mx-4' : 'mx-auto'}`}
                     >
-                        <div className="mr-4 ml-2 flex h-full items-center gap-2 px-2 sm:px-4">
-                            <LuUser size={20} className="flex-shrink-0" />
-                            <span className="text-contrast-subtle min-w-0 flex-1 truncate text-sm">
-                                {userAccessData?.name}
-                            </span>
-                        </div>
-                    </motion.div>
+                        {!isAuthenticated && (
+                            <button
+                                onClick={async () => {
+                                    await login();
+                                }}
+                                className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 items-center rounded-xl border border-transparent transition-transform duration-150 hover:scale-102 focus:ring-0 focus:outline-none active:scale-98 md:flex ${!isOpen ? 'md:bg-primary/10 w-10' : 'w-full'}`}
+                                tabIndex={0}
+                            >
+                                <div className="flex w-10 items-center justify-center">
+                                    <LuLogIn size={20} />
+                                </div>
+                                {isOpen && (
+                                    <span className="whitespace-nowrap">
+                                        Sign in to save your chats
+                                    </span>
+                                )}
+                            </button>
+                        )}
+
+                        {isAuthenticated && (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await logout(window.location.origin);
+                                        await userAccessManager.createAnonymousAccess();
+                                        resetCurrentThread();
+                                    } catch (error) {
+                                        console.error('Logout failed:', error);
+                                    }
+                                }}
+                                className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 items-center rounded-xl border border-transparent transition-transform duration-150 hover:scale-102 focus:ring-0 focus:outline-none active:scale-98 md:flex ${!isOpen ? 'md:bg-primary/10 w-10' : 'w-full'}`}
+                                tabIndex={0}
+                            >
+                                <div className="flex w-10 items-center justify-center">
+                                    <LuLogOut size={20} />
+                                </div>
+                                {isOpen && (
+                                    <span className="text-base whitespace-nowrap">Sign out</span>
+                                )}
+                            </button>
+                        )}
+                    </div>
                 )}
-
-                {featureFlags.enableAuth && <div
-                    className={`mt-2 mb-4 flex flex-shrink-0 items-center gap-2 ${isOpen ? 'mx-4' : 'mx-auto'}`}
-                >
-                    {!userAccessData?.is_authenticated && (
-                        <motion.button
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.95 }}
-                            animate={{
-                                width: isOpen ? '100%' : '2.5rem',
-                            }}
-                            transition={TRANSITIONS.fast}
-                            onClick={() => openAuthModal('login')}
-                            className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
-                            style={{ minWidth: '2.5rem', maxWidth: '100%' }}
-                            tabIndex={0}
-                        >
-                            <div className="flex w-10 items-center justify-center">
-                                <LuLogIn size={20} />
-                            </div>
-                            {isOpen && (
-                                <span className="whitespace-nowrap">
-                                    Sign in to save your chats
-                                </span>
-                            )}
-                        </motion.button>
-                    )}
-
-                    {userAccessData?.is_authenticated && userAccessData?.name && (
-                        <motion.button
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.95 }}
-                            animate={{
-                                width: isOpen ? '100%' : '2.5rem',
-                            }}
-                            transition={TRANSITIONS.fast}
-                            onClick={async () => {
-                                await signout();
-                                resetCurrentThread();
-                            }}
-                            className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center rounded-xl border border-transparent transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
-                            style={{ minWidth: '2.5rem', maxWidth: '100%' }}
-                            tabIndex={0}
-                        >
-                            <div className="flex w-10 items-center justify-center">
-                                <LuLogOut size={20} />
-                            </div>
-                            {isOpen && (
-                                <span className="text-base whitespace-nowrap">Sign out</span>
-                            )}
-                        </motion.button>
-                    )}
-                </div>}
-            </motion.div>
+            </div>
         </>
     );
 }
 
-const useUserAccessData = () => {
+const useUserAccess = () => {
     const userAccessManager = useUserAccessManager();
-    const [userAccessData, setUserAccessData] = useState<UserAccessData | null>(
-        userAccessManager.getUserAccessData(),
+    const [userAccess, setUserAccess] = useState<UserAccess | null>(
+        userAccessManager.getUserAccess(),
     );
 
     useEffect(() => {
-        const accessEnsuredListener = (userAccessData: UserAccessData) =>
-            setUserAccessData(userAccessData);
-        const accessChangedListener = (userAccessData: UserAccessData | null) =>
-            setUserAccessData(userAccessData);
+        const accessEnsuredListener = (userAccess: UserAccess) => setUserAccess(userAccess);
+        const accessChangedListener = (userAccess: UserAccess | null) => setUserAccess(userAccess);
         userAccessManager.subscribe('accessEnsured', accessEnsuredListener);
         userAccessManager.subscribe('accessChanged', accessChangedListener);
         return () => {
@@ -409,7 +293,7 @@ const useUserAccessData = () => {
         };
     }, [userAccessManager]);
 
-    return userAccessData;
+    return userAccess;
 };
 
 function useChatLimit() {
@@ -418,24 +302,23 @@ function useChatLimit() {
     const [hasLimitReached, setHasLimitReached] = useState(false);
 
     const { featureFlags } = useAppConfig();
-    
+
     useEffect(() => {
         const limitReachedListener = (error: ChatSessionError) => {
             if (error.type === 'over_message_limit') {
                 setHasLimitReached(true);
             }
         };
-        
 
-        const accessEnsuredListener = (userAccessData: UserAccessData) => {
+        const accessEnsuredListener = (userAccess: UserAccess) => {
             const limit = userAccessManager.getMessageLimit();
-            const messageCount = userAccessData.user_message_count;
+            const messageCount = userAccess.user_message_count;
             setHasLimitReached(messageCount >= limit);
         };
-        const accessChangedListener = (userAccessData: UserAccessData | null) => {
-            if (userAccessData) {
+        const accessChangedListener = (userAccess: UserAccess | null) => {
+            if (userAccess) {
                 const limit = userAccessManager.getMessageLimit();
-                const messageCount = userAccessData.user_message_count;
+                const messageCount = userAccess.user_message_count;
                 setHasLimitReached(messageCount >= limit);
             } else {
                 setHasLimitReached(false);
@@ -471,7 +354,6 @@ function useCurrentThread() {
         const threadResumedListener = (thread: Thread) => {
             setCurrentThreadId(thread.id);
         };
-
         chatStateManager.subscribe('currentThreadChanged', currentThreadChangedListener);
         chatStateManager.subscribe('threadStarted', threadStartedListener);
         chatStateManager.subscribe('threadResumed', threadResumedListener);
@@ -496,14 +378,14 @@ function useCurrentThread() {
     );
 
     const resetCurrentThread = useCallback(() => {
-        chatStateManager.resetState();
         setCurrentThreadId(null);
+        chatStateManager.resetState();
     }, [chatStateManager]);
 
     return { currentThreadId, startThread, resumeThread, resetCurrentThread };
 }
 
-function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null) {
+function useFetchThreads(isOpen: boolean, userAccess: UserAccess | null) {
     const [threads, setThreads] = useState<Thread[]>([]);
     const [isFetching, setIsFetching] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -518,7 +400,7 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
 
     const fetchThreads = useCallback(async () => {
         // TODO: We don't fetch if there's no access token.  Better solution?
-        if (!userAccessData?.access_token || isFetching || !hasMoreThreads) return;
+        if (!userAccess?.access_token || isFetching || !hasMoreThreads) return;
 
         setIsFetching(true);
         try {
@@ -546,17 +428,17 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
         } finally {
             setIsFetching(false);
         }
-    }, [userAccessData?.access_token, isFetching, hasMoreThreads, threadsApiClient, nextTimestamp]);
+    }, [userAccess?.access_token, isFetching, hasMoreThreads, threadsApiClient, nextTimestamp]);
 
     useEffect(() => {
-        if (!userAccessData?.access_token) {
+        if (!userAccess?.access_token) {
             // Reset fetch state when user access changes
             setThreads([]);
             setHasMoreThreads(true);
             setNextTimestamp(null);
             hasInitiallyFetched.current = false;
             setError(null);
-        } else if (userAccessData?.access_token && hasInitiallyFetched.current) {
+        } else if (userAccess?.access_token && hasInitiallyFetched.current) {
             // If we get a new access token (user logged in), reset fetch state to get fresh data
             setThreads([]);
             setHasMoreThreads(true);
@@ -564,7 +446,7 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
             hasInitiallyFetched.current = false;
             setError(null);
         }
-    }, [userAccessData?.access_token]);
+    }, [userAccess?.access_token]);
 
     useEffect(() => {
         if (isOpen && !hasInitiallyFetched.current) {
@@ -575,7 +457,7 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
 
     useEffect(() => {
         const firstUserMessageSentListener = () => {
-            if (!userAccessData) {
+            if (!userAccess) {
                 return;
             }
             const chatState = chatStateManager.getState();
@@ -618,13 +500,12 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
             chatStateManager.unsubscribe('firstMessageSent', firstUserMessageSentListener);
             chatStateManager.unsubscribe('chatStateChanged', chatStateChangedListener);
         };
-    }, [chatStateManager, userAccessData]);
+    }, [chatStateManager, userAccess]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                console.log('🔄 IntersectionObserver - entries:', entries);
-                if (entries[0].isIntersecting && !error && isOpen && userAccessData?.access_token) {
+                if (entries[0].isIntersecting && !error && isOpen && userAccess?.access_token) {
                     fetchThreads();
                 }
             },
@@ -639,7 +520,7 @@ function useFetchThreads(isOpen: boolean, userAccessData: UserAccessData | null)
         return () => {
             if (target) observer.unobserve(target);
         };
-    }, [fetchThreads, error, isOpen, userAccessData?.access_token]);
+    }, [fetchThreads, error, isOpen, userAccess?.access_token]);
 
     const threadGroups = useMemo(() => getThreadGroups(threads), [threads]);
 

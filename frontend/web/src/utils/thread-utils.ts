@@ -10,7 +10,7 @@ export function formatThreadTimestamp(ts: string) {
     } else if (dt.hasSame(now.minus({ days: 1 }), 'day')) {
         return dt.toFormat('h:mm a');
     } else if (dt > now.minus({ days: 7 })) {
-        return dt.toFormat('EEE h:mm a');
+        return dt.toFormat('EEE MMM d h:mm a');
     } else if (dt > now.minus({ days: 30 })) {
         return dt.toFormat('MMM d h:mm a');
     } else {

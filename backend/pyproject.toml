@@ -24,7 +24,7 @@ langgraph = "^0.4.1"
 langchain-google-genai = "^2.1.4"
 lxml = "^5.4.0"
 aiosqlite = "^0.21.0"
-langgraph-checkpoint-postgres = "^2.0.21"
+langgraph-checkpoint-postgres = "2.0.21"
 sqlalchemy = "^2.0.41"
 alembic = "^1.16.1"
 redis = {extras = ["asyncio"], version = "^6.2.0"}

@@ -230,7 +230,6 @@ async def verify(
                         created_at=timestamp,
                         updated_at=timestamp
                     ))
-                    needs_migration = True
                     
             if not current_user_access.is_authenticated:
                 await service_container.user_access_cache_service.revoke_access(access_token)
@@ -262,6 +261,8 @@ async def verify(
                     httponly=settings.get_cookie_httponly(),
                     path=settings.cookie_path,
                 )
+                
+                needs_migration = True
         
             if needs_migration:
                 background_tasks.add_task(_migrate_user_data, old_user_id, user.id, service_container)

@@ -394,6 +394,135 @@ class TestVerifyToken:
         assert response.cookies.get("bk_access_token") != user_access.access_token
         
     @pytest.mark.asyncio(loop_scope="session")
+    async def test_migration_existing_user_with_data(self, async_client, service_container: ServiceContainer, sample_ip_address: str, sample_auth0_token: str, mock_auth0_jwks, mock_jwt_decode, mock_jwt_header, mock_jwk_construct):
+        user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
+        old_user_id = user_access.user_id
+        
+        sample_thread = Thread(
+            id="existing-user-thread",
+            user_id=old_user_id,
+            created_at=to_utc_isostring(datetime.now()),
+            updated_at=to_utc_isostring(datetime.now()),
+            resumed_at=to_utc_isostring(datetime.now()),
+            is_empty=False,
+            title="Existing User Thread",
+            summary="Test summary for existing user",
+            error_message=None
+        )
+        
+        sample_recipe = UserRecipe(
+            id="existing-user-recipe",
+            user_id=old_user_id,
+            thread_id=sample_thread.id,
+            created_at=to_utc_isostring(datetime.now()),
+            updated_at=to_utc_isostring(datetime.now()),
+            name="Existing User Recipe",
+            description="A test recipe for existing user",
+            ingredients=[RecipeIngredient(name="ingredient 1", quantity="1", unit="unit")],
+            instructions=[RecipeInstruction(title="step 1", description="step 1")],
+            categories=[RecipeCategory(name="main dish")],
+            prep_time_minutes=15,
+            cook_time_minutes=30,
+            servings="4 servings",
+            chef_notes="Test notes",
+            substitutions=None,
+            equipment_alternatives=None,
+            scaling_guidance="Test guidance",
+            storage_notes="Test storage",
+            serving_suggestions="Test serving",
+            make_ahead_tips="Test tips",
+            coordination_timeline="Test timeline"
+        )
+        
+        sample_message = Message(
+            id="existing-user-message",
+            user_id=old_user_id,
+            thread_id=sample_thread.id,
+            role=MessageRole.user,
+            content_type=MessageContentType.text,
+            text_content="Hello from existing user!",
+            created_at=to_utc_isostring(datetime.now()),
+            updated_at=to_utc_isostring(datetime.now()),
+            model_name="gpt-4",
+            input_tokens=10,
+            output_tokens=20,
+            tool_name=None,
+            tool_input=None,
+            tool_output=None,
+            recipe_id=sample_recipe.id,
+            is_recipe_generation_started=False,
+            is_recipe_generation_completed=True
+        )
+        
+        await service_container.thread_cache_service.set_thread(sample_thread)
+        await service_container.message_cache_service.set_message(user_id=old_user_id, message=sample_message)
+        await service_container.recipe_cache_service.set_recipe(sample_recipe)
+        
+        cached_threads = await service_container.thread_cache_service.get_threads(old_user_id)
+        cached_messages = await service_container.message_cache_service.get_messages_by_user_id(old_user_id)
+        cached_recipes = await service_container.recipe_cache_service.get_recipes_by_user_id(old_user_id)
+        
+        assert len(cached_threads) == 1
+        assert len(cached_messages) == 1
+        assert len(cached_recipes) == 1
+        
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
+            existing_user = await service_container.user_service.create_user(db, CreateUserParams(
+                id="existing-user-id",
+                external_id="auth0|test-user-id",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            ))
+        
+        headers = {
+            "fly-client-ip": sample_ip_address,
+            "Authorization": f"Bearer {sample_auth0_token}"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access.access_token)
+
+        response = await async_client.post("/api/auth/verify-token", headers=headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        
+        new_user_access = response.json()
+        
+        assert new_user_access["user_id"] == existing_user.id
+        assert new_user_access["user_id"] != old_user_id
+        assert new_user_access["access_token"] != user_access.access_token
+        assert new_user_access["is_authenticated"] is True
+        assert new_user_access["user_message_count"] == 1
+        assert new_user_access["ip_address"] == sample_ip_address
+        
+        # Wait for background migration to complete
+        await asyncio.sleep(0.1)
+        
+        cached_threads = await service_container.thread_cache_service.get_threads(old_user_id)
+        cached_messages = await service_container.message_cache_service.get_messages_by_user_id(old_user_id)
+        cached_recipes = await service_container.recipe_cache_service.get_recipes_by_user_id(old_user_id)
+        
+        assert len(cached_threads) == 0
+        assert len(cached_messages) == 0
+        assert len(cached_recipes) == 0
+        
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
+            db_thread = await service_container.thread_service.get_thread(db, sample_thread.id)
+            assert db_thread is not None
+            assert db_thread.user_id == existing_user.id
+            
+            db_paginated_threads = await service_container.thread_service.get_paginated_threads(db, GetUserThreadsParams(user_id=existing_user.id))
+            db_paginated_messages = await service_container.message_service.get_paginated_messages(db, GetMessagesParams(user_id=existing_user.id, thread_id=sample_thread.id))
+            db_recipes = await service_container.recipe_service.get_user_recipes(db, user_id=existing_user.id)
+        
+            assert len(db_paginated_threads.threads) == 1
+            assert len(db_paginated_messages.messages) == 1
+            assert len(db_recipes) == 1
+            
+            assert db_paginated_threads.threads[0].user_id == existing_user.id
+            assert db_paginated_messages.messages[0].user_id == existing_user.id
+            assert db_recipes[0].user_id == existing_user.id
+        
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_auth0_token_expired(self, async_client, service_container: ServiceContainer, test_settings: Settings, sample_ip_address: str, sample_auth0_token: str, mock_jwt_header, mock_jwk_construct, mock_auth0_jwks):
         user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
         

@@ -136,7 +136,7 @@ export function Sidebar(props: SidebarProps) {
                             </div>
                         </div>
                     )}
-                    <div className="h-full overflow-y-auto px-4 pt-4 pb-8">
+                    <div className="custom-scrollbar h-full overflow-y-auto px-4 pt-4 pb-8">
                         {isOpen && threadGroups.length === 0 && !isFetching && !error && (
                             <div className="text-contrast-subtle py-8 text-center text-sm">
                                 <div className="mb-2">

@@ -259,9 +259,11 @@ function useThreadTitle() {
     );
 
     useEffect(() => {
-        const accessChangedListener = () => {
-            setThreadTitle(null);
-            setThreadTitleState('empty');
+        const accessChangedListener = (access: UserAccess | null) => {
+            if (access === null) {
+                setThreadTitle(null);
+                setThreadTitleState('empty');
+            }
         };
         const updateTitle = (thread: Thread | null) => {
             if (thread?.title) {

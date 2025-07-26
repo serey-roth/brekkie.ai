@@ -2,35 +2,25 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        <!-- App Icons -->
+        <link rel="icon" type="image/png" sizes="32x32" href="/brekkie-logo-32x32.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/brekkie-logo-192x192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/brekkie-logo-512x512.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/brekkie-logo-180x180.png" />
 
-        <!-- Basic Meta -->
-        <meta
-            name="description"
-            content="brekkie.ai is powered by Milo, your friendly AI cooking companion. Get personalized recipes, no-fuss meal ideas, and cozy food chats whenever you need them."
-        />
-        <meta name="theme-color" content="#f86673" />
+        <!-- Essential Meta -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>brekkie.ai - Chat with Milo | Your AI Food Buddy</title>
+        <meta name="theme-color" content="#FF6B35" />
 
-        <!-- Open Graph (for Slack, Discord, etc.) -->
-        <meta property="og:title" content="brekkie.ai — Meet Milo" />
-        <meta
-            property="og:description"
-            content="Milo helps you cook with what you've got. Find recipes, get inspired, and enjoy food again, all from your cozy new sidekick."
-        />
-        <meta property="og:type" content="website" />
+        <!-- Security -->
+        <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+        <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
+        <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
 
-        <!-- Twitter Card -->
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="brekkie.ai — Meet Milo" />
-        <meta
-            name="twitter:description"
-            content="Your friendly food companion. Get easy, comforting recipes and kitchen support with Milo."
-        />
-
-        <title>brekkie.ai — Meet Milo</title>
-
-        <!-- Favicon -->
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <!-- Performance -->
+        <link rel="preload" href="/brekkie-logo.png" as="image" />
+        <link rel="preload" href="/src/main.tsx" as="script" type="module" />
     </head>
     <body>
         <div id="root"></div>

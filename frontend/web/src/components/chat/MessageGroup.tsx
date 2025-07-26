@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
+import { User, Bot, Clock } from 'lucide-react';
 import { DateTime } from 'luxon';
-import { LuUser, LuBot, LuClock } from 'react-icons/lu';
 import { RecipeMessageCard } from '@/components/recipes/RecipeMessageCard';
 import { Markdown } from '@/components/ui/Markdown';
 import type { AssistantMessage, RoleMessageGroup, UserMessage } from '@/data/schemas/messages';
@@ -22,7 +22,7 @@ function UserMessageBubble({ message }: { message: UserMessage }) {
                         <div className="flex items-center gap-2">
                             <div className="flex-shrink-0">
                                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 sm:h-8 sm:w-8">
-                                    <LuUser size={18} className="text-white" />
+                                    <User size={18} className="text-white" />
                                 </div>
                             </div>
                             <span className="text-base font-medium">You</span>
@@ -30,7 +30,7 @@ function UserMessageBubble({ message }: { message: UserMessage }) {
 
                         <div className="flex items-center gap-2 text-xs opacity-80 sm:text-sm">
                             <div className="flex items-center gap-1 text-white/90">
-                                <LuClock size={12} />
+                                <Clock size={12} />
                                 <span>
                                     {DateTime.fromISO(message.created_at).toLocaleString(
                                         DateTime.DATETIME_SHORT,
@@ -106,7 +106,7 @@ function AssistantMessageBubble({
                     <div className="flex items-center gap-2">
                         <div className="flex-shrink-0">
                             <div className="bg-primary/10 border-primary/20 flex h-6 w-6 items-center justify-center rounded-full border sm:h-8 sm:w-8">
-                                <LuBot size={18} className="text-primary" />
+                                <Bot size={18} className="text-primary" />
                             </div>
                         </div>
 
@@ -163,7 +163,7 @@ function AssistantMessageBubble({
 
                     <div className="flex items-center gap-2 text-xs opacity-80 sm:text-sm">
                         <div className="text-contrast-subtle/90 flex items-center gap-1">
-                            <LuClock size={12} />
+                            <Clock size={12} />
                             <span>
                                 {DateTime.fromISO(message.created_at).toLocaleString(
                                     DateTime.DATETIME_SHORT,
@@ -236,7 +236,7 @@ export function AssistantThinkingMessageBubble() {
                         <div className="flex items-center gap-2">
                             <div className="flex-shrink-0">
                                 <div className="bg-primary/10 border-primary/20 flex h-6 w-6 items-center justify-center rounded-full border sm:h-8 sm:w-8">
-                                    <LuBot size={18} className="text-primary" />
+                                    <Bot size={18} className="text-primary" />
                                 </div>
                             </div>
                             <motion.div

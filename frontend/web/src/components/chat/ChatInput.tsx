@@ -1,5 +1,5 @@
+import { ArrowUp } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { FiArrowUp } from 'react-icons/fi';
 
 type ChatInputProps = {
     onSend: (message: string) => void;
@@ -72,7 +72,7 @@ export default function ChatInput({ onSend, disabled, inputContainerRef }: ChatI
                                     : 'bg-background-light/50 text-contrast-subtle/50 cursor-not-allowed opacity-80'
                             }`}
                         >
-                            <FiArrowUp
+                            <ArrowUp
                                 size={20}
                                 className={
                                     input.trim() && !disabled ? 'text-white' : 'text-inherit'

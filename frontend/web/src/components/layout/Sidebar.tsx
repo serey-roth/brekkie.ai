@@ -1,16 +1,16 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
-    LuPanelLeftClose,
-    LuMessageSquare,
-    LuMessageSquarePlus,
-    LuLogOut,
-    LuLogIn,
-    LuMessageSquareWarning,
-    LuArrowRightFromLine,
-    LuArrowLeftFromLine,
-    LuMessageSquareX,
-    LuUtensils,
-} from 'react-icons/lu';
+    PanelLeftClose,
+    MessageSquare,
+    MessageSquarePlus,
+    LogOut,
+    LogIn,
+    MessageSquareWarning,
+    ArrowRightFromLine,
+    ArrowLeftFromLine,
+    MessageSquareX,
+    Utensils,
+} from 'lucide-react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import {
     useAppConfig,
     useAppState,
@@ -52,7 +52,7 @@ export function Sidebar(props: SidebarProps) {
                         onClick={openSidebar}
                         className="text-contrast hover:text-primary bg-background/95 focus:ring-primary/20 border-border flex h-10 w-10 items-center justify-center rounded-xl border shadow-lg backdrop-blur-sm transition-transform duration-150 hover:scale-102 focus:ring-2 focus:outline-none active:scale-98"
                     >
-                        <LuPanelLeftClose size={20} />
+                        <PanelLeftClose size={20} />
                     </button>
                 </div>
             )}
@@ -69,8 +69,15 @@ export function Sidebar(props: SidebarProps) {
             >
                 <div className={`mt-4 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
                     {isOpen && (
-                        <div className="flex flex-1 flex-row items-center gap-2">
-                            <span className="text-contrast ml-3 text-xl font-bold whitespace-nowrap">
+                        <div className="flex flex-1 flex-row items-center">
+                            <div className="flex h-10 w-10 items-center justify-center">
+                                <img
+                                    src="/brekkie-logo.png"
+                                    alt="Brekkie Logo"
+                                    className="h-8 w-8"
+                                />
+                            </div>
+                            <span className="text-contrast mr-2 text-xl font-bold whitespace-nowrap">
                                 brekkie.ai
                             </span>
                             <span className="text-contrast-subtle bg-primary/20 rounded-full px-2 py-0.5 text-xs font-semibold">
@@ -83,9 +90,9 @@ export function Sidebar(props: SidebarProps) {
                         className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border border-transparent p-2 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
                     >
                         {isOpen ? (
-                            <LuArrowLeftFromLine size={20} />
+                            <ArrowLeftFromLine size={20} />
                         ) : (
-                            <LuArrowRightFromLine size={20} />
+                            <ArrowRightFromLine size={20} />
                         )}
                     </button>
                 </div>
@@ -102,7 +109,7 @@ export function Sidebar(props: SidebarProps) {
                         tabIndex={0}
                     >
                         <div className="flex h-10 w-10 items-center justify-center">
-                            <LuUtensils size={20} />
+                            <Utensils size={20} />
                         </div>
                         {isOpen && <span className="whitespace-nowrap">Recipes</span>}
                     </button>
@@ -121,7 +128,7 @@ export function Sidebar(props: SidebarProps) {
                         tabIndex={0}
                     >
                         <div className="flex h-10 w-10 items-center justify-center">
-                            <LuMessageSquarePlus size={20} />
+                            <MessageSquarePlus size={20} />
                         </div>
                         {isOpen && <span className="whitespace-nowrap">New Chat</span>}
                     </button>
@@ -140,10 +147,7 @@ export function Sidebar(props: SidebarProps) {
                         {isOpen && threadGroups.length === 0 && !isFetching && !error && (
                             <div className="text-contrast-subtle py-8 text-center text-sm">
                                 <div className="mb-2">
-                                    <LuMessageSquareX
-                                        size={32}
-                                        className="text-primary/60 mx-auto"
-                                    />
+                                    <MessageSquareX size={32} className="text-primary/60 mx-auto" />
                                 </div>
                                 <p className="mx-auto max-w-[240px] font-medium">
                                     No chats yet. Milo's waiting whenever you're ready.
@@ -153,7 +157,7 @@ export function Sidebar(props: SidebarProps) {
                         {isOpen && error && (
                             <div className="text-contrast-subtle flex flex-col items-center justify-center gap-1 py-8 text-center text-sm">
                                 <div className="mb-2">
-                                    <LuMessageSquareWarning
+                                    <MessageSquareWarning
                                         size={32}
                                         className="text-primary/60 mx-auto"
                                     />
@@ -192,7 +196,7 @@ export function Sidebar(props: SidebarProps) {
                                                 className={`hover:bg-primary/10 hover:border-primary/20 flex w-full items-center gap-2 rounded-xl border border-transparent p-1 text-left text-sm transition-transform duration-150 hover:scale-102 active:scale-98 sm:p-2 ${currentThreadId === thread.id ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : ''}`}
                                             >
                                                 <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
-                                                    <LuMessageSquare
+                                                    <MessageSquare
                                                         size={16}
                                                         className="text-primary/80"
                                                     />
@@ -237,7 +241,7 @@ export function Sidebar(props: SidebarProps) {
                                 tabIndex={0}
                             >
                                 <div className="flex w-10 items-center justify-center">
-                                    <LuLogIn size={20} />
+                                    <LogIn size={20} />
                                 </div>
                                 {isOpen && (
                                     <span className="whitespace-nowrap">
@@ -262,7 +266,7 @@ export function Sidebar(props: SidebarProps) {
                                 tabIndex={0}
                             >
                                 <div className="flex w-10 items-center justify-center">
-                                    <LuLogOut size={20} />
+                                    <LogOut size={20} />
                                 </div>
                                 {isOpen && (
                                     <span className="text-base whitespace-nowrap">Sign out</span>

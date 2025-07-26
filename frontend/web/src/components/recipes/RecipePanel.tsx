@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowRightFromLine } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { LuArrowRightFromLine } from 'react-icons/lu';
 import { useRecipeManager } from '@/context/chat-context';
 import type { UserRecipe } from '@/data/schemas/recipes';
 import { RecipeView } from './RecipeView';
@@ -53,7 +53,7 @@ export function RecipePanel({ selectedRecipeId, isSidebarOpen, onClose }: Recipe
                                     onClick={onClose}
                                     className="text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border-none shadow-none backdrop-blur-sm transition-colors duration-200 focus:ring-0 focus:outline-none md:flex"
                                 >
-                                    <LuArrowRightFromLine
+                                    <ArrowRightFromLine
                                         className="transition-transform duration-200"
                                         size={20}
                                     />

@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, Users, Flame, ChevronDown } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import React from 'react';
-import { FaClock, FaUserFriends, FaFire, FaChevronDown } from 'react-icons/fa';
 import { Markdown } from '@/components/ui/Markdown';
 import {
     type RecipeCategory,
@@ -238,9 +238,9 @@ const RecipeCategories = React.memo(function RecipeCategories({
 });
 
 const RECIPE_META_ICONS = {
-    prep_time: <FaClock className="text-primary-dark" />,
-    cook_time: <FaFire className="text-primary-dark" />,
-    servings: <FaUserFriends className="text-primary-dark" />,
+    prep_time: <Clock className="text-primary-dark" />,
+    cook_time: <Flame className="text-primary-dark" />,
+    servings: <Users className="text-primary-dark" />,
 } as const;
 
 const RecipeMeta = React.memo(function RecipeMeta({
@@ -417,7 +417,7 @@ const InstructionsList = React.memo(function InstructionsList({
                                 </h3>
                             </div>
                             {hasContent && (
-                                <FaChevronDown
+                                <ChevronDown
                                     className={`text-primary-dark transition-transform duration-200 ${
                                         isOpen ? 'rotate-180' : ''
                                     } group-hover:text-primary`}
@@ -582,7 +582,7 @@ export const GroupedRecipeNotesTabs = ({
                                             </h3>
                                         </div>
                                         {hasContent && (
-                                            <FaChevronDown
+                                            <ChevronDown
                                                 className={`text-primary-dark transition-all duration-200 ${
                                                     isOpen ? 'text-primary rotate-180' : ''
                                                 } group-hover:text-primary`}

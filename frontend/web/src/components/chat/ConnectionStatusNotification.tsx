@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
+import { CircleAlert, WifiOff, Loader, Wifi } from 'lucide-react';
 import { useMemo } from 'react';
-import { FaCircleExclamation } from 'react-icons/fa6';
-import { LuWifiOff, LuLoader, LuWifi } from 'react-icons/lu';
 import type { ConnectionStatus } from '@/data/schemas/connection-state';
 
 interface ConnectionStatusProps {
@@ -17,37 +16,37 @@ const STATUS_CONFIG: Record<
     }
 > = {
     connected: {
-        icon: <LuWifi className="h-4 w-4" />,
+        icon: <Wifi className="h-4 w-4" />,
         className:
             'bg-secondary/90 border-secondary-dark/50 text-contrast bg-opacity-90 border shadow-lg backdrop-blur-sm',
         message: 'Connected',
     },
     error: {
-        icon: <FaCircleExclamation className="h-4 w-4" />,
+        icon: <CircleAlert className="h-4 w-4" />,
         className:
             'bg-primary/90 border-primary-dark/50 text-white bg-opacity-90 border shadow-lg backdrop-blur-sm',
         message: 'Something went wrong',
     },
     connecting: {
-        icon: <LuLoader className="h-4 w-4 animate-spin" />,
+        icon: <Loader className="h-4 w-4 animate-spin" />,
         className:
             'bg-accent/90 border-accent-dark/50 text-contrast bg-opacity-90 border shadow-lg backdrop-blur-sm',
         message: 'Connecting...',
     },
     reconnecting: {
-        icon: <LuLoader className="h-4 w-4 animate-spin" />,
+        icon: <Loader className="h-4 w-4 animate-spin" />,
         className:
             'bg-accent/90 border-accent-dark/50 text-contrast bg-opacity-90 border shadow-lg backdrop-blur-sm',
         message: 'Reconnecting...',
     },
     disconnected: {
-        icon: <LuWifiOff className="h-4 w-4" />,
+        icon: <WifiOff className="h-4 w-4" />,
         className:
             'bg-contrast-subtle/90 border-contrast/50 text-background-light bg-opacity-90 border shadow-lg backdrop-blur-sm',
         message: 'Not connected',
     },
     idle: {
-        icon: <LuWifiOff className="h-4 w-4" />,
+        icon: <WifiOff className="h-4 w-4" />,
         className:
             'bg-contrast-subtle/90 border-contrast/50 text-background-light bg-opacity-90 border shadow-lg backdrop-blur-sm',
         message: 'Not connected',

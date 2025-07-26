@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { FaCircleExclamation } from 'react-icons/fa6';
-import { LuLoader } from 'react-icons/lu';
+import { CircleAlert, Loader } from 'lucide-react';
 import { ChatMessageGroup, AssistantThinkingMessageBubble } from '@/components/chat/MessageGroup';
 import type { RoleMessageGroup } from '@/data/schemas/messages';
 
@@ -40,7 +39,7 @@ export function MessageList({
                         transition={{ duration: 0.15 }}
                         className="text-contrast-subtle flex h-12 items-center justify-center gap-2 text-sm"
                     >
-                        <LuLoader className="h-4 w-4 animate-spin" />
+                        <Loader className="h-4 w-4 animate-spin" />
                         <span>{loadingMessage}</span>
                     </motion.div>
                 )}
@@ -52,7 +51,7 @@ export function MessageList({
                         transition={{ duration: 0.15 }}
                         className="text-contrast-subtle flex h-12 items-center justify-center gap-2 text-sm"
                     >
-                        <FaCircleExclamation className="h-4 w-4 text-red-500" />
+                        <CircleAlert className="h-4 w-4 text-red-500" />
                         <span>{errorLoadingMoreMessages}</span>
                     </motion.div>
                 )}

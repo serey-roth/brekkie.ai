@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FaCircleExclamation } from 'react-icons/fa6';
+import { CircleAlert } from 'lucide-react';
 
 export function ErrorNotification({ errorMessage }: { errorMessage: string }) {
     return (
@@ -22,7 +22,7 @@ export function ErrorNotification({ errorMessage }: { errorMessage: string }) {
                     ease: 'easeOut',
                 }}
             >
-                <FaCircleExclamation className="h-4 w-4" />
+                <CircleAlert className="h-4 w-4" />
             </motion.div>
             <motion.div
                 className="min-w-0 flex-1"

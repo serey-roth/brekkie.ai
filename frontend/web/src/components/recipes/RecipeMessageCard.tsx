@@ -1,5 +1,5 @@
+import { Loader } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { LuLoader } from 'react-icons/lu';
 import { useRecipeManager } from '@/context/chat-context';
 import type { UserRecipe } from '@/data/schemas/recipes';
 import { RecipeCard } from './RecipeCard';
@@ -65,7 +65,7 @@ export function RecipeMessageCard({
             >
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-3">
-                        <LuLoader className="text-background-light h-5 w-5 animate-spin" />
+                        <Loader className="text-background-light h-5 w-5 animate-spin" />
                         <p className="text-background-light text-sm">{message}</p>
                     </div>
                 </div>

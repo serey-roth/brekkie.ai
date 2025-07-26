@@ -1,8 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { Utensils, Loader, CircleAlert } from 'lucide-react';
 import { DateTime } from 'luxon';
 import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
-import { FaCircleExclamation, FaUtensils } from 'react-icons/fa6';
-import { LuLoader } from 'react-icons/lu';
 import { useRecipesApiClient } from '@/context/app-context';
 import { useRecipeManager } from '@/context/chat-context';
 import type { UserRecipe } from '@/data/schemas/recipes';
@@ -187,7 +186,7 @@ export const RecipeListView = ({
                                             ease: 'linear',
                                         }}
                                     >
-                                        <LuLoader className="text-primary mb-4 h-8 w-8 animate-spin" />
+                                        <Loader className="text-primary mb-4 h-8 w-8 animate-spin" />
                                     </motion.div>
                                     <motion.p
                                         className="text-contrast-subtle text-sm"
@@ -219,7 +218,7 @@ export const RecipeListView = ({
                                         animate={{ scale: 1, opacity: 1 }}
                                         transition={{ delay: 0.1 }}
                                     >
-                                        <FaCircleExclamation className="text-primary/60 mb-4 h-12 w-12" />
+                                        <CircleAlert className="text-primary/60 mb-4 h-12 w-12" />
                                     </motion.div>
                                     <motion.h3
                                         className="text-contrast mb-2 text-lg font-medium"
@@ -247,7 +246,7 @@ export const RecipeListView = ({
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.4 }}
                                     >
-                                        <LuLoader className="h-4 w-4" />
+                                        <Loader className="h-4 w-4" />
                                         Try Again
                                     </motion.button>
                                 </motion.div>
@@ -272,7 +271,7 @@ export const RecipeListView = ({
                                         animate={{ scale: 1, opacity: 1 }}
                                         transition={{ delay: 0.1 }}
                                     >
-                                        <FaUtensils className="text-primary/40 mb-6 h-16 w-16" />
+                                        <Utensils className="text-primary/40 mb-6 h-16 w-16" />
                                     </motion.div>
                                     <motion.h3
                                         className="text-contrast mb-3 text-xl font-semibold"

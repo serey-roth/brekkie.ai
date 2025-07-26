@@ -1,4 +1,4 @@
-import { FaClock, FaUserFriends } from 'react-icons/fa';
+import { Clock, Users } from 'lucide-react';
 import Markdown from 'react-markdown';
 import type { UserRecipe } from '@/data/schemas/recipes';
 import { formatRecipeCategory, formatRecipeTime } from '@/utils/recipe-utils';
@@ -28,7 +28,7 @@ export const RecipeCard = ({
             <div className="text-background-light mb-2 flex flex-wrap items-center gap-x-4 gap-y-2">
                 {(recipe.prep_time_minutes || recipe.cook_time_minutes) && (
                     <div className="flex items-center gap-1">
-                        <FaClock className="text-sm" />
+                        <Clock className="text-sm" />
                         <span className="text-sm">
                             Total:{' '}
                             {formatRecipeTime(
@@ -39,7 +39,7 @@ export const RecipeCard = ({
                 )}
                 {recipe.servings && (
                     <div className="flex items-center gap-1">
-                        <FaUserFriends className="text-sm" />
+                        <Users className="text-sm" />
                         <span className="text-sm">{recipe.servings} servings</span>
                     </div>
                 )}

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
+import { Utensils } from 'lucide-react';
 import { useLayoutEffect, useState, useCallback, useRef } from 'react';
-import { FaUtensils } from 'react-icons/fa6';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -8,7 +8,7 @@ const LoadingAnimation = ({ name }: { name: string | undefined }) => (
     <div className="bg-background flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center space-y-6">
             <div className="text-primary/40 flex items-center justify-center">
-                <FaUtensils className="h-24 w-24" />
+                <Utensils className="h-24 w-24" />
             </div>
 
             <motion.div
@@ -78,7 +78,7 @@ const ErrorAnimation = () => (
             transition={{ duration: 0.5, ease: 'easeOut' }}
         >
             <div className="flex items-center justify-center">
-                <FaUtensils className="h-24 w-24 text-red-500" />
+                <Utensils className="h-24 w-24 text-red-500" />
             </div>
             <div>
                 <h2 className="text-contrast font-heading text-lg font-semibold">

@@ -1,7 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowDown, CircleAlert, AlertTriangle } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { FaArrowDown } from 'react-icons/fa';
-import { FaCircleExclamation, FaTriangleExclamation } from 'react-icons/fa6';
 import ChatInput from '@/components/chat/ChatInput';
 import { ConnectionStatusNotification } from '@/components/chat/ConnectionStatusNotification';
 import { ErrorNotification } from '@/components/ui/ErrorNotification';
@@ -124,10 +123,10 @@ export function ChatLayout({
                                             <div className="flex flex-wrap items-center justify-center gap-1">
                                                 <div className="flex flex-nowrap items-center gap-2 text-sm">
                                                     {chatLimitMessage.type === 'warning' && (
-                                                        <FaTriangleExclamation className="h-4 w-4 text-yellow-500" />
+                                                        <AlertTriangle className="h-4 w-4 text-yellow-500" />
                                                     )}
                                                     {chatLimitMessage.type === 'error' && (
-                                                        <FaCircleExclamation className="h-4 w-4 text-red-500" />
+                                                        <CircleAlert className="h-4 w-4 text-red-500" />
                                                     )}
                                                     <span>{chatLimitMessage.message}</span>
                                                 </div>
@@ -168,7 +167,7 @@ export function ChatLayout({
                                     <div className="flex w-full items-center justify-center">
                                         <div className="bg-background rounded-2xl border border-red-300 px-4 py-3 text-base leading-relaxed text-red-700 shadow-md sm:text-sm">
                                             <div className="flex items-center gap-2">
-                                                <FaCircleExclamation className="h-4 w-4" />
+                                                <CircleAlert className="h-4 w-4" />
                                                 <span>{chatSessionErrorMessage}</span>
                                             </div>
                                         </div>
@@ -193,7 +192,7 @@ export function ChatLayout({
                                             ease: 'easeInOut',
                                         }}
                                     >
-                                        <FaArrowDown />
+                                        <ArrowDown />
                                     </motion.div>
                                     <span className="text-contrast text-sm">
                                         {scrollToBottomMessage}

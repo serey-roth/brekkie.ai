@@ -18,7 +18,7 @@ primary_region = "iad"
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = false
+  auto_stop_machines = "off"
   min_machines_running = 1 # Keep at least 1 vm warm ready for chat
   processes = ["app"]
 
@@ -33,10 +33,6 @@ primary_region = "iad"
   cpu_kind = "shared"
   cpus = 1
   memory_mb = 512
-
-[[mounts]]
-  source = "brekkie_data"
-  destination = "/data"
 
 [[services]]
   protocol = "tcp"

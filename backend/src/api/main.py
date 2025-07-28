@@ -4,54 +4,48 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from api.routes.access import router as access_router
+from api.routes.auth import router as auth_router
+from api.routes.chats import router as chats_router
+from api.routes.health import router as health_router
+from api.routes.recipes import router as recipes_router
+from api.routes.threads import router as threads_router
+from config.settings import create_settings
+from database.checkpointer import create_checkpointer_pool
+from database.index import create_db_transaction_maker
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-
-from api.routes.chats import router as chats_router
-from api.routes.auth import router as auth_router
-from api.routes.access import router as access_router
-from api.routes.threads import router as threads_router
-from api.routes.health import router as health_router
-from api.routes.recipes import router as recipes_router
-
-from database.index import create_db_transaction_maker
-from database.checkpointer import create_checkpointer_pool
-
-from repositories.thread_repository import ThreadRepository
 from repositories.message_repository import MessageRepository
-from repositories.user_repository import UserRepository
 from repositories.recipe_repository import RecipeRepository
-
-from services.service_container import ServiceContainer
-from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from repositories.thread_repository import ThreadRepository
+from repositories.user_repository import UserRepository
+from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
+from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
 from services.chat_services.chat_session_store import ChatSessionStore
-from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
-from services.data_services.user_access_cache_service import UserAccessCacheService
-from services.data_services.ip_address_rate_limiter import (
-    IpAddressRateLimiter,
-    IpAddressRateLimitConfig,
-)
 from services.data_services.anonymous_access_service import AnonymousAccessService
-from services.data_services.user_service import UserService
-from services.data_services.thread_service import ThreadService
-from services.data_services.thread_cache_service import ThreadCacheService
-from services.data_services.message_service import MessageService
+from services.data_services.ip_address_rate_limiter import (
+    IpAddressRateLimitConfig,
+    IpAddressRateLimiter,
+)
 from services.data_services.message_cache_service import MessageCacheService
-from services.data_services.recipe_service import RecipeService
+from services.data_services.message_service import MessageService
 from services.data_services.recipe_cache_service import RecipeCacheService
-from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
-from services.websocket_event_sender import WebSocketEventSender
-from services.safety_guards.regex_safety_guard import RegexSafetyGuard
+from services.data_services.recipe_service import RecipeService
+from services.data_services.thread_cache_service import ThreadCacheService
+from services.data_services.thread_service import ThreadService
+from services.data_services.user_access_cache_service import UserAccessCacheService
+from services.data_services.user_service import UserService
 from services.redis.redis_client import create_redis_client
-
-from config.settings import create_settings
+from services.safety_guards.regex_safety_guard import RegexSafetyGuard
+from services.service_container import ServiceContainer
+from services.websocket_event_sender import WebSocketEventSender
 from utils.logger import Logger
 
 logger = Logger("api.index")
@@ -203,7 +197,13 @@ if os.path.exists("frontend/dist"):
         if full_path.startswith(("api/", "ws/")):
             raise HTTPException(status_code=404, detail="Not Found")
         
-        # Serve index.html for all other routes
+        # Check if the requested path is a static file (like logos)
+        static_file_path = f"frontend/dist/{full_path}"
+        if os.path.exists(static_file_path) and os.path.isfile(static_file_path):
+            # Serve the static file
+            return FileResponse(static_file_path)
+        
+        # Serve index.html for all other routes (client-side routing)
         index_path = "frontend/dist/index.html"
         if os.path.exists(index_path):
             with open(index_path, "r") as f:

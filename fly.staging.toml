@@ -36,10 +36,6 @@ primary_region = "iad"
   cpus = 1
   memory_mb = 512
 
-[[mounts]]
-  source = "brekkie_data"
-  destination = "/data"
-
 [[services]]
   protocol = "tcp"
   internal_port = 8080

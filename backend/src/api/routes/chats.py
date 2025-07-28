@@ -1,14 +1,14 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, WebSocket
-from fastapi.websockets import WebSocketState
 
 from api.deps import get_access_token_from_websocket, get_service_container_from_websocket
-from services.service_container import ServiceContainer
+from fastapi import APIRouter, Depends, WebSocket
+from fastapi.websockets import WebSocketState
 from schemas.chat_session_errors import (
     AccessTokenNotFoundError,
     ChatSessionError,
     InternalServerError,
 )
+from services.service_container import ServiceContainer
 from utils.logger import Logger
 
 logger = Logger("api.routes.chats")

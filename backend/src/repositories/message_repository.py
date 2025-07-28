@@ -1,14 +1,9 @@
-from typing import cast
-from datetime import datetime
-
-from sqlalchemy import func, select
-from sqlalchemy.orm import selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.schema import DBMessage
-
-from schemas.messages import CreateMessageParams, UpdateMessageParams, GetDBMessagesParams
-
+from schemas.messages import CreateMessageParams, GetDBMessagesParams, UpdateMessageParams
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from utils.date_utils import strip_timezone
 
 

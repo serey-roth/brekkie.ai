@@ -99,9 +99,12 @@ class TestGetUserThreads:
         async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests 
             user = await service_container.user_service.create_user(db, CreateUserParams(
                 id=user_access.user_id,
-                external_id="test-user-id",
+                external_id="test-external-id",
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
+                last_signed_in_at=datetime.now(timezone.utc),
+                email="test@test.com",
+                name="Test User"
             ))
             await service_container.thread_service.create_thread(db, CreateThreadParams(
                 id=thread_id,
@@ -305,9 +308,12 @@ class TestGetThreadMessages:
         async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             user = await service_container.user_service.create_user(db, CreateUserParams(
                 id=user_access.user_id,
-                external_id="test-user-id",
+                external_id="test-external-id",
                 created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.now(timezone.utc),
+                last_signed_in_at=datetime.now(timezone.utc),
+                email="test@test.com",
+                name="Test User"
             ))
             thread = await service_container.thread_service.create_thread(db, CreateThreadParams(
                 id=thread_id,

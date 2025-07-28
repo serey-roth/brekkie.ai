@@ -1,7 +1,7 @@
 from enum import Enum
-from datetime import datetime, timezone
-from typing import Annotated, Dict, List
-from pydantic import BaseModel, Field, AfterValidator
+from typing import List
+
+from pydantic import BaseModel, Field
 
 
 class SafetyIssueType(str, Enum):

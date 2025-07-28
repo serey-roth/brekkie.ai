@@ -1,31 +1,27 @@
-from typing import Callable, Awaitable, Dict, Any
 import json
-
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langchain_core.messages import HumanMessage, ToolMessage, AIMessageChunk
+from typing import Any, Awaitable, Callable, Dict
 
 from ai.workflow.agent import AgentFactory
-
-from services.ai_food_agent.ai_food_agent import AIFoodAgent
-from services.streaming_recipe_parser.streaming_recipe_parser import StreamingRecipeFieldParser
-
-from schemas.conversation_stream_state import ConversationStreamState
+from langchain_core.messages import AIMessageChunk, HumanMessage, ToolMessage
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from schemas.conversation_stream_events import (
+    AIAgentErrorPayload,
     ConversationStreamEvent,
-    TextMessageStartedPayload,
-    TextMessageChunkGeneratedPayload,
-    TextMessageCompletedPayload,
-    SearchStartedPayload,
-    SearchCompletedPayload,
-    RecipeGenerationStartedPayload,
+    ConversationStreamMetadata,
     RecipeFieldDetectedPayload,
     RecipeGenerationCompletedPayload,
-    AIAgentErrorPayload,
+    RecipeGenerationStartedPayload,
+    SearchCompletedPayload,
+    SearchStartedPayload,
     SummaryUpdatedPayload,
+    TextMessageChunkGeneratedPayload,
+    TextMessageCompletedPayload,
+    TextMessageStartedPayload,
     ThreadTitleUpdatedPayload,
-    ConversationStreamMetadata,
 )
-
+from schemas.conversation_stream_state import ConversationStreamState
+from services.ai_food_agent.ai_food_agent import AIFoodAgent
+from services.streaming_recipe_parser.streaming_recipe_parser import StreamingRecipeFieldParser
 from utils.logger import Logger
 
 logger = Logger("google_ai_food_agent")

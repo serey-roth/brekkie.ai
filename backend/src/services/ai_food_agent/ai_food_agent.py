@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Awaitable
+from typing import Awaitable, Callable
 
 from langchain_core.messages import AIMessageChunk
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
-
 from schemas.conversation_stream_events import ConversationStreamEvent
-
 from utils.logger import Logger
 
 logger = Logger("ai_food_agent")

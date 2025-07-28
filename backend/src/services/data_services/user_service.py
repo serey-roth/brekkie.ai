@@ -1,17 +1,14 @@
-from typing import cast
 from datetime import datetime
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import cast
 
 from database.schema import DBUser
-
 from repositories.user_repository import UserRepository
-
 from schemas.users import (
-    User,
     CreateUserParams,
+    UpdateUserParams,
+    User,
 )
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from utils.date_utils import to_utc_isostring
 from utils.logger import Logger
 
@@ -28,6 +25,9 @@ class UserService:
             external_id=str(user.external_id),
             created_at=to_utc_isostring(cast(datetime, user.created_at)),
             updated_at=to_utc_isostring(cast(datetime, user.updated_at)),
+            last_signed_in_at=to_utc_isostring(cast(datetime, user.last_signed_in_at)) if user.last_signed_in_at is not None else None,
+            email=str(user.email) if user.email is not None else None,
+            name=str(user.name) if user.name is not None else None
         )
 
     async def create_user(self, db: AsyncSession, params: CreateUserParams) -> User:
@@ -44,3 +44,8 @@ class UserService:
         logger.debug(f"Getting user by external_id: {external_id}")
         user = await self.repository.get_user_by_external_id(db, external_id)
         return self._to_user_dto(user) if user else None
+
+    async def update_user(self, db: AsyncSession, user_id: str, params: UpdateUserParams) -> User:
+        logger.debug(f"Updating user with id: {user_id}")
+        user = await self.repository.update_user(db, user_id, params)
+        return self._to_user_dto(user)

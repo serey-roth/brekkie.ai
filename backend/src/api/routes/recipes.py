@@ -1,12 +1,9 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Header, HTTPException, Cookie
 
-from api.deps import get_service_container, get_access_token
-
+from api.deps import get_access_token, get_service_container
+from fastapi import APIRouter, Depends, HTTPException
 from schemas.recipes import UserRecipe
-
 from services.service_container import ServiceContainer
-
 from utils.logger import Logger
 
 logger = Logger("api.routes.recipes")

@@ -1,19 +1,17 @@
 from typing import Any, Optional, Type
-from pydantic import BaseModel
 
+from pydantic import BaseModel
 from schemas.recipes import (
     CreateRecipeParams,
+    RecipeCategory,
     RecipeIngredient,
+    RecipeInstruction,
     UpdateRecipeFieldParams,
     UpdateRecipeParams,
     UserRecipe,
-    RecipeInstruction,
-    RecipeCategory,
 )
-
-from services.redis.redis_client import RedisClient
 from services.redis.redis_cache import RedisCache
-
+from services.redis.redis_client import RedisClient
 from utils.date_utils import to_utc_isostring
 
 

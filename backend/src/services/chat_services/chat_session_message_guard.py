@@ -1,8 +1,7 @@
 from typing import List
 
-from services.safety_guards.regex_safety_guard import RegexSafetyGuard
-
 from schemas.safety_guards import SafetyGuardResult, SafetyIssue, SafetyRiskLevel
+from services.safety_guards.regex_safety_guard import RegexSafetyGuard
 
 
 class ChatSessionMessageGuard:

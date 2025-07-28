@@ -53,7 +53,9 @@ def mock_jwt_decode():
         "aud": "https://brekkie-ai.fly.dev/api",
         "iss": "https://dev-1oqfxpe3kn4ryzgd.us.auth0.com/",
         "exp": 9999999999,
-        "iat": 1234567890
+        "iat": 1234567890,
+        "email": "test@test.com",
+        "name": "Test User"
     }
     
     with patch('api.routes.auth.jwt.decode', return_value=mock_payload):
@@ -77,7 +79,6 @@ class TestVerifyToken:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_successful_verify(self, async_client, service_container: ServiceContainer, sample_ip_address: str, sample_auth0_token: str, mock_auth0_jwks, mock_jwt_decode, mock_jwt_header, mock_jwk_construct):
         user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
-        
         
         headers = {
             "fly-client-ip": sample_ip_address,
@@ -230,8 +231,6 @@ class TestVerifyToken:
     
     @pytest.mark.asyncio(loop_scope="session")
     async def test_missing_auth0_token(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
-        user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
-        
         headers = {
             "fly-client-ip": sample_ip_address,
         }
@@ -279,8 +278,6 @@ class TestVerifyToken:
             
     @pytest.mark.asyncio(loop_scope="session")
     async def test_access_token_not_found(self, async_client, service_container: ServiceContainer, sample_ip_address: str):
-        user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
-        
         headers = {
             "fly-client-ip": sample_ip_address,
             "Authorization": f"Bearer {sample_auth0_token}"
@@ -335,6 +332,9 @@ class TestVerifyToken:
                 external_id="auth0|test-user-id",
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
+                last_signed_in_at=datetime.now(timezone.utc),
+                email="test@test.com",
+                name="Test User"
             ))
         
         headers = {
@@ -364,6 +364,9 @@ class TestVerifyToken:
                 external_id="auth0|test-user-id",
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
+                last_signed_in_at=datetime.now(timezone.utc),
+                email="test@test.com",
+                name="Test User"
             ))
         
         headers = {
@@ -472,6 +475,9 @@ class TestVerifyToken:
                 external_id="auth0|test-user-id",
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
+                last_signed_in_at=datetime.now(timezone.utc),
+                email="old@test.com",
+                name="Old User"
             ))
         
         headers = {
@@ -533,7 +539,7 @@ class TestVerifyToken:
         
         async_client.cookies.set("bk_access_token", user_access.access_token)
         
-        with patch('api.routes.auth.jwt.decode', return_value={"sub": "auth0|test-user-id", "exp": 100, "iat": 1715808000, "aud":"https://brekkie-ai.fly.dev/api", "iss": "https://dev-1oqfxpe3kn4ryzgd.us.auth0.com/"}):
+        with patch('api.routes.auth.jwt.decode', return_value={"sub": "auth0|test-user-id", "exp": 100, "iat": 1715808000, "aud":"https://brekkie-ai.fly.dev/api", "iss": "https://dev-1oqfxpe3kn4ryzgd.us.auth0.com/", "email": "test@test.com", "name": "Test User"}):
             response = await async_client.post("/api/auth/verify-token", headers=headers)
             assert response.status_code == status.HTTP_200_OK
             
@@ -583,6 +589,45 @@ class TestVerifyToken:
             assert response.json()["detail"]["message"] == "Invalid token"
             
     @pytest.mark.asyncio(loop_scope="session")
+    async def test_existing_user_gets_updated(self, async_client, service_container: ServiceContainer, sample_ip_address: str, sample_auth0_token: str, mock_auth0_jwks, mock_jwt_decode, mock_jwt_header, mock_jwk_construct):
+        user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
+        
+        old_last_signed_in_at = datetime.now(timezone.utc)
+        # Create existing user in database
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
+            await service_container.user_service.create_user(db, CreateUserParams(
+                id=user_access.user_id,
+                external_id="auth0|test-user-id",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+                last_signed_in_at=old_last_signed_in_at,
+                email="old@test.com",
+                name="Old User"
+            ))
+        
+        headers = {
+            "fly-client-ip": sample_ip_address,
+            "Authorization": f"Bearer {sample_auth0_token}"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access.access_token)
+        
+        response = await async_client.post("/api/auth/verify-token", headers=headers)
+        assert response.status_code == status.HTTP_200_OK
+        
+        # Check that user was updated with new email and name
+        async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
+            updated_user = await service_container.user_service.get_user_by_id(db, user_access.user_id)
+            assert updated_user is not None
+            assert updated_user.email == "test@test.com"
+            assert updated_user.name == "Test User"
+            assert updated_user.last_signed_in_at != old_last_signed_in_at
+        
+        new_user_access = response.json()
+        assert new_user_access["user_id"] == user_access.user_id
+        assert new_user_access["is_authenticated"] is True
+        
+    @pytest.mark.asyncio(loop_scope="session")
     async def test_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings, sample_ip_address: str):
         from api.main import app
         from api.deps import get_settings
@@ -603,3 +648,57 @@ class TestVerifyToken:
         
         finally:
             app.dependency_overrides = {}
+            
+    @pytest.mark.asyncio(loop_scope="session")
+    async def test_request_to_user_info_endpoint(self, async_client, service_container: ServiceContainer, sample_ip_address: str, sample_auth0_token: str, mock_jwt_header, mock_jwk_construct, mock_auth0_jwks):
+        user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
+        
+        headers = {
+            "fly-client-ip": sample_ip_address,
+            "Authorization": f"Bearer {sample_auth0_token}"
+        }
+        
+        async_client.cookies.set("bk_access_token", user_access.access_token)
+        
+        # Mock JWT decode to return payload without email and name
+        mock_payload_without_user_info = {
+            "sub": "auth0|test-user-id",
+            "aud": "https://brekkie-ai.fly.dev/api",
+            "iss": "https://dev-1oqfxpe3kn4ryzgd.us.auth0.com/",
+            "exp": 9999999999,
+            "iat": 1234567890
+            # Note: no email or name fields
+        }
+        
+        # Mock the userinfo endpoint response
+        mock_userinfo_response = MagicMock()
+        mock_userinfo_response.read.return_value = b'''{
+            "sub": "auth0|test-user-id",
+            "email": "test@test.com",
+            "name": "Test User",
+            "email_verified": true
+        }'''
+        
+        with patch('api.routes.auth.jwt.decode', return_value=mock_payload_without_user_info), \
+             patch('api.routes.auth.urlopen', side_effect=[
+                 # First call for JWKS
+                 MagicMock(read=lambda: b'''{"keys": [{"kty": "RSA", "kid": "test-kid", "use": "sig", "n": "test-n", "e": "AQAB"}]}'''),
+                 # Second call for userinfo
+                 mock_userinfo_response
+             ]):
+            
+            response = await async_client.post("/api/auth/verify-token", headers=headers)
+            
+            assert response.status_code == status.HTTP_200_OK
+            
+            new_user_access = response.json()
+            assert new_user_access["user_id"] == user_access.user_id
+            assert new_user_access["is_authenticated"] is True
+            assert new_user_access["access_token"] != user_access.access_token
+            
+            # Verify that the user was created with the email and name from userinfo endpoint
+            async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
+                user = await service_container.user_service.get_user_by_id(db, user_access.user_id)
+                assert user is not None
+                assert user.email == "test@test.com"
+                assert user.name == "Test User"

@@ -2,19 +2,16 @@ import re
 from typing import Callable, List, Literal
 
 from lxml.etree import XMLPullParser, XMLSyntaxError
-
 from schemas.recipes import (
     Recipe,
-    RecipeIngredient,
-    RecipeInstruction,
     RecipeCategory,
     RecipeField,
+    RecipeIngredient,
+    RecipeInstruction,
 )
-
+from services.streaming_recipe_parser.xml_chunk_tokenizer import XMLChunkTokenizer
 from services.streaming_recipe_parser.xml_chunk_patcher import XMLChunkPatcher
-from services.streaming_recipe_parser.xm_chunk_tokenizer import XMLChunkTokenizer
 from services.streaming_recipe_parser.xml_tag_tracker import XMLTagTracker
-
 from utils.logger import Logger
 
 logger = Logger("streaming_recipe_parser", level="WARNING")

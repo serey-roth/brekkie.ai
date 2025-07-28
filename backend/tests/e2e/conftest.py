@@ -150,7 +150,10 @@ def sample_user():
         id=str(uuid4()),
         external_id="test-user-id",
         created_at=to_utc_isostring(now),
-        updated_at=to_utc_isostring(now)
+        updated_at=to_utc_isostring(now),
+        last_signed_in_at=to_utc_isostring(now),
+        email="test@test.com",
+        name="Test User"
     )
 
 @pytest.fixture

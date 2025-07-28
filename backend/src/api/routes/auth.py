@@ -1,25 +1,26 @@
 import json
 import ssl
+import urllib.request
+from datetime import datetime, timezone
+from typing import Annotated
 from urllib.request import urlopen
 from uuid import uuid4
-from typing import Annotated
-from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, Response
-from jose import jwt, JWTError, jwk
-
+from api.deps import (
+    get_access_token,
+    get_auth0_token,
+    get_client_ip,
+    get_service_container,
+    get_settings,
+)
 from config.settings import Settings
-
-from api.deps import get_client_ip, get_service_container, get_access_token, get_settings, get_auth0_token
-
-from schemas.users import CreateUserParams
-from schemas.user_access import UserAccess
-from schemas.threads import CreateThreadParams
-from schemas.recipes import CreateRecipeParams
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
+from jose import JWTError, jwk, jwt
 from schemas.messages import CreateMessageParams
-
+from schemas.recipes import CreateRecipeParams
+from schemas.threads import CreateThreadParams
+from schemas.users import CreateUserParams, UpdateUserParams
 from services.service_container import ServiceContainer
-
 from utils.date_utils import to_utc_isostring
 from utils.logger import Logger
 
@@ -164,11 +165,11 @@ async def verify(
         raise HTTPException(status_code=403, detail={"message": "Auth is disabled"})
     
     if auth0_token is None:
-        logger.error(f"Missing auth0 token")
+        logger.error("Missing auth0 token")
         raise HTTPException(status_code=401, detail={"message": "Missing auth0 token"})
 
     if access_token is None:
-        logger.error(f"Missing access token")
+        logger.error("Missing access token")
         raise HTTPException(status_code=401, detail={"message": "Missing access token"})
 
     try:
@@ -213,7 +214,29 @@ async def verify(
             
             # Extract user ID from Auth0 payload
             auth0_user_id = payload.get("sub")  # This is the unique Auth0 user ID
-            expires_at = payload.get("exp")
+            expires_at = int(payload.get("exp", 0))
+            email = payload.get("email")
+            name = payload.get("name")
+            
+            # If email or name not in JWT, get from UserInfo endpoint
+            if not email or not name:
+                try:
+                    # Create request with Authorization header
+                    req = urllib.request.Request(f"https://{auth0_domain}/userinfo")
+                    req.add_header("Authorization", f"Bearer {auth0_token}")
+                    
+                    if settings.is_development():
+                        userinfo_response = urlopen(req, context=ssl_context)
+                    else:
+                        userinfo_response = urlopen(req)
+                    
+                    userinfo_data = json.loads(userinfo_response.read())
+                    email = email or userinfo_data.get("email")
+                    name = name or userinfo_data.get("name")
+                    logger.info(f"Retrieved user info from Auth0: {userinfo_data}")
+                except Exception as e:
+                    logger.warning(f"Failed to get user info from Auth0: {e}")
+                    
             if auth0_user_id is None:
                 raise HTTPException(status_code=400, detail={"message": "Invalid token: missing user ID"})
             
@@ -228,10 +251,23 @@ async def verify(
                         id=current_user_access.user_id,
                         external_id=auth0_user_id,
                         created_at=timestamp,
-                        updated_at=timestamp
+                        updated_at=timestamp,
+                        last_signed_in_at=timestamp,
+                        email=email,
+                        name=name
                     ))
-                    
+                else:
+                    user = await service_container.user_service.update_user(db, user.id, UpdateUserParams(
+                        id=user.id,
+                        updated_at=timestamp,
+                        last_signed_in_at=timestamp,
+                        email=email,
+                        name=name
+                    ))
+                        
             if not current_user_access.is_authenticated:
+                needs_migration = True
+                
                 await service_container.user_access_cache_service.revoke_access(access_token)
                 await service_container.anonymous_access_service.ip_rate_limiter.clear(ip_address)
                 
@@ -251,7 +287,6 @@ async def verify(
                     ttl=ttl
                 )
                 
-
                 response.set_cookie(
                     settings.cookie_name,
                     current_user_access.access_token,
@@ -261,9 +296,7 @@ async def verify(
                     httponly=settings.get_cookie_httponly(),
                     path=settings.cookie_path,
                 )
-                
-                needs_migration = True
-        
+                        
             if needs_migration:
                 background_tasks.add_task(_migrate_user_data, old_user_id, user.id, service_container)
             
@@ -272,7 +305,7 @@ async def verify(
         logger.error(f"JWTError: Invalid token {auth0_token}")
         raise HTTPException(status_code=401, detail={"message": "Invalid token"})
         
-    except JWTError as e:
+    except JWTError:
         logger.error(f"JWTError: Invalid token {auth0_token}")
         raise HTTPException(status_code=401, detail={"message": "Invalid token"})
     

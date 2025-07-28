@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from fastapi_health import health
-
 from utils.logger import Logger
 
 logger = Logger("health")

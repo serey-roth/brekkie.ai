@@ -1,47 +1,44 @@
-from contextlib import _AsyncGeneratorContextManager
-from functools import wraps
-from datetime import datetime
-from typing import TypedDict, Union, TypeVar, Callable, Any
 import uuid
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from contextlib import _AsyncGeneratorContextManager
+from datetime import datetime
+from functools import wraps
+from typing import Any, Callable, TypedDict, Union
 
 from schemas.conversation_stream_events import (
-    TextMessageStartedPayload,
-    TextMessageCompletedPayload,
-    TextMessageChunkGeneratedPayload,
+    AIAgentErrorPayload,
+    RecipeFieldDetectedPayload,
+    RecipeGenerationCompletedPayload,
     RecipeGenerationStartedPayload,
     SearchCompletedPayload,
     SearchStartedPayload,
-    RecipeFieldDetectedPayload,
-    RecipeGenerationCompletedPayload,
-    AIAgentErrorPayload,
     SummaryUpdatedPayload,
+    TextMessageChunkGeneratedPayload,
+    TextMessageCompletedPayload,
+    TextMessageStartedPayload,
     ThreadTitleUpdatedPayload,
     UserMessageRejectedPayload,
 )
-from schemas.messages import (
-    CreateAssistantToolMessageParams,
-    CreateAssistantTextMessageParams,
-    CreateAssistantRecipeMessageParams,
-    UpdateMessageParams,
-    MessageResponse,
-)
-from schemas.message_role import MessageRole
 from schemas.message_content_type import MessageContentType
+from schemas.message_role import MessageRole
+from schemas.messages import (
+    CreateAssistantRecipeMessageParams,
+    CreateAssistantTextMessageParams,
+    CreateAssistantToolMessageParams,
+    MessageResponse,
+    UpdateMessageParams,
+)
+from schemas.recipes import (
+    UpdateRecipeFieldParams,
+    UpdateRecipeParams,
+    UserRecipe,
+)
 from schemas.threads import (
     Thread,
     UpdateThreadParams,
 )
-from schemas.recipes import (
-    UserRecipe,
-    UpdateRecipeParams,
-    UpdateRecipeFieldParams,
-)
 from schemas.user_access import UserAccess
-
 from services.chat_services.chat_session_store import ChatSessionStore
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from utils.logger import Logger
 
 logger = Logger("chat_session_handlers")

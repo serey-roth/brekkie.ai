@@ -1,9 +1,8 @@
-from typing import TypeVar, Generic, Type
+import json
+from typing import Generic, Type, TypeVar
 
 from pydantic import BaseModel
-
 from services.redis.redis_client import RedisClient
-import json
 
 T = TypeVar("T", bound=dict | BaseModel)
 

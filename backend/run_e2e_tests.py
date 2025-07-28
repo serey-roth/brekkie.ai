@@ -14,7 +14,6 @@ Options:
 """
 
 import argparse
-import asyncio
 import subprocess
 import sys
 import time

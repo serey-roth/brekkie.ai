@@ -1,21 +1,19 @@
 import os
 from typing import Literal
-from langchain_google_genai import ChatGoogleGenerativeAI
-
-from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
-from langchain_core.prompts import (
-    SystemMessagePromptTemplate,
-    ChatPromptTemplate,
-    MessagesPlaceholder,
-)
-from langgraph.graph import StateGraph
-from langgraph.prebuilt.tool_node import ToolNode
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.graph import MessagesState
-from langgraph.config import get_stream_writer
 
 from ai.workflow.prompts import agent_prompt
 from ai.workflow.tools import TOOLS
+from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    MessagesPlaceholder,
+    SystemMessagePromptTemplate,
+)
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.config import get_stream_writer
+from langgraph.graph import MessagesState, StateGraph
+from langgraph.prebuilt.tool_node import ToolNode
 
 
 class AgentState(MessagesState):
@@ -74,12 +72,12 @@ class AgentFactory:
         )
 
         title_message = (
-            f"Review the recent conversation messages above and return ONLY a concise thread title (max 60 characters).\n\n"
-            f"Identify the main topic, concern, or request from the user's messages.\n\n"
-            f"Focus on: What are they asking for? What's their situation? What kind of support do they need?\n\n"
-            f"Use warm, conversational language that feels natural and supportive.\n\n"
-            f"Examples: 'Need dinner ideas', 'Feeling stressed about cooking', 'Want to try new recipes', 'Help with meal planning'\n\n"
-            f"IMPORTANT: Return ONLY the title text. No markdown, no explanations, no quotes."
+            "Review the recent conversation messages above and return ONLY a concise thread title (max 60 characters).\n\n"
+            "Identify the main topic, concern, or request from the user's messages.\n\n"
+            "Focus on: What are they asking for? What's their situation? What kind of support do they need?\n\n"
+            "Use warm, conversational language that feels natural and supportive.\n\n"
+            "Examples: 'Need dinner ideas', 'Feeling stressed about cooking', 'Want to try new recipes', 'Help with meal planning'\n\n"
+            "IMPORTANT: Return ONLY the title text. No markdown, no explanations, no quotes."
         )
 
         recent_messages = messages[-5:] + [HumanMessage(content=title_message)]

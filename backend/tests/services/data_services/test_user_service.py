@@ -2,8 +2,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 
 import pytest
-import pytest_asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +12,7 @@ from services.data_services.user_service import UserService
 
 from repositories.user_repository import UserRepository
 
-from schemas.users import CreateUserParams, User
+from schemas.users import CreateUserParams, UpdateUserParams, User
 
 from utils.date_utils import to_utc_isostring
 
@@ -56,6 +55,9 @@ def mock_db_user(sample_user_id: str, sample_user_external_id: str, sample_times
         external_id=sample_user_external_id,
         created_at=sample_timestamps[0].replace(tzinfo=None),
         updated_at=sample_timestamps[1].replace(tzinfo=None),
+        last_signed_in_at=sample_timestamps[1].replace(tzinfo=None),
+        email="test@test.com",
+        name="Test User"
     )
 
 
@@ -66,6 +68,9 @@ class TestUserService:
             external_id=sample_user_external_id,
             created_at=sample_timestamps[0],
             updated_at=sample_timestamps[1],
+            last_signed_in_at=sample_timestamps[1],
+            email="test@test.com",
+            name="Test User"
         )
                 
         mock_user_repository.create_user.return_value = mock_db_user
@@ -91,7 +96,9 @@ class TestUserService:
         assert result.external_id == sample_user_external_id
         assert result.created_at == to_utc_isostring(sample_timestamps[0])
         assert result.updated_at == to_utc_isostring(sample_timestamps[1])
-        
+        assert result.last_signed_in_at == to_utc_isostring(sample_timestamps[1])
+        assert result.email == "test@test.com"
+        assert result.name == "Test User"
         
     async def test_get_non_existent_user_by_id(self, user_service: UserService, mock_user_repository: UserRepository, mock_async_session: AsyncSession):
         mock_user_repository.get_user_by_id.return_value = None
@@ -113,7 +120,9 @@ class TestUserService:
         assert result.external_id == sample_user_external_id
         assert result.created_at == to_utc_isostring(sample_timestamps[0])
         assert result.updated_at == to_utc_isostring(sample_timestamps[1])
-        
+        assert result.last_signed_in_at == to_utc_isostring(sample_timestamps[1])
+        assert result.email == "test@test.com"
+        assert result.name == "Test User"
         
     async def test_get_non_existent_user_by_external_id(self, user_service: UserService, mock_user_repository: UserRepository, mock_async_session: AsyncSession):
         mock_user_repository.get_user_by_external_id.return_value = None
@@ -121,4 +130,28 @@ class TestUserService:
         result = await user_service.get_user_by_external_id(mock_async_session, "non-existent-user-external-id")
         
         assert result is None
+
+class TestUpdateUser:
+    async def test_update_user(self, user_service: UserService, mock_user_repository: UserRepository, mock_async_session: AsyncSession, mock_db_user: DBUser, sample_user_id: str, sample_user_external_id: str, sample_timestamps: tuple[datetime, datetime]):
+        params = UpdateUserParams(
+            id=sample_user_id,
+            updated_at=sample_timestamps[1],
+            last_signed_in_at=sample_timestamps[1],
+            email="test@test.com",
+            name="Test User"
+        )
+        
+        mock_user_repository.update_user.return_value = mock_db_user
+        
+        result = await user_service.update_user(mock_async_session, sample_user_id, params)
+        
+        assert isinstance(result, User)
+        
+        assert result.id == sample_user_id
+        assert result.external_id == sample_user_external_id
+        assert result.created_at == to_utc_isostring(sample_timestamps[0])
+        assert result.updated_at == to_utc_isostring(sample_timestamps[1])
+        assert result.last_signed_in_at == to_utc_isostring(sample_timestamps[1])
+        assert result.email == "test@test.com"
+        assert result.name == "Test User"
         

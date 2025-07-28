@@ -1,15 +1,12 @@
-from typing import Annotated, Literal
 from datetime import datetime, timezone
+from typing import Annotated, Literal
+
+from api.deps import get_access_token, get_service_container
 from fastapi import APIRouter, Depends, HTTPException
-
 from fastapi.params import Query
-
-from schemas.messages import GetThreadMessagesResponse, GetMessagesParams
-from schemas.threads import PaginatedThreads, GetUserThreadsParams
-
-from api.deps import get_service_container, get_access_token
+from schemas.messages import GetMessagesParams, GetThreadMessagesResponse
+from schemas.threads import GetUserThreadsParams, PaginatedThreads
 from services.service_container import ServiceContainer
-
 from utils.logger import Logger
 
 logger = Logger("api.routes.threads")

@@ -1,18 +1,16 @@
 import os
-
 from typing import Annotated, Any
 
+from ai.workflow.prompts import create_recipe_prompt, search_prompt
 from langchain_core.messages.ai import AIMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
-    SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
 )
 from langchain_core.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_tavily import TavilySearch
-
-from ai.workflow.prompts import search_prompt, create_recipe_prompt
 
 
 # TODO: Use web search instead of Gemini, and maybe real time/geolocation search

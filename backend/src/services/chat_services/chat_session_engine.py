@@ -1,29 +1,12 @@
 import asyncio
-from contextlib import _AsyncGeneratorContextManager
 import json
-from typing import List, Any
-from pydantic import ValidationError
+from contextlib import _AsyncGeneratorContextManager
 from datetime import datetime, timedelta, timezone
+from typing import Any, List
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from services.websocket_event_sender import WebSocketEventSender
-from services.ai_food_agent.ai_food_agent import AIFoodAgent
-from services.chat_services.chat_session_handlers import ChatSessionHandlers
-from services.chat_services.chat_session_message_processor import (
-    ChatSessionMessageProcessor,
-    MessageProcessingResult,
-)
-from services.chat_services.chat_session_store import ChatSessionStore
-from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
-from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
-from services.data_services.user_access_cache_service import UserAccessCacheService
-
-from schemas.messages import UserMessagePayload
-from schemas.user_access import UserAccess
+from pydantic import ValidationError
 from schemas.chat_session_errors import (
     AccessTokenNotFoundError,
     ChatSessionError,
@@ -32,8 +15,21 @@ from schemas.chat_session_errors import (
     OverMessageLimitError,
     SessionClosedError,
 )
+from schemas.messages import UserMessagePayload
 from schemas.safety_guards import SafetyIssue
-
+from schemas.user_access import UserAccess
+from services.ai_food_agent.ai_food_agent import AIFoodAgent
+from services.chat_services.chat_session_handlers import ChatSessionHandlers
+from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
+from services.chat_services.chat_session_message_processor import (
+    ChatSessionMessageProcessor,
+    MessageProcessingResult,
+)
+from services.chat_services.chat_session_store import ChatSessionStore
+from services.data_services.user_access_cache_service import UserAccessCacheService
+from services.websocket_event_sender import WebSocketEventSender
+from sqlalchemy.ext.asyncio import AsyncSession
 from utils.logger import Logger
 
 logger = Logger("chat_session_engine")
@@ -232,7 +228,7 @@ class ChatSessionEngine:
             raw_data = await self.websocket.receive_json()
             try:
                 return UserMessagePayload.model_validate(raw_data)
-            except ValidationError as e:
+            except ValidationError:
                 raise InvalidPayloadError(
                     payload=raw_data if isinstance(raw_data, str) else json.dumps(raw_data)
                 )
@@ -244,7 +240,7 @@ class ChatSessionEngine:
         except InvalidPayloadError as e:
             raise e
 
-        except Exception as e:
+        except Exception:
             raise InternalServerError()
 
     async def _reject_user_message(

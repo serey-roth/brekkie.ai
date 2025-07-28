@@ -1,22 +1,20 @@
 from datetime import datetime, timezone
 
-from services.redis.redis_client import RedisClient
-from services.redis.redis_cache import RedisCache
-
+from schemas.message_role import MessageRole
 from schemas.messages import (
     CreateAssistantRecipeMessageParams,
     CreateAssistantTextMessageParams,
     CreateAssistantToolMessageParams,
     CreateMessageParams,
     CreateUserMessageParams,
+    GetMessagesParams,
     Message,
     MessageResponse,
-    UpdateMessageParams,
-    GetMessagesParams,
     PaginatedMessages,
+    UpdateMessageParams,
 )
-from schemas.message_role import MessageRole
-
+from services.redis.redis_cache import RedisCache
+from services.redis.redis_client import RedisClient
 from utils.date_utils import to_utc_isostring
 
 

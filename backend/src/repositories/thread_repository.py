@@ -1,16 +1,13 @@
+from database.schema import DBThread
+from schemas.threads import (
+    CreateThreadParams,
+    GetDBUserThreadsParams,
+    ResumeThreadParams,
+    UpdateThreadParams,
+)
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-
-from database.schema import DBThread
-
-from schemas.threads import (
-    CreateThreadParams,
-    ResumeThreadParams,
-    UpdateThreadParams,
-    GetDBUserThreadsParams,
-)
-
 from utils.date_utils import strip_timezone
 
 

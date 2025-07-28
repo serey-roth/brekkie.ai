@@ -1,10 +1,8 @@
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
-
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from contextlib import asynccontextmanager
 
 from config.settings import Settings
-
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from utils.logger import Logger
 
 logger = Logger("database.index")

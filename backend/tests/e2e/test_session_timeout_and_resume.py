@@ -206,9 +206,12 @@ class TestSessionTimeoutAndResume:
                     db,
                     CreateUserParams(
                         id=user_access.user_id,
-                        external_id="test-user-resume",
+                        external_id="test-external-id",
                         created_at=timestamp,
-                        updated_at=timestamp
+                        updated_at=timestamp,
+                        last_signed_in_at=timestamp,
+                        email="test@test.com",
+                        name="Test User"
                     )
                 )
                 

@@ -1,5 +1,4 @@
 import redis.asyncio as redis
-
 from utils.logger import Logger
 
 logger = Logger("redis_client")

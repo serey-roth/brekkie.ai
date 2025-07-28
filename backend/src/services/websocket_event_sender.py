@@ -2,7 +2,6 @@ import asyncio
 
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
-
 from utils.logger import Logger
 
 logger = Logger("websocket_event_sender")

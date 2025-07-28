@@ -1,43 +1,40 @@
 from datetime import datetime
-from typing import Callable, Any, TypeVar
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any, Callable
 
 from schemas.messages import (
-    CreateAssistantToolMessageParams,
-    Message,
-    CreateUserMessageParams,
-    CreateAssistantTextMessageParams,
     CreateAssistantRecipeMessageParams,
-    UpdateMessageParams,
+    CreateAssistantTextMessageParams,
+    CreateAssistantToolMessageParams,
+    CreateUserMessageParams,
     GetMessagesParams,
+    Message,
     PaginatedMessages,
+    UpdateMessageParams,
 )
 from schemas.recipes import (
-    UserRecipe,
     CreateRecipeParams,
-    UpdateRecipeParams,
     UpdateRecipeFieldParams,
+    UpdateRecipeParams,
+    UserRecipe,
 )
+from schemas.safety_guards import SafetyGuardResult
 from schemas.threads import (
     CreateThreadParams,
+    GetUserThreadsParams,
+    PaginatedThreads,
     ResumeThreadParams,
     Thread,
     UpdateThreadParams,
-    PaginatedThreads,
-    GetUserThreadsParams,
 )
 from schemas.user_access import UserAccess
-from schemas.safety_guards import SafetyGuardResult
-
-from services.data_services.message_service import MessageService
 from services.data_services.message_cache_service import MessageCacheService
-from services.data_services.recipe_service import RecipeService
+from services.data_services.message_service import MessageService
 from services.data_services.recipe_cache_service import RecipeCacheService
-from services.data_services.thread_service import ThreadService
+from services.data_services.recipe_service import RecipeService
 from services.data_services.thread_cache_service import ThreadCacheService
+from services.data_services.thread_service import ThreadService
 from services.data_services.user_access_cache_service import UserAccessCacheService
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from utils.logger import Logger
 
 logger = Logger("chat_session_store")

@@ -1,19 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-
+from api.deps import get_access_token, get_client_ip, get_service_container, get_settings
 from config.settings import Settings
-
-from api.deps import get_service_container, get_access_token, get_client_ip, get_settings
-
+from fastapi import APIRouter, Depends, HTTPException, Response
 from schemas.api_error import RateLimitError
 from schemas.user_access import UserAccess
-
 from services.service_container import ServiceContainer
-
 from utils.logger import Logger
-from utils.date_utils import to_utc_isostring
-
 
 logger = Logger("api.routes.access")
 

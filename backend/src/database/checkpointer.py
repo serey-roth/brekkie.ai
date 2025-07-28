@@ -1,5 +1,5 @@
-from psycopg_pool.pool_async import AsyncConnectionPool
 from psycopg.connection_async import AsyncConnection
+from psycopg_pool.pool_async import AsyncConnectionPool
 
 
 async def _check_connection(conn: AsyncConnection) -> None:

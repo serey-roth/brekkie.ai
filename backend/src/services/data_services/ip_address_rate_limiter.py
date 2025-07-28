@@ -1,7 +1,6 @@
 from pydantic import BaseModel
-
-from services.redis.redis_client import RedisClient
 from services.redis.redis_cache import RedisCache
+from services.redis.redis_client import RedisClient
 
 
 class IpAddressRateLimitData(BaseModel):

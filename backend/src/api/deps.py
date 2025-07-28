@@ -1,8 +1,7 @@
 from typing import Annotated
-from fastapi import Request, WebSocket, Cookie
 
 from config.settings import Settings
-
+from fastapi import Cookie, Request, WebSocket
 from services.service_container import ServiceContainer
 
 

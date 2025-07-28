@@ -1,7 +1,9 @@
 import re
-from schemas.safety_guards import SafetyGuardType, SafetyIssue, SafetyGuardResult, SafetyRiskLevel
+
+from schemas.safety_guards import SafetyGuardResult, SafetyGuardType, SafetyIssue, SafetyRiskLevel
 from services.safety_guards.regex_safety_guard_patterns import SAFETY_REGEX_GUARD_PATTERNS
 from services.safety_guards.safety_guard import SafetyGuard
+
 
 class RegexSafetyGuard(SafetyGuard):
     VERSION = "regex-guard-1.0.0"

@@ -1,11 +1,9 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from services.redis.redis_client import RedisClient
-from services.redis.redis_cache import RedisCache
-
 from schemas.user_access import UserAccess
-
+from services.redis.redis_cache import RedisCache
+from services.redis.redis_client import RedisClient
 from utils.date_utils import to_utc_isostring
 
 

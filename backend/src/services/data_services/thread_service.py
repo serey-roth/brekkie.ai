@@ -1,24 +1,20 @@
-from typing import cast
 from datetime import datetime
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import cast
 
 from database.schema import DBThread
-
 from repositories.thread_repository import ThreadRepository
-
 from schemas.threads import (
+    CreateThreadParams,
+    GetDBUserThreadsParams,
+    GetUserThreadsParams,
+    PaginatedThreads,
     ResumeThreadParams,
     Thread,
-    PaginatedThreads,
-    CreateThreadParams,
-    GetUserThreadsParams,
     UpdateThreadParams,
-    GetDBUserThreadsParams,
 )
-
-from utils.logger import Logger
+from sqlalchemy.ext.asyncio import AsyncSession
 from utils.date_utils import to_utc_isostring
+from utils.logger import Logger
 
 logger = Logger("thread_service")
 

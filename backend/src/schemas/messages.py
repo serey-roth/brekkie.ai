@@ -1,10 +1,9 @@
 from datetime import datetime
-from typing import Annotated, Literal, ClassVar
+from typing import Annotated, ClassVar, Literal
 
 from pydantic import AfterValidator, BaseModel, Field
-
-from schemas.message_role import MessageRole
 from schemas.message_content_type import MessageContentType
+from schemas.message_role import MessageRole
 from schemas.recipes import UserRecipe
 from schemas.safety_guards import SafetyGuardResult
 

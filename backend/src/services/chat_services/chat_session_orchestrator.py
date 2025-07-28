@@ -1,36 +1,32 @@
-from contextlib import _AsyncGeneratorContextManager
 import uuid
+from contextlib import _AsyncGeneratorContextManager
 from datetime import datetime, timezone
 
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
-
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from services.websocket_event_sender import WebSocketEventSender
-from services.ai_food_agent.ai_food_agent import AIFoodAgent
-from services.data_services.user_access_cache_service import UserAccessCacheService
-from services.chat_services.chat_session_handlers import ChatSessionHandlers
-from services.chat_services.chat_session_store import ChatSessionStore
-from services.chat_services.chat_session_engine import ChatSessionEngine
-from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
-from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
-
-from schemas.user_access import UserAccess
-from schemas.threads import (
-    Thread,
-    CreateThreadParams,
-    ResumeThreadParams,
-)
-from schemas.messages import GetMessagesParams
 from schemas.chat_session_errors import (
-    ChatSessionError,
     AccessTokenNotFoundError,
+    ChatSessionError,
     InternalServerError,
     OverMessageLimitError,
     ThreadNotFoundError,
 )
-
+from schemas.messages import GetMessagesParams
+from schemas.threads import (
+    CreateThreadParams,
+    ResumeThreadParams,
+    Thread,
+)
+from schemas.user_access import UserAccess
+from services.ai_food_agent.ai_food_agent import AIFoodAgent
+from services.chat_services.chat_session_engine import ChatSessionEngine
+from services.chat_services.chat_session_handlers import ChatSessionHandlers
+from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
+from services.chat_services.chat_session_store import ChatSessionStore
+from services.data_services.user_access_cache_service import UserAccessCacheService
+from services.websocket_event_sender import WebSocketEventSender
+from sqlalchemy.ext.asyncio import AsyncSession
 from utils.logger import Logger
 
 logger = Logger("chat_session_maker")

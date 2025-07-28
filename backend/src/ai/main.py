@@ -5,36 +5,35 @@ backend_dir = os.path.dirname(current_dir)
 env_file = os.path.join(os.path.dirname(backend_dir), '.env.development')
 
 from dotenv import load_dotenv
+
 load_dotenv(env_file)
 
-from contextlib import asynccontextmanager
 import asyncio
 import uuid
-
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.checkpoint.memory import InMemorySaver
+from contextlib import asynccontextmanager
 
 from config.settings import create_settings
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 settings = create_settings(".env.development")
 
 from schemas.conversation_stream_events import (
-    TextMessageCompletedPayload,
+    AIAgentErrorPayload,
     ConversationStreamEvent,
-    TextMessageStartedPayload,
-    TextMessageChunkGeneratedPayload,
-    RecipeGenerationStartedPayload,
     RecipeFieldDetectedPayload,
     RecipeGenerationCompletedPayload,
-    AIAgentErrorPayload,
-    SummaryUpdatedPayload,
-    SearchStartedPayload,
+    RecipeGenerationStartedPayload,
     SearchCompletedPayload,
+    SearchStartedPayload,
+    SummaryUpdatedPayload,
+    TextMessageChunkGeneratedPayload,
+    TextMessageCompletedPayload,
+    TextMessageStartedPayload,
     ThreadTitleUpdatedPayload,
     UserMessageRejectedPayload,
 )
-from schemas.recipes import RecipeIngredient, RecipeInstruction, RecipeCategory
-
+from schemas.recipes import RecipeCategory, RecipeIngredient, RecipeInstruction
 from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 
 
@@ -88,13 +87,13 @@ async def handle_recipe_field(message_id: str, payload: RecipeFieldDetectedPaylo
         and isinstance(field_value, list)
         and all(isinstance(item, RecipeIngredient) for item in field_value)
     ):
-        print(f"\n🍴 Ingredients:")
+        print("\n🍴 Ingredients:")
         if isinstance(field_value, list):
             for ingredient_data in field_value:
                 ingredient = RecipeIngredient.model_validate(ingredient_data)
                 print(f"   • {ingredient.name} ({ingredient.quantity} {ingredient.unit})")
     elif field_name == "instruction":
-        print(f"\n👨‍🍳 Instruction:")
+        print("\n👨‍🍳 Instruction:")
         instruction = RecipeInstruction.model_validate(field_value)
         print(f"   {instruction.title} - {instruction.description}")
     elif (
@@ -102,7 +101,7 @@ async def handle_recipe_field(message_id: str, payload: RecipeFieldDetectedPaylo
         and isinstance(field_value, list)
         and all(isinstance(item, RecipeInstruction) for item in field_value)
     ):
-        print(f"\n👨‍🍳 Instructions:")
+        print("\n👨‍🍳 Instructions:")
         if isinstance(field_value, list):
             for instruction_data in field_value:
                 instruction = RecipeInstruction.model_validate(instruction_data)
@@ -115,34 +114,34 @@ async def handle_recipe_field(message_id: str, payload: RecipeFieldDetectedPaylo
         and isinstance(field_value, list)
         and all(isinstance(item, RecipeCategory) for item in field_value)
     ):
-        print(f"\n🏷️  Categories:")
+        print("\n🏷️  Categories:")
         if isinstance(field_value, list):
             for category_data in field_value:
                 category = RecipeCategory.model_validate(category_data)
                 print(f"   • {category.name}")
     elif field_name == "chef_notes":
-        print(f"\n💡 Chef's Notes:")
+        print("\n💡 Chef's Notes:")
         print(f"   {field_value}")
     elif field_name == "substitutions":
-        print(f"\n🔄 Substitutions:")
+        print("\n🔄 Substitutions:")
         print(f"   {field_value}")
     elif field_name == "make_ahead_tips":
-        print(f"\n⏰ Make Ahead Tips:")
+        print("\n⏰ Make Ahead Tips:")
         print(f"   {field_value}")
     elif field_name == "equipment_alternatives":
-        print(f"\n🔧 Equipment Alternatives:")
+        print("\n🔧 Equipment Alternatives:")
         print(f"   {field_value}")
     elif field_name == "coordination_timeline":
-        print(f"\n📅 Coordination Timeline:")
+        print("\n📅 Coordination Timeline:")
         print(f"   {field_value}")
     elif field_name == "scaling_guidance":
-        print(f"\n📊 Scaling Guidance:")
+        print("\n📊 Scaling Guidance:")
         print(f"   {field_value}")
     elif field_name == "storage_notes":
-        print(f"\n🗄️  Storage Notes:")
+        print("\n🗄️  Storage Notes:")
         print(f"   {field_value}")
     elif field_name == "serving_suggestions":
-        print(f"\n🍽️  Serving Suggestions:")
+        print("\n🍽️  Serving Suggestions:")
         print(f"   {field_value}")
 
 

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, Field
 from utils.date_utils import to_utc_isostring
 
 

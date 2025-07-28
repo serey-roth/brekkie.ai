@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
 from typing import Dict
 
+from pydantic import BaseModel, Field
 from schemas.safety_guards import SafetyIssueType, SafetyRiskLevel
 
 

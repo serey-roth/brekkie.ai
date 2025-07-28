@@ -1,12 +1,10 @@
 import uuid
-
-from sqlalchemy import JSON, Column, String, Integer, Text, ForeignKey, Enum, DateTime, Boolean
-from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime, timezone
 
 from schemas.message_content_type import MessageContentType
 from schemas.message_role import MessageRole
-
+from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import declarative_base, relationship
 from utils.date_utils import strip_timezone
 
 Base = declarative_base()
@@ -87,9 +85,12 @@ class DBUser(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    external_id = Column(String, nullable=True, unique=True)
+    external_id = Column(String, unique=True)
+    email = Column(String, nullable=True, unique=True)
+    name = Column(String, nullable=True)
     created_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
     updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
+    last_signed_in_at = Column(DateTime, nullable=True)
 
     messages = relationship("DBMessage", back_populates="user", cascade="all, delete-orphan")
     threads = relationship("DBThread", back_populates="user", cascade="all, delete-orphan")

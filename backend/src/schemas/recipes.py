@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import NewType, Literal
+from typing import Literal, NewType
+
 from pydantic import BaseModel, Field, field_validator
 
 RecipeName = NewType("RecipeName", str)

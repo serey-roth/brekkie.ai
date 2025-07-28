@@ -1,23 +1,20 @@
 from contextlib import _AsyncGeneratorContextManager
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from services.ai_food_agent.ai_food_agent import AIFoodAgent
-
-from services.data_services.message_service import MessageService
-from services.data_services.message_cache_service import MessageCacheService
-from services.data_services.recipe_service import RecipeService
-from services.data_services.recipe_cache_service import RecipeCacheService
-from services.data_services.thread_service import ThreadService
-from services.data_services.thread_cache_service import ThreadCacheService
-from services.data_services.user_service import UserService
-from services.data_services.user_access_cache_service import UserAccessCacheService
-from services.data_services.anonymous_access_service import AnonymousAccessService
-
-from services.chat_services.chat_session_store import ChatSessionStore
-from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
-
+from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
+from services.chat_services.chat_session_store import ChatSessionStore
+from services.data_services.anonymous_access_service import AnonymousAccessService
+from services.data_services.message_cache_service import MessageCacheService
+from services.data_services.message_service import MessageService
+from services.data_services.recipe_cache_service import RecipeCacheService
+from services.data_services.recipe_service import RecipeService
+from services.data_services.thread_cache_service import ThreadCacheService
+from services.data_services.thread_service import ThreadService
+from services.data_services.user_access_cache_service import UserAccessCacheService
+from services.data_services.user_service import UserService
 from services.websocket_event_sender import WebSocketEventSender
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class ServiceContainer:

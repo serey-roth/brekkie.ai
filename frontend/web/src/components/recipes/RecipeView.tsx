@@ -238,9 +238,9 @@ const RecipeCategories = React.memo(function RecipeCategories({
 });
 
 const RECIPE_META_ICONS = {
-    prep_time: <Clock className="text-primary-dark" />,
-    cook_time: <Flame className="text-primary-dark" />,
-    servings: <Users className="text-primary-dark" />,
+    prep_time: <Clock className="h-4 w-4 text-primary-dark" />,
+    cook_time: <Flame className="h-4 w-4 text-primary-dark" />,
+    servings: <Users className="h-4 w-4 text-primary-dark" />,
 } as const;
 
 const RecipeMeta = React.memo(function RecipeMeta({

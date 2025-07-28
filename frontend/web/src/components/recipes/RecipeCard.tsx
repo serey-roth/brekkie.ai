@@ -28,7 +28,7 @@ export const RecipeCard = ({
             <div className="text-background-light mb-2 flex flex-wrap items-center gap-x-4 gap-y-2">
                 {(recipe.prep_time_minutes || recipe.cook_time_minutes) && (
                     <div className="flex items-center gap-1">
-                        <Clock className="text-sm" />
+                        <Clock className="h-4 w-4" />
                         <span className="text-sm">
                             Total:{' '}
                             {formatRecipeTime(
@@ -39,7 +39,7 @@ export const RecipeCard = ({
                 )}
                 {recipe.servings && (
                     <div className="flex items-center gap-1">
-                        <Users className="text-sm" />
+                        <Users className="h-4 w-4" />
                         <span className="text-sm">{recipe.servings} servings</span>
                     </div>
                 )}

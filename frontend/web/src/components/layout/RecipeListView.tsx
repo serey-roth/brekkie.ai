@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Utensils, Loader, CircleAlert } from 'lucide-react';
 import { DateTime } from 'luxon';
+import { Masonry } from 'masonic';
 import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { useRecipesApiClient } from '@/context/app-context';
 import { useRecipeManager } from '@/context/chat-context';
@@ -290,14 +291,6 @@ export const RecipeListView = ({
                                         Ready to start cooking? Chat with Milo and he'll whip up
                                         some amazing recipes just for you.
                                     </motion.p>
-                                    <motion.p
-                                        className="text-contrast-subtle text-xs"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.4 }}
-                                    >
-                                        Your recipes will show up here once you start chatting 💪
-                                    </motion.p>
                                 </motion.div>
                             )}
 
@@ -363,10 +356,9 @@ export const RecipeListView = ({
                                                 </motion.div>
 
                                                 {/* Recipes Grid */}
-                                                <motion.div
-                                                    className={`gap-2 space-y-3 md:grid md:space-y-0 ${isRecipePanelOpen ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}
-                                                >
-                                                    {groupRecipes.map((recipe, index) => (
+                                                <Masonry
+                                                    items={groupRecipes}
+                                                    render={({ data: recipe, index }) => (
                                                         <motion.div
                                                             key={recipe.id}
                                                             initial={{ opacity: 0 }}
@@ -392,8 +384,11 @@ export const RecipeListView = ({
                                                                 className="hover:bg-contrast-subtle/80 hover:scale-[1.02] hover:shadow-lg"
                                                             />
                                                         </motion.div>
-                                                    ))}
-                                                </motion.div>
+                                                    )}
+                                                    columnGutter={8}
+                                                    columnWidth={isRecipePanelOpen ? 300 : 250}
+                                                    overscanBy={2}
+                                                />
                                             </motion.div>
                                         ),
                                     )}

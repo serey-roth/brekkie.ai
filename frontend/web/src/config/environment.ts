@@ -17,6 +17,8 @@ export interface EnvironmentConfig {
     featureFlags: {
         enableAuth: boolean;
     };
+    supabaseUrl: string;
+    supabaseApiKey: string;
 }
 
 function getEnvVar(key: string, fallback: string): string {
@@ -30,6 +32,8 @@ const developmentConfig: EnvironmentConfig = {
     appBaseUrl: 'http://localhost:5173',
     apiBaseUrl: 'http://localhost:8000/api',
     wsBaseUrl: 'ws://localhost:8000/ws',
+    supabaseUrl: 'https://supabase-project.supabase.co',
+    supabaseApiKey: 'supabase_api_key',
     isDevelopment: true,
     isProduction: false,
     isTest: false,
@@ -50,6 +54,8 @@ const productionConfig: EnvironmentConfig = {
     appBaseUrl: 'https://brekkie-ai.fly.dev',
     apiBaseUrl: 'https://brekkie-ai.fly.dev/api',
     wsBaseUrl: 'wss://brekkie-ai.fly.dev/ws',
+    supabaseUrl: 'https://supabase-project.supabase.co',
+    supabaseApiKey: 'supabase_api_key',
     isDevelopment: false,
     isProduction: true,
     isTest: false,
@@ -70,6 +76,8 @@ const stagingConfig: EnvironmentConfig = {
     appBaseUrl: 'https://brekkie-ai-staging.fly.dev',
     apiBaseUrl: 'https://brekkie-ai-staging.fly.dev/api',
     wsBaseUrl: 'wss://brekkie-ai-staging.fly.dev/ws',
+    supabaseUrl: 'https://supabase-project.supabase.co',
+    supabaseApiKey: 'supabase_api_key',
     isDevelopment: false,
     isProduction: false,
     isTest: false,
@@ -91,6 +99,8 @@ const testConfig: EnvironmentConfig = {
     appBaseUrl: 'http://localhost:5173',
     apiBaseUrl: 'http://localhost:8000/api',
     wsBaseUrl: 'ws://localhost:8000/ws',
+    supabaseUrl: 'https://supabase-project.supabase.co',
+    supabaseApiKey: 'supabase_api_key',
     isDevelopment: false,
     isProduction: false,
     isTest: true,
@@ -126,17 +136,7 @@ export function getConfigWithOverrides(): EnvironmentConfig {
         auth0ClientId: getEnvVar('VITE_AUTH0_CLIENT_ID', baseConfig.auth0ClientId),
         apiBaseUrl: getEnvVar('VITE_API_BASE_URL', baseConfig.apiBaseUrl),
         wsBaseUrl: getEnvVar('VITE_WS_BASE_URL', baseConfig.wsBaseUrl),
-        maxMessageCountAnonymous: parseInt(
-            getEnvVar(
-                'VITE_MAX_MESSAGE_COUNT_ANONYMOUS',
-                baseConfig.maxMessageCountAnonymous.toString(),
-            ),
-        ),
-        maxMessageCountAuthenticated: parseInt(
-            getEnvVar(
-                'VITE_MAX_MESSAGE_COUNT_AUTHENTICATED',
-                baseConfig.maxMessageCountAuthenticated.toString(),
-            ),
-        ),
+        supabaseUrl: getEnvVar('VITE_SUPABASE_URL', baseConfig.supabaseUrl),
+        supabaseApiKey: getEnvVar('VITE_SUPABASE_API_KEY', baseConfig.supabaseApiKey),
     };
 }

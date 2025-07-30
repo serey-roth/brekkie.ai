@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MessageList } from '@/components/chat/MessageList';
 import { ChatLayout } from '@/components/layout/ChatLayout';
 import { WelcomeScreen } from '@/components/layout/WelcomeScreen';
@@ -22,19 +23,15 @@ import type { ChatLimitMessage, ChatSessionError } from '@/data/schemas/errors';
 import type { Message, RoleMessageGroup } from '@/data/schemas/messages';
 import type { Thread } from '@/data/schemas/threads';
 import type { UserAccess } from '@/data/schemas/user-access';
-import { useAuth } from '@/hooks/useAuth';
+import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
 import { groupMessagesByRole } from '@/utils/message-utils';
-import { RecipeListView } from './RecipeListView';
-import { Sidebar } from './Sidebar';
 
-export function Main() {
-    const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
-    const [showRecipeListView, setShowRecipeListView] = useState(false);
+export function ChatView() {
     const [scrollToBottomMessage, setScrollToBottomMessage] = useState<string | null>(null);
 
-    const { isSidebarOpen } = useAppState();
+    const { isSidebarOpen, selectedRecipeId, setSelectedRecipeId } = useAppState();
 
-    const { login, isAuthenticated } = useAuth();
+    const { addAuthStateChangeListener } = useSupabaseAuth();
 
     const connectionState = useConnectionState();
 
@@ -98,73 +95,64 @@ export function Main() {
         }, [scrollRef, scrollToBottom]),
     });
 
-    return (
-        <div className="bg-background px-safe pb-safe min-h-screen">
-            <Sidebar
-                showRecipeListView={() => setShowRecipeListView(true)}
-                hideRecipeListView={() => setShowRecipeListView(false)}
-            />
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    useEffect(() => {
+        const unsubscribe = addAuthStateChangeListener((event) => {
+            if (event === 'SIGNED_IN') {
+                setIsAuthenticated(true);
+            }
+        });
+        return () => {
+            unsubscribe();
+        };
+    }, [addAuthStateChangeListener]);
 
-            <div
-                className={`bg-background grid min-h-screen overflow-hidden transition-all duration-300 ${
-                    selectedRecipeId ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
-                } ${isSidebarOpen ? 'md:ml-16 lg:ml-[20rem]' : 'md:ml-16'}`}
+    const navigate = useNavigate();
+
+    return (
+        <>
+            <ChatLayout
+                scrollRef={scrollRef}
+                selectedRecipeId={selectedRecipeId}
+                scrollToBottomMessage={scrollToBottomMessage}
+                onScrollToBottom={scrollToBottom}
+                onSendMessage={sendMessage}
+                connectionStatus={connectionState.status}
+                appErrorMessage={accessErrorMessage ?? connectionState.errorMessage}
+                chatLimitMessage={chatLimitMessage ?? null}
+                chatSessionErrorMessage={chatSessionErrorMessage ?? null}
+                disableSendButton={
+                    !currentChatState || isLoadingMoreMessages || !connectionState.isConnected
+                }
+                isAuthenticated={isAuthenticated}
+                onSignIn={() => navigate('/auth')}
+                threadTitle={threadTitle}
+                threadTitleState={threadTitleState}
             >
-                {showRecipeListView ? (
-                    <RecipeListView
+                {messageGroups.length > 0 ? (
+                    <MessageList
+                        messageGroups={messageGroups}
+                        isLoadingMoreMessages={isLoadingMoreMessages}
+                        isAssistantThinking={currentChatState?.isAssistantThinking ?? false}
+                        isAssistantResponding={currentChatState?.isAssistantResponding ?? false}
                         selectedRecipeId={selectedRecipeId}
-                        isRecipePanelOpen={selectedRecipeId !== null}
                         onSelectRecipe={setSelectedRecipeId}
+                        errorLoadingMoreMessages={errorLoadingMoreMessages}
+                        loadingMessage={loadingMessage}
                     />
                 ) : (
-                    <ChatLayout
-                        scrollRef={scrollRef}
-                        selectedRecipeId={selectedRecipeId}
-                        scrollToBottomMessage={scrollToBottomMessage}
-                        onScrollToBottom={scrollToBottom}
+                    <WelcomeScreen
                         onSendMessage={sendMessage}
-                        connectionStatus={connectionState.status}
-                        appErrorMessage={accessErrorMessage ?? connectionState.errorMessage}
-                        chatLimitMessage={chatLimitMessage ?? null}
-                        chatSessionErrorMessage={chatSessionErrorMessage ?? null}
-                        disableSendButton={
-                            !currentChatState ||
-                            isLoadingMoreMessages ||
-                            !connectionState.isConnected
-                        }
-                        isAuthenticated={isAuthenticated}
-                        onSignIn={login}
-                        threadTitle={threadTitle}
-                        threadTitleState={threadTitleState}
-                    >
-                        {messageGroups.length > 0 ? (
-                            <MessageList
-                                messageGroups={messageGroups}
-                                isLoadingMoreMessages={isLoadingMoreMessages}
-                                isAssistantThinking={currentChatState?.isAssistantThinking ?? false}
-                                isAssistantResponding={
-                                    currentChatState?.isAssistantResponding ?? false
-                                }
-                                selectedRecipeId={selectedRecipeId}
-                                onSelectRecipe={setSelectedRecipeId}
-                                errorLoadingMoreMessages={errorLoadingMoreMessages}
-                                loadingMessage={loadingMessage}
-                            />
-                        ) : (
-                            <WelcomeScreen
-                                onSendMessage={sendMessage}
-                                disabled={connectionState.status !== 'connected'}
-                            />
-                        )}
-                    </ChatLayout>
+                        disabled={connectionState.status !== 'connected'}
+                    />
                 )}
-                <RecipePanel
-                    selectedRecipeId={selectedRecipeId}
-                    isSidebarOpen={isSidebarOpen}
-                    onClose={() => setSelectedRecipeId(null)}
-                />
-            </div>
-        </div>
+            </ChatLayout>
+            <RecipePanel
+                selectedRecipeId={selectedRecipeId}
+                isSidebarOpen={isSidebarOpen}
+                onClose={() => setSelectedRecipeId(null)}
+            />
+        </>
     );
 }
 

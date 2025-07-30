@@ -45,7 +45,7 @@ def get_settings_from_websocket(websocket: WebSocket) -> Settings:
     return websocket.app.state.settings
 
 
-def get_auth0_token(request: Request) -> str | None:
+def get_jwt_token(request: Request) -> str | None:
     authorization = request.headers.get("Authorization")
     if not authorization:
         return None

@@ -44,7 +44,7 @@ export function RecipePanel({ selectedRecipeId, isSidebarOpen, onClose }: Recipe
                     animate={{ x: 0, opacity: 1 }}
                     exit={{ x: '100%', opacity: 0 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    className={`fixed right-0 bottom-0 left-0 z-30 overflow-y-auto bg-white lg:relative lg:z-auto lg:col-span-1 lg:block ${isSidebarOpen ? 'md:left-[20rem]' : 'md:left-16'} lg:left-0`}
+                    className={`fixed right-0 bottom-0 left-0 z-30 overflow-y-auto bg-white lg:relative lg:z-auto lg:col-span-1 lg:block ${isSidebarOpen ? 'md:left-[20rem]' : 'md:left-14'} lg:left-0`}
                 >
                     <div className="bg-background-light pb-safe pt-safe px-safe h-full">
                         <div className="border-border custom-scrollbar mx-auto h-screen max-h-screen overflow-y-auto rounded-lg border-l p-4 shadow-lg">

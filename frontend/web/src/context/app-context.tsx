@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import { SupabaseAuthApiClient } from '@/api-clients/auth';
 import { RecipesApiClient } from '@/api-clients/recipes';
 import { ThreadsApiClient } from '@/api-clients/threads';
 import { UserAccessApiClient } from '@/api-clients/user-access';
@@ -9,6 +10,7 @@ interface ApiClients {
     threadsApiClient: ThreadsApiClient;
     userAccessApiClient: UserAccessApiClient;
     recipesApiClient: RecipesApiClient;
+    supabaseAuthApiClient: SupabaseAuthApiClient;
 }
 
 interface AppManagers {
@@ -17,8 +19,9 @@ interface AppManagers {
 
 export interface AppState {
     isSidebarOpen: boolean;
-    openSidebar: () => void;
-    closeSidebar: () => void;
+    setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    selectedRecipeId: string | null;
+    setSelectedRecipeId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export interface AppContextType {
@@ -61,6 +64,11 @@ export function useUserAccessApiClient() {
 export function useRecipesApiClient() {
     const { apiClients } = useAppContext();
     return apiClients.recipesApiClient;
+}
+
+export function useSupabaseAuthApiClient() {
+    const { apiClients } = useAppContext();
+    return apiClients.supabaseAuthApiClient;
 }
 
 export function useUserAccessManager() {

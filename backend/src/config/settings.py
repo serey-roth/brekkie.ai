@@ -80,8 +80,7 @@ class Settings(BaseSettings):
 
     # Feature Flags
     enable_auth: bool = Field(default=True, alias="ENABLE_AUTH")
-    auth0_domain: str = Field(default="auth0_domain", alias="AUTH0_DOMAIN")
-    auth0_audience: str = Field(default="auth0_audience", alias="AUTH0_API_AUDIENCE")
+    supabase_url: str = Field(default="supabase_url", alias="SUPABASE_URL")
 
     model_config = SettingsConfigDict(
         env_file=".env",

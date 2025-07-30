@@ -8,14 +8,15 @@ from uuid import uuid4
 
 from api.deps import (
     get_access_token,
-    get_auth0_token,
+    get_jwt_token,
     get_client_ip,
     get_service_container,
     get_settings,
 )
 from config.settings import Settings
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
-from jose import JWTError, jwk, jwt
+from jose import JWTError, jwt
+from jose.jwk import construct as jwk_construct
 from schemas.messages import CreateMessageParams
 from schemas.recipes import CreateRecipeParams
 from schemas.threads import CreateThreadParams
@@ -151,7 +152,7 @@ async def _migrate_user_data(
 
 router = APIRouter()    
 
-@router.post("/verify-token")
+@router.post("/verify-jwt")
 async def verify(
     response: Response,
     service_container: Annotated[ServiceContainer, Depends(get_service_container)],
@@ -159,12 +160,12 @@ async def verify(
     background_tasks: BackgroundTasks,
     ip_address: Annotated[str, Depends(get_client_ip)],
     access_token: Annotated[str | None, Depends(get_access_token)] = None,
-    auth0_token: Annotated[str | None, Depends(get_auth0_token)] = None,
+    jwt_token: Annotated[str | None, Depends(get_jwt_token)] = None,
 ):
     if not settings.is_auth_enabled():
         raise HTTPException(status_code=403, detail={"message": "Auth is disabled"})
     
-    if auth0_token is None:
+    if jwt_token is None:
         logger.error("Missing auth0 token")
         raise HTTPException(status_code=401, detail={"message": "Missing auth0 token"})
 
@@ -179,65 +180,66 @@ async def verify(
         if current_user_access is None:
             raise HTTPException(status_code=401, detail={"message": "Access record not found"})
         
-        auth0_domain = settings.auth0_domain
-        auth0_audience = settings.auth0_audience
-        
+        supabase_url = settings.supabase_url
+
         # Handle SSL certificate verification based on environment
+        ssl_context = None
         if settings.is_development():
             # For development, disable SSL verification to avoid certificate issues
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
-            jsonurl = urlopen("https://"+auth0_domain+"/.well-known/jwks.json", context=ssl_context)
+            jsonurl = urlopen(supabase_url+"/.well-known/jwks.json", context=ssl_context)
         else:
             # For production/staging, use proper SSL verification
-            jsonurl = urlopen("https://"+auth0_domain+"/.well-known/jwks.json")
+            jsonurl = urlopen(supabase_url+"/.well-known/jwks.json")
             
-        jwks = json.loads(jsonurl.read())
-        unverified_header = jwt.get_unverified_header(auth0_token)
+        logger.info(f"Supabase auth URL: {supabase_url}")
+        jwks_response = jsonurl.read()
+        logger.info(f"Supabase auth jwks: {jwks_response}")
+            
+        jwks = json.loads(jwks_response)
+        unverified_header = jwt.get_unverified_header(jwt_token)
+        logger.info(f"JWT header: {unverified_header}")
         public_key = None
         for key in jwks["keys"]:
             if key["kid"] == unverified_header["kid"]:
-                public_key = jwk.construct(key)
+                public_key = jwk_construct(key)
                 break
                 
+        if not public_key:
+            logger.error(f"No matching key found for kid: {unverified_header.get('kid')}")
+            raise HTTPException(status_code=401, detail={"message": "Invalid token: no matching key"})
+            
         if public_key:
-            payload = jwt.decode(
-                auth0_token,
-                public_key,
-                algorithms=["RS256"],
-                audience=auth0_audience,
-                issuer="https://"+auth0_domain+"/"
-            )
+            try:
+                payload = jwt.decode(
+                    jwt_token,
+                    public_key,
+                    algorithms=["ES256"],
+                    audience="authenticated",
+                    issuer=supabase_url
+                )
+            except JWTError as e:
+                logger.warning(f"Failed to verify with audience 'authenticated': {e}")
+                payload = jwt.decode(
+                    jwt_token,
+                    public_key,
+                    algorithms=["ES256"],
+                    issuer=supabase_url
+                )
             
-            logger.info(f"Auth0 token verified successfully for user: {payload}")
+            logger.info(f"Supabase token verified successfully for user: {payload}")
             
-            # Extract user ID from Auth0 payload
-            auth0_user_id = payload.get("sub")  # This is the unique Auth0 user ID
+            # Extract user ID from Supabase payload
+            supabase_user_id = payload.get("sub")  # This is the unique Supabase user ID
             expires_at = int(payload.get("exp", 0))
             email = payload.get("email")
-            name = payload.get("name")
+            name = payload.get("user_metadata", {}).get("name")
             
-            # If email or name not in JWT, get from UserInfo endpoint
-            if not email or not name:
-                try:
-                    # Create request with Authorization header
-                    req = urllib.request.Request(f"https://{auth0_domain}/userinfo")
-                    req.add_header("Authorization", f"Bearer {auth0_token}")
+            logger.info(f"Supabase user payload: {payload}")
                     
-                    if settings.is_development():
-                        userinfo_response = urlopen(req, context=ssl_context)
-                    else:
-                        userinfo_response = urlopen(req)
-                    
-                    userinfo_data = json.loads(userinfo_response.read())
-                    email = email or userinfo_data.get("email")
-                    name = name or userinfo_data.get("name")
-                    logger.info(f"Retrieved user info from Auth0: {userinfo_data}")
-                except Exception as e:
-                    logger.warning(f"Failed to get user info from Auth0: {e}")
-                    
-            if auth0_user_id is None:
+            if supabase_user_id is None:
                 raise HTTPException(status_code=400, detail={"message": "Invalid token: missing user ID"})
             
             old_user_id = current_user_access.user_id
@@ -245,11 +247,11 @@ async def verify(
             needs_migration = False
             
             async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
-                user = await service_container.user_service.get_user_by_external_id(db, auth0_user_id)
+                user = await service_container.user_service.get_user_by_external_id(db, supabase_user_id)
                 if user is None:
                     user = await service_container.user_service.create_user(db, CreateUserParams(
-                        id=current_user_access.user_id,
-                        external_id=auth0_user_id,
+                        id=current_user_access.user_id, 
+                        external_id=supabase_user_id,
                         created_at=timestamp,
                         updated_at=timestamp,
                         last_signed_in_at=timestamp,
@@ -302,16 +304,16 @@ async def verify(
             
             return current_user_access
         
-        logger.error(f"JWTError: Invalid token {auth0_token}")
+        logger.error(f"JWTError: Invalid token {jwt_token}")
         raise HTTPException(status_code=401, detail={"message": "Invalid token"})
         
     except JWTError:
-        logger.error(f"JWTError: Invalid token {auth0_token}")
+        logger.error(f"JWTError: Invalid token {jwt_token}")
         raise HTTPException(status_code=401, detail={"message": "Invalid token"})
     
     except HTTPException as e:
         raise e
     
     except Exception as e:
-        logger.error(f"Error verifying Auth0 token: {e}")
+        logger.error(f"Error verifying Supabase token: {e}")
         raise HTTPException(status_code=500, detail={"message": "Token verification failed"})

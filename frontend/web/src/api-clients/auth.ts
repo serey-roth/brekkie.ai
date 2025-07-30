@@ -9,15 +9,6 @@ import {
 
 export interface ISupabaseAuthApiClient {
     googleLogin(): Promise<string>;
-    emailLogin(
-        email: string,
-        password: string,
-    ): Promise<{ user: User | null; session: Session | null }>;
-    emailSignUp(
-        email: string,
-        password: string,
-    ): Promise<{ user: User | null; session: Session | null }>;
-    resetPassword(email: string): Promise<void>;
     logout(): Promise<void>;
     getSession(): Promise<Session | null>;
     getUser(): Promise<User>;
@@ -39,43 +30,6 @@ export class SupabaseAuthApiClient implements ISupabaseAuthApiClient {
             throw new Error(error.message);
         }
         return data.url;
-    }
-
-    async emailLogin(
-        email: string,
-        password: string,
-    ): Promise<{ user: User | null; session: Session | null }> {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
-        if (error) {
-            throw new Error(error.message);
-        }
-        return data;
-    }
-
-    async emailSignUp(
-        email: string,
-        password: string,
-    ): Promise<{ user: User | null; session: Session | null }> {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-        });
-        if (error) {
-            throw new Error(error.message);
-        }
-        return data;
-    }
-
-    async resetPassword(email: string): Promise<void> {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/auth/callback`,
-        });
-        if (error) {
-            throw new Error(error.message);
-        }
     }
 
     async logout(): Promise<void> {

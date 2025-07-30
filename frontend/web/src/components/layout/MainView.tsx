@@ -34,7 +34,7 @@ export function MainView() {
 
     const { isSidebarOpen, selectedRecipeId, setSelectedRecipeId } = useAppState();
 
-    const { addAuthStateChangeListener } = useSupabaseAuth();
+    const { addAuthStateChangeListener, getClaims } = useSupabaseAuth();
 
     const connectionState = useConnectionState();
 
@@ -105,10 +105,17 @@ export function MainView() {
                 setIsAuthenticated(true);
             }
         });
+        const checkAuthentication = async () => {
+            const claims = await getClaims();
+            if (claims.aud === 'authenticated') {
+                setIsAuthenticated(true);
+            }
+        };
+        checkAuthentication();
         return () => {
             unsubscribe();
         };
-    }, [addAuthStateChangeListener]);
+    }, [addAuthStateChangeListener, getClaims]);
 
     const navigate = useNavigate();
 
@@ -121,7 +128,7 @@ export function MainView() {
             <div
                 className={`bg-background grid min-h-screen overflow-hidden transition-all duration-300 ${
                     selectedRecipeId ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
-                } ${isSidebarOpen ? 'md:ml-16 lg:ml-[20rem]' : 'md:ml-16'}`}
+                } ${isSidebarOpen ? 'md:ml-16 lg:ml-[20rem]' : 'md:ml-14'}`}
             >
                 {showRecipeListView ? (
                     <RecipeListView />

@@ -48,11 +48,6 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
         setSelectedRecipeIdState(recipeId);
     }, []);
 
-    const [showRecipeListView, setShowRecipeListViewState] = useState(true);
-    const setShowRecipeListView = useCallback((show: boolean) => {
-        setShowRecipeListViewState(show);
-    }, []);
-
     const value = useMemo<AppContextType>(
         () => ({
             config,
@@ -70,8 +65,6 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
                 setIsSidebarOpen,
                 selectedRecipeId,
                 setSelectedRecipeId,
-                showRecipeListView,
-                setShowRecipeListView,
             },
         }),
         [
@@ -79,9 +72,7 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
             isSidebarOpen,
             setIsSidebarOpen,
             selectedRecipeId,
-            setSelectedRecipeId,
-            showRecipeListView,
-            setShowRecipeListView,
+            setSelectedRecipeId
         ],
     );
 

@@ -29,10 +29,10 @@ import { RecipeListView } from './RecipeListView';
 import { Sidebar } from './Sidebar';
 
 export function MainView() {
+    const [showRecipeListView, setShowRecipeListView] = useState(false);
     const [scrollToBottomMessage, setScrollToBottomMessage] = useState<string | null>(null);
 
-    const { isSidebarOpen, selectedRecipeId, setSelectedRecipeId, showRecipeListView } =
-        useAppState();
+    const { isSidebarOpen, selectedRecipeId, setSelectedRecipeId } = useAppState();
 
     const { addAuthStateChangeListener } = useSupabaseAuth();
 
@@ -114,7 +114,10 @@ export function MainView() {
 
     return (
         <div className="bg-background px-safe pb-safe min-h-screen">
-            <Sidebar />
+            <Sidebar
+                showRecipeListView={() => setShowRecipeListView(true)}
+                hideRecipeListView={() => setShowRecipeListView(false)}
+            />
             <div
                 className={`bg-background grid min-h-screen overflow-hidden transition-all duration-300 ${
                     selectedRecipeId ? 'lg:grid-cols-2' : 'lg:grid-cols-1'

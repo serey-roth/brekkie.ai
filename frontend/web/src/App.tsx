@@ -3,7 +3,6 @@ import { AuthCallback } from './components/auth/AuthCallback';
 import { AuthForm } from './components/auth/AuthForm';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { MainView } from './components/layout/MainView';
-import { RootLayout } from './components/layout/RootLayout';
 import { ChatProvider } from './components/providers/ChatProvider';
 
 export default function App() {
@@ -16,13 +15,11 @@ export default function App() {
                 element={
                     <AuthGuard>
                         <ChatProvider>
-                            <RootLayout />
+                            <MainView />
                         </ChatProvider>
                     </AuthGuard>
                 }
-            >
-                <Route index element={<MainView />} />
-            </Route>
+            />
         </Routes>
     );
 }

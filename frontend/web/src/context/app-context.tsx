@@ -22,8 +22,6 @@ export interface AppState {
     setIsSidebarOpen: (isOpen: boolean) => void;
     selectedRecipeId: string | null;
     setSelectedRecipeId: (recipeId: string | null) => void;
-    showRecipeListView: boolean;
-    setShowRecipeListView: (show: boolean) => void;
 }
 
 export interface AppContextType {

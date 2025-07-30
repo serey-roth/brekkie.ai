@@ -11,9 +11,7 @@ export const useSupabaseAuth = () => {
 
     const loginWithGoogle = useCallback(async () => {
         try {
-            const url = await supabaseAuthApiClient.googleLogin(
-                `${appBaseUrl}/auth/callback`,
-            );
+            const url = await supabaseAuthApiClient.googleLogin(`${appBaseUrl}/auth/callback`);
             window.location.href = url;
         } catch (error) {
             console.error(error);

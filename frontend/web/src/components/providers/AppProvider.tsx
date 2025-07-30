@@ -46,7 +46,12 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
     const [selectedRecipeId, setSelectedRecipeIdState] = useState<string | null>(null);
     const setSelectedRecipeId = useCallback((recipeId: string | null) => {
         setSelectedRecipeIdState(recipeId);
-    }, []); 
+    }, []);
+
+    const [showRecipeListView, setShowRecipeListViewState] = useState(true);
+    const setShowRecipeListView = useCallback((show: boolean) => {
+        setShowRecipeListViewState(show);
+    }, []);
 
     const value = useMemo<AppContextType>(
         () => ({
@@ -65,9 +70,19 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
                 setIsSidebarOpen,
                 selectedRecipeId,
                 setSelectedRecipeId,
+                showRecipeListView,
+                setShowRecipeListView,
             },
         }),
-        [config, isSidebarOpen, setIsSidebarOpen, selectedRecipeId, setSelectedRecipeId],
+        [
+            config,
+            isSidebarOpen,
+            setIsSidebarOpen,
+            selectedRecipeId,
+            setSelectedRecipeId,
+            showRecipeListView,
+            setShowRecipeListView,
+        ],
     );
 
     useEffect(() => {

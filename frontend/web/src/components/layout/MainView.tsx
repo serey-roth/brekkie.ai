@@ -25,11 +25,14 @@ import type { Thread } from '@/data/schemas/threads';
 import type { UserAccess } from '@/data/schemas/user-access';
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
 import { groupMessagesByRole } from '@/utils/message-utils';
+import { RecipeListView } from './RecipeListView';
+import { Sidebar } from './Sidebar';
 
-export function ChatView() {
+export function MainView() {
     const [scrollToBottomMessage, setScrollToBottomMessage] = useState<string | null>(null);
 
-    const { isSidebarOpen, selectedRecipeId, setSelectedRecipeId } = useAppState();
+    const { isSidebarOpen, selectedRecipeId, setSelectedRecipeId, showRecipeListView } =
+        useAppState();
 
     const { addAuthStateChangeListener } = useSupabaseAuth();
 
@@ -110,49 +113,64 @@ export function ChatView() {
     const navigate = useNavigate();
 
     return (
-        <>
-            <ChatLayout
-                scrollRef={scrollRef}
-                selectedRecipeId={selectedRecipeId}
-                scrollToBottomMessage={scrollToBottomMessage}
-                onScrollToBottom={scrollToBottom}
-                onSendMessage={sendMessage}
-                connectionStatus={connectionState.status}
-                appErrorMessage={accessErrorMessage ?? connectionState.errorMessage}
-                chatLimitMessage={chatLimitMessage ?? null}
-                chatSessionErrorMessage={chatSessionErrorMessage ?? null}
-                disableSendButton={
-                    !currentChatState || isLoadingMoreMessages || !connectionState.isConnected
-                }
-                isAuthenticated={isAuthenticated}
-                onSignIn={() => navigate('/auth')}
-                threadTitle={threadTitle}
-                threadTitleState={threadTitleState}
+        <div className="bg-background px-safe pb-safe min-h-screen">
+            <Sidebar />
+            <div
+                className={`bg-background grid min-h-screen overflow-hidden transition-all duration-300 ${
+                    selectedRecipeId ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
+                } ${isSidebarOpen ? 'md:ml-16 lg:ml-[20rem]' : 'md:ml-16'}`}
             >
-                {messageGroups.length > 0 ? (
-                    <MessageList
-                        messageGroups={messageGroups}
-                        isLoadingMoreMessages={isLoadingMoreMessages}
-                        isAssistantThinking={currentChatState?.isAssistantThinking ?? false}
-                        isAssistantResponding={currentChatState?.isAssistantResponding ?? false}
-                        selectedRecipeId={selectedRecipeId}
-                        onSelectRecipe={setSelectedRecipeId}
-                        errorLoadingMoreMessages={errorLoadingMoreMessages}
-                        loadingMessage={loadingMessage}
-                    />
+                {showRecipeListView ? (
+                    <RecipeListView />
                 ) : (
-                    <WelcomeScreen
+                    <ChatLayout
+                        scrollRef={scrollRef}
+                        selectedRecipeId={selectedRecipeId}
+                        scrollToBottomMessage={scrollToBottomMessage}
+                        onScrollToBottom={scrollToBottom}
                         onSendMessage={sendMessage}
-                        disabled={connectionState.status !== 'connected'}
-                    />
+                        connectionStatus={connectionState.status}
+                        appErrorMessage={accessErrorMessage ?? connectionState.errorMessage}
+                        chatLimitMessage={chatLimitMessage ?? null}
+                        chatSessionErrorMessage={chatSessionErrorMessage ?? null}
+                        disableSendButton={
+                            !currentChatState ||
+                            isLoadingMoreMessages ||
+                            !connectionState.isConnected
+                        }
+                        isAuthenticated={isAuthenticated}
+                        onSignIn={() => navigate('/auth')}
+                        threadTitle={threadTitle}
+                        threadTitleState={threadTitleState}
+                    >
+                        {messageGroups.length > 0 ? (
+                            <MessageList
+                                messageGroups={messageGroups}
+                                isLoadingMoreMessages={isLoadingMoreMessages}
+                                isAssistantThinking={currentChatState?.isAssistantThinking ?? false}
+                                isAssistantResponding={
+                                    currentChatState?.isAssistantResponding ?? false
+                                }
+                                selectedRecipeId={selectedRecipeId}
+                                onSelectRecipe={setSelectedRecipeId}
+                                errorLoadingMoreMessages={errorLoadingMoreMessages}
+                                loadingMessage={loadingMessage}
+                            />
+                        ) : (
+                            <WelcomeScreen
+                                onSendMessage={sendMessage}
+                                disabled={connectionState.status !== 'connected'}
+                            />
+                        )}
+                    </ChatLayout>
                 )}
-            </ChatLayout>
-            <RecipePanel
-                selectedRecipeId={selectedRecipeId}
-                isSidebarOpen={isSidebarOpen}
-                onClose={() => setSelectedRecipeId(null)}
-            />
-        </>
+                <RecipePanel
+                    selectedRecipeId={selectedRecipeId}
+                    isSidebarOpen={isSidebarOpen}
+                    onClose={() => setSelectedRecipeId(null)}
+                />
+            </div>
+        </div>
     );
 }
 

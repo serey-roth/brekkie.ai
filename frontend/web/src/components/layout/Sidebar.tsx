@@ -36,7 +36,7 @@ import type { UserMetadata } from '@/supabase-client';
 import { getThreadGroups, formatThreadTimestamp } from '@/utils/thread-utils';
 
 export function Sidebar() {
-    const { isSidebarOpen: isOpen, setIsSidebarOpen } = useAppState();
+    const { isSidebarOpen: isOpen, setIsSidebarOpen, setShowRecipeListView } = useAppState();
     const { featureFlags } = useAppConfig();
 
     const { getClaims, logout, addAuthStateChangeListener } = useSupabaseAuth();
@@ -152,7 +152,7 @@ export function Sidebar() {
                             if (isOpen) {
                                 setIsSidebarOpen(false);
                             }
-                            navigate('/recipes');
+                            setShowRecipeListView(true);
                         }}
                         className={`text-contrast hover:text-primary hover:bg-primary/5 focus:ring-primary/20 hover:border-primary/10 flex h-10 items-center rounded-xl border border-transparent transition-all duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/5 w-10' : 'w-full'}`}
                         tabIndex={0}
@@ -175,7 +175,7 @@ export function Sidebar() {
                         disabled={hasLimitReached}
                         onClick={() => {
                             startThread();
-                            navigate('/');
+                            setShowRecipeListView(false);
                         }}
                         className={`text-contrast hover:text-primary hover:bg-primary/5 focus:ring-primary/20 hover:border-primary/10 flex h-10 items-center rounded-xl border border-transparent transition-all duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/5 w-10' : 'w-full'}`}
                         tabIndex={0}
@@ -248,7 +248,7 @@ export function Sidebar() {
                                                     if (currentThreadId !== thread.id) {
                                                         resumeThread(thread.id);
                                                     }
-                                                    navigate(`/`);
+                                                    setShowRecipeListView(false);
                                                 }}
                                                 className={`hover:bg-primary/5 hover:border-primary/10 flex w-full items-center gap-2 rounded-xl border border-transparent p-1 text-left text-sm transition-all duration-200 ${currentThreadId === thread.id ? 'bg-primary/10 border-primary/50 hover:bg-primary/15' : ''}`}
                                             >

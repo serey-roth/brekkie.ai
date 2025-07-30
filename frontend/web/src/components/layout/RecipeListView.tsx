@@ -1,30 +1,22 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Utensils, Loader, CircleAlert } from 'lucide-react';
+import { Utensils, CircleAlert, LoaderCircle } from 'lucide-react';
 import { DateTime } from 'luxon';
 import { Masonry } from 'masonic';
 import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
-import { useRecipesApiClient } from '@/context/app-context';
+import { useAppState, useRecipesApiClient } from '@/context/app-context';
 import { useRecipeManager } from '@/context/chat-context';
 import type { UserRecipe } from '@/data/schemas/recipes';
 import { RecipeCard } from '../recipes/RecipeCard';
 
-interface RecipeListViewProps {
-    selectedRecipeId: string | null;
-    onSelectRecipe: (recipeId: string) => void;
-    isRecipePanelOpen: boolean;
-}
-
-export const RecipeListView = ({
-    selectedRecipeId,
-    onSelectRecipe,
-    isRecipePanelOpen,
-}: RecipeListViewProps) => {
+export const RecipeListView = () => {
     const [recipes, setRecipes] = useState<UserRecipe[]>([]);
     const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'success' | 'error'>(
         'idle',
     );
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    const { selectedRecipeId, setSelectedRecipeId } = useAppState();
 
     const recipeManager = useRecipeManager();
     const recipesApiClient = useRecipesApiClient();
@@ -187,7 +179,7 @@ export const RecipeListView = ({
                                             ease: 'linear',
                                         }}
                                     >
-                                        <Loader className="text-primary mb-4 h-8 w-8 animate-spin" />
+                                        <LoaderCircle className="text-primary mb-4 h-8 w-8 animate-spin" />
                                     </motion.div>
                                     <motion.p
                                         className="text-contrast-subtle text-sm"
@@ -247,7 +239,7 @@ export const RecipeListView = ({
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.4 }}
                                     >
-                                        <Loader className="h-4 w-4" />
+                                        <LoaderCircle className="h-4 w-4" />
                                         Try Again
                                     </motion.button>
                                 </motion.div>
@@ -379,14 +371,14 @@ export const RecipeListView = ({
                                                                 recipe={recipe}
                                                                 selectedRecipeId={selectedRecipeId}
                                                                 onSelectRecipe={() =>
-                                                                    onSelectRecipe(recipe.id)
+                                                                    setSelectedRecipeId(recipe.id)
                                                                 }
                                                                 className="hover:bg-contrast-subtle/80 hover:scale-[1.02] hover:shadow-lg"
                                                             />
                                                         </motion.div>
                                                     )}
                                                     columnGutter={8}
-                                                    columnWidth={isRecipePanelOpen ? 300 : 250}
+                                                    columnWidth={selectedRecipeId ? 300 : 250}
                                                     overscanBy={2}
                                                 />
                                             </motion.div>

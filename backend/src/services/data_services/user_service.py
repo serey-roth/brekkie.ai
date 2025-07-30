@@ -45,6 +45,11 @@ class UserService:
         user = await self.repository.get_user_by_external_id(db, external_id)
         return self._to_user_dto(user) if user else None
 
+    async def get_user_by_email(self, db: AsyncSession, email: str) -> User | None:
+        logger.debug(f"Getting user by email: {email}")
+        user = await self.repository.get_user_by_email(db, email)
+        return self._to_user_dto(user) if user else None
+
     async def update_user(self, db: AsyncSession, user_id: str, params: UpdateUserParams) -> User:
         logger.debug(f"Updating user with id: {user_id}")
         user = await self.repository.update_user(db, user_id, params)

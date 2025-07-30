@@ -135,6 +135,7 @@ class TestUpdateUser:
     async def test_update_user(self, user_service: UserService, mock_user_repository: UserRepository, mock_async_session: AsyncSession, mock_db_user: DBUser, sample_user_id: str, sample_user_external_id: str, sample_timestamps: tuple[datetime, datetime]):
         params = UpdateUserParams(
             id=sample_user_id,
+            external_id=sample_user_external_id,
             updated_at=sample_timestamps[1],
             last_signed_in_at=sample_timestamps[1],
             email="test@test.com",

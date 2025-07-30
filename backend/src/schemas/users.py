@@ -23,6 +23,7 @@ class CreateUserParams(BaseModel):
 
 class UpdateUserParams(BaseModel):
     id: str = Field(description="Unique identifier for the user")
+    external_id: str  = Field(description="The user's ID from the authentication provider")
     updated_at: datetime = Field(description="When the user was last modified")
     last_signed_in_at: datetime | None = Field(description="When the user was last signed in")
     email: str | None = Field(description="The user's email address")

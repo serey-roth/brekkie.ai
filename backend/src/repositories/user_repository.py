@@ -34,6 +34,10 @@ class UserRepository:
         result = await db.execute(select(DBUser).where(DBUser.external_id == external_id))
         return result.scalar_one_or_none()
 
+    async def get_user_by_email(self, db: AsyncSession, email: str) -> DBUser | None:
+        result = await db.execute(select(DBUser).where(DBUser.email == email))
+        return result.scalar_one_or_none()
+
     async def update_user(self, db: AsyncSession, user_id: str, params: UpdateUserParams) -> DBUser:
         user = await self.get_user_by_id(db, user_id)
         if user is None:

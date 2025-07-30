@@ -140,6 +140,7 @@ class TestUpdateUser:
     async def test_update_user(self, async_session: AsyncSession, user_repository: UserRepository, create_user_in_db, sample_user: dict, user_id: str):
         params = UpdateUserParams(
             id=user_id,
+            external_id=sample_user["external_id"],
             updated_at=datetime.now(timezone.utc),
             last_signed_in_at=datetime.now(timezone.utc),
             email="test@test.com",

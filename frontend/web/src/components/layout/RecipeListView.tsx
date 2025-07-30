@@ -267,7 +267,7 @@ export const RecipeListView = () => {
                                         <Utensils className="text-primary/40 mb-6 h-16 w-16" />
                                     </motion.div>
                                     <motion.h3
-                                        className="text-contrast mb-3 text-xl font-semibold"
+                                        className="text-contrast mb-3 text-xl font-medium"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.2 }}

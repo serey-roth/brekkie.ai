@@ -5,46 +5,46 @@ import { UserAccessSchema, type UserAccess } from '@/data/schemas/user-access';
 import type { AuthChangeEvent, Session } from '@/supabase-client';
 
 export const useSupabaseAuth = () => {
-    const { apiBaseUrl } = useAppConfig();
+    const { appBaseUrl, apiBaseUrl } = useAppConfig();
     const supabaseAuthApiClient = useSupabaseAuthApiClient();
     const navigate = useNavigate();
 
     const loginWithGoogle = useCallback(async () => {
         try {
             const url = await supabaseAuthApiClient.googleLogin(
-                `${window.location.origin}/auth/callback`,
+                `${appBaseUrl}/auth/callback`,
             );
             window.location.href = url;
         } catch (error) {
             console.error(error);
             throw error;
         }
-    }, [supabaseAuthApiClient]);
+    }, [supabaseAuthApiClient, appBaseUrl]);
 
     const loginWithEmail = useCallback(
         async (email: string, password: string) => {
             try {
                 await supabaseAuthApiClient.emailLogin(email, password);
-                navigate(`${window.location.origin}/auth/callback`);
+                navigate(`${appBaseUrl}/auth/callback`);
             } catch (error) {
                 console.error(error);
                 throw error;
             }
         },
-        [supabaseAuthApiClient, navigate],
+        [supabaseAuthApiClient, navigate, appBaseUrl],
     );
 
     const signUpWithEmail = useCallback(
         async (email: string, password: string) => {
             try {
                 await supabaseAuthApiClient.emailSignUp(email, password);
-                navigate(`${window.location.origin}/auth/callback`);
+                navigate(`${appBaseUrl}/auth/callback`);
             } catch (error) {
                 console.error(error);
                 throw error;
             }
         },
-        [supabaseAuthApiClient, navigate],
+        [supabaseAuthApiClient, navigate, appBaseUrl],
     );
 
     const resetPassword = useCallback(

@@ -1,10 +1,11 @@
 interface AvatarProps {
     name: string;
-    size?: 'sm' | 'md' | 'lg';
+    avatarUrl?: string | null;
+    size?: 'xs' | 'sm' | 'md' | 'lg';
     className?: string;
 }
 
-export function Avatar({ name, size = 'md', className = '' }: AvatarProps) {
+export function Avatar({ name, avatarUrl, size = 'md', className = '' }: AvatarProps) {
     const getInitials = (name: string) => {
         return name
             .split(' ')
@@ -15,10 +16,32 @@ export function Avatar({ name, size = 'md', className = '' }: AvatarProps) {
     };
 
     const sizeClasses = {
+        xs: 'w-6 h-6 text-xs',
         sm: 'w-8 h-8 text-sm',
         md: 'w-10 h-10 text-base',
         lg: 'w-14 h-14 text-xl',
     };
+
+    if (avatarUrl) {
+        return (
+            <div className={`${sizeClasses[size]} ${className}`}>
+                <img
+                    src={avatarUrl}
+                    alt={`${name}'s avatar`}
+                    className="h-full w-full rounded-full object-cover"
+                    onError={(e) => {
+                        // Fallback to initials if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                            parent.innerHTML = `<span class="text-primary font-medium">${getInitials(name)}</span>`;
+                        }
+                    }}
+                />
+            </div>
+        );
+    }
 
     return (
         <div

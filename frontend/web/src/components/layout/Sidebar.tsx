@@ -1,16 +1,25 @@
 import {
     PanelLeftClose,
-    MessageSquare,
-    MessageSquarePlus,
-    LogOut,
+    MessageCircle,
+    MessageCirclePlus,
     LogIn,
-    MessageSquareWarning,
-    ArrowRightFromLine,
-    ArrowLeftFromLine,
-    MessageSquareX,
+    MessageCircleWarning,
+    SidebarOpenIcon,
+    SidebarCloseIcon,
+    MessageCircleX,
     Utensils,
+    LogOut,
+    Settings,
+    HelpCircle,
+    FileText,
+    Shield,
+    Info,
 } from 'lucide-react';
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { SettingsModal } from '@/components/layout/SettingsModal';
+import { Avatar } from '@/components/ui/Avatar';
+import { Menu } from '@/components/ui/Menu';
 import {
     useAppConfig,
     useAppState,
@@ -22,35 +31,61 @@ import type { ChatState } from '@/data/schemas/chat-state';
 import type { ChatSessionError } from '@/data/schemas/errors';
 import { type Thread } from '@/data/schemas/threads';
 import { type UserAccess } from '@/data/schemas/user-access';
-import { useAuth } from '@/hooks/useAuth';
+import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import type { UserMetadata } from '@/supabase-client';
 import { getThreadGroups, formatThreadTimestamp } from '@/utils/thread-utils';
 
-interface SidebarProps {
-    showRecipeListView: () => void;
-    hideRecipeListView: () => void;
-}
-
-export function Sidebar(props: SidebarProps) {
-    const { showRecipeListView, hideRecipeListView } = props;
-    const { isSidebarOpen: isOpen, openSidebar, closeSidebar } = useAppState();
+export function Sidebar() {
+    const { isSidebarOpen: isOpen, setIsSidebarOpen } = useAppState();
     const { featureFlags } = useAppConfig();
-    const { login, logout, isAuthenticated } = useAuth();
-    const userAccessManager = useUserAccessManager();
+
+    const { getClaims, logout, addAuthStateChangeListener } = useSupabaseAuth();
     const userAccess = useUserAccess();
+
     const { hasLimitReached } = useChatLimit();
-    const { currentThreadId, startThread, resumeThread, resetCurrentThread } = useCurrentThread();
+    const { currentThreadId, startThread, resumeThread } = useCurrentThread();
     const { threadGroups, isFetching, error, fetchMoreObserverTarget } = useFetchThreads(
         isOpen,
         userAccess,
     );
+
+    const [user, setUser] = useState<UserMetadata | null>(null);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    useEffect(() => {
+        const unsubscribe = addAuthStateChangeListener((event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) {
+                setUser(session.user.user_metadata);
+            } else if (event === 'SIGNED_IN' && !session) {
+                setUser(null);
+            } else if (event === 'SIGNED_OUT') {
+                setUser(null);
+            }
+        });
+
+        const checkAuth = async () => {
+            const claims = await getClaims();
+            if (claims.aud === 'authenticated') {
+                setUser(claims['user_metadata']);
+            } else {
+                setUser(null);
+            }
+        };
+
+        checkAuth();
+        return () => {
+            unsubscribe();
+        };
+    }, [addAuthStateChangeListener, getClaims]);
+
+    const navigate = useNavigate();
 
     return (
         <>
             {!isOpen && (
                 <div className="fixed top-4 left-4 z-50 flex flex-row gap-2 md:hidden">
                     <button
-                        onClick={openSidebar}
-                        className="text-contrast hover:text-primary bg-background/95 focus:ring-primary/20 border-border flex h-10 w-10 items-center justify-center rounded-xl border shadow-lg backdrop-blur-sm transition-transform duration-150 hover:scale-102 focus:ring-2 focus:outline-none active:scale-98"
+                        onClick={() => setIsSidebarOpen(true)}
+                        className="text-contrast hover:text-primary bg-background/95 focus:ring-primary/20 border-border flex h-10 w-10 items-center justify-center rounded-xl border shadow-lg backdrop-blur-sm transition-all duration-200 focus:ring-2 focus:outline-none"
                     >
                         <PanelLeftClose size={20} />
                     </button>
@@ -59,95 +94,117 @@ export function Sidebar(props: SidebarProps) {
 
             {isOpen && (
                 <div
-                    onClick={closeSidebar}
+                    onClick={() => setIsSidebarOpen(false)}
                     className="bg-contrast/20 fixed inset-0 z-40 backdrop-blur-[1px] md:hidden"
                 />
             )}
 
             <div
-                className={`bg-background/95 border-border fixed top-0 left-0 z-40 flex h-screen flex-col border-r shadow-lg backdrop-blur-sm transition-[transform,width] duration-250 ease-in-out ${isOpen ? 'w-80 translate-x-0' : 'w-16 -translate-x-full md:translate-x-0'}`}
+                className={`bg-background/95 border-border fixed top-0 left-0 z-40 flex h-screen flex-col border-r shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out ${isOpen ? 'w-80 translate-x-0' : 'w-14 -translate-x-full md:translate-x-0'}`}
             >
-                <div className={`mt-4 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
-                    {isOpen && (
-                        <div className="flex flex-1 flex-row items-center">
-                            <div className="flex h-10 w-10 items-center justify-center">
-                                <img
-                                    src="/brekkie-logo.png"
-                                    alt="Brekkie Logo"
-                                    className="h-8 w-8"
-                                />
-                            </div>
-                            <span className="text-contrast mr-2 text-xl font-bold whitespace-nowrap">
-                                brekkie.ai
-                            </span>
-                            <span className="text-contrast-subtle bg-primary/20 rounded-full px-2 py-0.5 text-xs font-semibold">
-                                beta
-                            </span>
-                        </div>
-                    )}
-                    <button
-                        onClick={isOpen ? closeSidebar : openSidebar}
-                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 w-10 items-center justify-center rounded-xl border border-transparent p-2 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/10' : ''}`}
+                <div className="mx-2 mt-2 flex items-center">
+                    <div
+                        className="flex flex-1 flex-shrink-0 flex-row items-center"
+                        title={!isOpen ? 'Open sidebar' : ''}
                     >
-                        {isOpen ? (
-                            <ArrowLeftFromLine size={20} />
-                        ) : (
-                            <ArrowRightFromLine size={20} />
-                        )}
-                    </button>
+                        <div
+                            className={`group relative flex h-10 w-10 items-center justify-center`}
+                        >
+                            <img
+                                src="/brekkie-logo.png"
+                                alt="Brekkie Logo"
+                                className={`h-8 w-8 ${!isOpen ? 'opacity-100 transition-opacity duration-200 group-hover:opacity-0' : ''}`}
+                            />
+                            {!isOpen && (
+                                <div
+                                    className={`group-hover:bg-primary/10 absolute top-0 left-0 flex h-full w-full items-center justify-center rounded-xl opacity-0 transition-opacity duration-200 group-hover:opacity-100`}
+                                    onClick={() => setIsSidebarOpen(true)}
+                                >
+                                    <SidebarOpenIcon size={18} className="text-contrast-subtle" />
+                                </div>
+                            )}
+                        </div>
+                        <div
+                            className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}
+                        >
+                            <div className="flex items-center gap-2 whitespace-nowrap">
+                                <span className="text-contrast text-xl font-bold">brekkie.ai</span>
+                                <span className="text-contrast-subtle bg-primary/20 rounded-full px-2 py-0.5 text-xs font-semibold">
+                                    beta
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {isOpen && (
+                        <button
+                            onClick={() => setIsSidebarOpen(false)}
+                            className={`text-contrast hover:text-primary hover:bg-primary/5 focus:ring-primary/20 hover:border-primary/10 flex h-10 w-10 items-center justify-center rounded-xl border border-transparent p-2 transition-colors duration-200 focus:ring-0 focus:outline-none md:flex`}
+                            title="Close sidebar"
+                        >
+                            <SidebarCloseIcon size={18} />
+                        </button>
+                    )}
                 </div>
 
-                <div className={`mt-2 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'}`}>
+                <div className="mx-2 flex items-center">
                     <button
                         onClick={() => {
-                            showRecipeListView();
                             if (isOpen) {
-                                closeSidebar();
+                                setIsSidebarOpen(false);
                             }
+                            navigate('/recipes');
                         }}
-                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 items-center rounded-xl border border-transparent transition-transform duration-150 hover:scale-102 focus:ring-0 focus:outline-none active:scale-98 md:flex ${!isOpen ? 'md:bg-primary/10 w-10' : 'w-full'}`}
+                        className={`text-contrast hover:text-primary hover:bg-primary/5 focus:ring-primary/20 hover:border-primary/10 flex h-10 items-center rounded-xl border border-transparent transition-all duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/5 w-10' : 'w-full'}`}
                         tabIndex={0}
                     >
-                        <div className="flex h-10 w-10 items-center justify-center">
-                            <Utensils size={20} />
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
+                            <Utensils size={18} />
                         </div>
-                        {isOpen && <span className="whitespace-nowrap">Recipes</span>}
+                        <div
+                            className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}
+                        >
+                            <span className="text-sm whitespace-nowrap">Recipes</span>
+                        </div>
                     </button>
                 </div>
 
                 <div
-                    className={`mt-2 flex items-center ${isOpen ? 'mx-4' : 'mx-auto'} ${hasLimitReached ? 'pointer-events-none cursor-not-allowed opacity-50' : ''}`}
+                    className={`mx-2 flex items-center ${hasLimitReached ? 'pointer-events-none cursor-not-allowed opacity-50' : ''}`}
                 >
                     <button
                         disabled={hasLimitReached}
                         onClick={() => {
                             startThread();
-                            hideRecipeListView();
+                            navigate('/');
                         }}
-                        className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 items-center rounded-xl border border-transparent transition-transform duration-150 hover:scale-102 focus:ring-0 focus:outline-none active:scale-98 md:flex ${!isOpen ? 'md:bg-primary/10 w-10' : 'w-full'}`}
+                        className={`text-contrast hover:text-primary hover:bg-primary/5 focus:ring-primary/20 hover:border-primary/10 flex h-10 items-center rounded-xl border border-transparent transition-all duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/5 w-10' : 'w-full'}`}
                         tabIndex={0}
                     >
-                        <div className="flex h-10 w-10 items-center justify-center">
-                            <MessageSquarePlus size={20} />
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center">
+                            <MessageCirclePlus size={18} />
                         </div>
-                        {isOpen && <span className="whitespace-nowrap">New Chat</span>}
+                        <div
+                            className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}
+                        >
+                            <span className="text-sm whitespace-nowrap">New Chat</span>
+                        </div>
                     </button>
                 </div>
 
                 <div className="flex-1 overflow-hidden">
                     {isOpen && threadGroups.length > 0 && (
-                        <div className="mt-2 flex flex-row items-center justify-between px-6">
+                        <div className="mx-4 mt-2 flex flex-row items-center justify-between">
                             <h2 className="text-contrast text-sm tracking-wider">Recent chats</h2>
                             <div className="text-contrast-subtle text-xs opacity-80">
                                 Sorted by last activity
                             </div>
                         </div>
                     )}
-                    <div className="custom-scrollbar h-full overflow-y-auto px-4 pt-4 pb-8">
+                    <div className="custom-scrollbar h-full overflow-y-auto pt-2 pb-8">
                         {isOpen && threadGroups.length === 0 && !isFetching && !error && (
                             <div className="text-contrast-subtle py-8 text-center text-sm">
                                 <div className="mb-2">
-                                    <MessageSquareX size={32} className="text-primary/60 mx-auto" />
+                                    <MessageCircleX size={32} className="text-primary/60 mx-auto" />
                                 </div>
                                 <p className="mx-auto max-w-[240px] font-medium">
                                     No chats yet. Milo's waiting whenever you're ready.
@@ -157,7 +214,7 @@ export function Sidebar(props: SidebarProps) {
                         {isOpen && error && (
                             <div className="text-contrast-subtle flex flex-col items-center justify-center gap-1 py-8 text-center text-sm">
                                 <div className="mb-2">
-                                    <MessageSquareWarning
+                                    <MessageCircleWarning
                                         size={32}
                                         className="text-primary/60 mx-auto"
                                     />
@@ -179,11 +236,11 @@ export function Sidebar(props: SidebarProps) {
                                     className={`${index < threadGroups.length - 1 ? 'mb-3' : ''}`}
                                 >
                                     <h3
-                                        className={`text-contrast-subtle mx-2 mb-2 text-sm tracking-wider`}
+                                        className={`text-contrast-subtle mx-4 mb-1 text-sm tracking-wider`}
                                     >
                                         {group.label}
                                     </h3>
-                                    <div className="space-y-0.5">
+                                    <div className="mx-2 space-y-0.5">
                                         {group.items.map((thread) => (
                                             <button
                                                 key={thread.id}
@@ -191,18 +248,18 @@ export function Sidebar(props: SidebarProps) {
                                                     if (currentThreadId !== thread.id) {
                                                         resumeThread(thread.id);
                                                     }
-                                                    hideRecipeListView();
+                                                    navigate(`/`);
                                                 }}
-                                                className={`hover:bg-primary/10 hover:border-primary/20 flex w-full items-center gap-2 rounded-xl border border-transparent p-1 text-left text-sm transition-transform duration-150 hover:scale-102 active:scale-98 sm:p-2 ${currentThreadId === thread.id ? 'bg-primary/10 border-primary/50 hover:bg-primary/20' : ''}`}
+                                                className={`hover:bg-primary/5 hover:border-primary/10 flex w-full items-center gap-2 rounded-xl border border-transparent p-1 text-left text-sm transition-all duration-200 ${currentThreadId === thread.id ? 'bg-primary/10 border-primary/50 hover:bg-primary/15' : ''}`}
                                             >
                                                 <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full">
-                                                    <MessageSquare
+                                                    <MessageCircle
                                                         size={16}
                                                         className="text-primary/80"
                                                     />
                                                 </div>
                                                 <div className="ml-2 min-w-0 flex-1">
-                                                    <div className="text-contrast truncate font-medium">
+                                                    <div className="text-contrast truncate text-xs">
                                                         {thread.title ?? 'New Chat'}
                                                     </div>
                                                     <div className="text-contrast-subtle text-xs italic">
@@ -229,53 +286,156 @@ export function Sidebar(props: SidebarProps) {
                 </div>
 
                 {featureFlags.enableAuth && (
-                    <div
-                        className={`mt-2 mb-4 flex flex-shrink-0 items-center gap-2 ${isOpen ? 'mx-4' : 'mx-auto'}`}
-                    >
-                        {!isAuthenticated && (
+                    <div className="mx-2 mt-2 mb-4 flex">
+                        {user ? (
+                            <Menu
+                                placement="top"
+                                align="start"
+                                containerClassName="w-full"
+                                menuClassName="bg-background-light"
+                                submenuClassName="bg-background-light"
+                                offset={4}
+                                trigger={
+                                    <button
+                                        className={`text-contrast focus:ring-primary/20 flex w-full items-center justify-center rounded-xl border border-transparent p-1 transition-all duration-200 focus:ring-0 focus:outline-none md:flex ${
+                                            !isOpen
+                                                ? ''
+                                                : 'hover:bg-primary/5 hover:border-primary/10'
+                                        }`}
+                                        tabIndex={0}
+                                    >
+                                        <div className="flex w-full items-center gap-2">
+                                            <div className="flex-shrink-0">
+                                                <Avatar
+                                                    name={user?.name || 'User'}
+                                                    avatarUrl={user?.avatar_url}
+                                                    size="sm"
+                                                />
+                                            </div>
+                                            <div
+                                                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                                    isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'
+                                                }`}
+                                            >
+                                                <div className="flex flex-col items-start">
+                                                    <span className="text-sm whitespace-nowrap">
+                                                        {user?.name}
+                                                    </span>
+                                                    <span className="text-xs whitespace-nowrap">
+                                                        Free Plan
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                }
+                                items={[
+                                    {
+                                        label: user?.email || 'User',
+                                        icon: <></>,
+                                    },
+                                    {
+                                        label: '',
+                                        icon: (
+                                            <div className="flex items-center gap-2">
+                                                <Avatar
+                                                    name={user?.name || 'User'}
+                                                    avatarUrl={user?.avatar_url}
+                                                    size="sm"
+                                                />
+                                                <div className="flex flex-col items-start">
+                                                    <span className="text-sm whitespace-nowrap">
+                                                        {user?.name}
+                                                    </span>
+                                                    <span className="text-contrast-subtle text-xs whitespace-nowrap">
+                                                        Free Plan
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ),
+                                    },
+                                    {
+                                        label: 'Settings',
+                                        icon: <Settings size={16} />,
+                                        onClick: () => setIsSettingsOpen(true),
+                                    },
+                                    {
+                                        label: 'Learn More',
+                                        icon: <HelpCircle size={16} />,
+                                        submenu: [
+                                            {
+                                                label: 'Terms of Service',
+                                                icon: <FileText size={16} />,
+                                                onClick: () =>
+                                                    window.open(
+                                                        'https://meet-brekkie-ai.vercel.app/terms',
+                                                        '_blank',
+                                                        'noopener,noreferrer',
+                                                    ),
+                                            },
+                                            {
+                                                label: 'Privacy Policy',
+                                                icon: <Shield size={16} />,
+                                                onClick: () =>
+                                                    window.open(
+                                                        'https://meet-brekkie-ai.vercel.app/privacy',
+                                                        '_blank',
+                                                        'noopener,noreferrer',
+                                                    ),
+                                            },
+                                            {
+                                                label: 'About brekkie.ai',
+                                                icon: <Info size={16} />,
+                                                onClick: () =>
+                                                    window.open(
+                                                        'https://meet-brekkie-ai.vercel.app',
+                                                        '_blank',
+                                                        'noopener,noreferrer',
+                                                    ),
+                                            },
+                                        ],
+                                    },
+                                    {
+                                        label: 'Sign Out',
+                                        icon: <LogOut size={16} />,
+                                        onClick: async () => {
+                                            try {
+                                                await logout();
+                                            } catch (error) {
+                                                console.error('Logout failed:', error);
+                                            }
+                                        },
+                                    },
+                                ]}
+                            />
+                        ) : (
                             <button
                                 onClick={async () => {
-                                    await login();
+                                    navigate('/auth');
                                 }}
-                                className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 items-center rounded-xl border border-transparent transition-transform duration-150 hover:scale-102 focus:ring-0 focus:outline-none active:scale-98 md:flex ${!isOpen ? 'md:bg-primary/10 w-10' : 'w-full'}`}
+                                className={`text-contrast hover:text-primary hover:bg-primary/5 focus:ring-primary/20 hover:border-primary/10 flex h-10 items-center rounded-xl border border-transparent py-1 transition-all duration-200 focus:ring-0 focus:outline-none md:flex ${!isOpen ? 'md:bg-primary/5 w-10' : 'w-full'}`}
                                 tabIndex={0}
+                                title="Sign in to save your chats"
                             >
-                                <div className="flex w-10 items-center justify-center">
-                                    <LogIn size={20} />
+                                <div className="flex w-10 flex-shrink-0 items-center justify-center">
+                                    <LogIn size={18} />
                                 </div>
-                                {isOpen && (
-                                    <span className="whitespace-nowrap">
-                                        Sign in to save your chats
-                                    </span>
-                                )}
-                            </button>
-                        )}
-
-                        {isAuthenticated && (
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        await logout(window.location.origin);
-                                        await userAccessManager.createAnonymousAccess();
-                                        resetCurrentThread();
-                                    } catch (error) {
-                                        console.error('Logout failed:', error);
-                                    }
-                                }}
-                                className={`text-contrast hover:text-primary hover:bg-primary/10 focus:ring-primary/20 hover:border-primary/20 flex h-10 items-center rounded-xl border border-transparent transition-transform duration-150 hover:scale-102 focus:ring-0 focus:outline-none active:scale-98 md:flex ${!isOpen ? 'md:bg-primary/10 w-10' : 'w-full'}`}
-                                tabIndex={0}
-                            >
-                                <div className="flex w-10 items-center justify-center">
-                                    <LogOut size={20} />
+                                <div
+                                    className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}
+                                >
+                                    <span className="text-sm whitespace-nowrap">Sign in</span>
                                 </div>
-                                {isOpen && (
-                                    <span className="text-base whitespace-nowrap">Sign out</span>
-                                )}
                             </button>
                         )}
                     </div>
                 )}
             </div>
+
+            <SettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                user={user}
+            />
         </>
     );
 }

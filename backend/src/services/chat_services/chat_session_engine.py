@@ -128,7 +128,7 @@ class ChatSessionEngine:
             This is a fallback cleanup mechanism. The primary cleanup should
             happen through the async context manager or explicit cleanup calls.
         """
-        if hasattr(self, "state") and self.state.is_timeout_task_running():
+        if hasattr(self, "state") and self.state is not None and self.state.is_timeout_task_running():
             try:
                 # If the event is still running, the timeout task will be cleaned up by garbage collection
                 loop = asyncio.get_event_loop()

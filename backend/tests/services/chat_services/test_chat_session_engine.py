@@ -79,6 +79,15 @@ async def chat_session_engine(mock_dependencies):
     return ChatSessionEngine(**mock_dependencies)
 
 
+@pytest.fixture(autouse=True)
+def cleanup_after_test():
+    """Ensure proper cleanup after each test to prevent garbage collection interference."""
+    yield
+    # Force garbage collection to clean up any remaining ChatSessionEngine instances
+    import gc
+    gc.collect()
+
+
 @pytest.fixture
 def sample_user_access(sample_access_token, sample_user_id):
     return UserAccess(
@@ -269,7 +278,10 @@ class TestAsyncContextManager:
 
     def test_del_with_no_state_attribute(self, mock_dependencies):
         engine = ChatSessionEngine(**mock_dependencies)
-        del engine.state
+        
+        # Use a more robust approach to simulate missing state attribute
+        # by removing the attribute entirely instead of setting it to None
+        delattr(engine, 'state')
         
         with patch('asyncio.get_event_loop') as mock_get_loop:
             with patch.object(ChatSessionEngineState, 'cleanup_timeout_task') as mock_cleanup:

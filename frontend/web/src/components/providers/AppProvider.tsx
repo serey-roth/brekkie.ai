@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SupabaseAuthApiClient } from '@/api-clients/auth';
 import { RecipesApiClient } from '@/api-clients/recipes';
 import { ThreadsApiClient } from '@/api-clients/threads';
@@ -35,10 +35,18 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
         }),
     );
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(
+    const [isSidebarOpen, setIsSidebarOpenState] = useState(
         localStorage.getItem('brekkie-sidebar-state') === 'open',
     );
-    const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+    const setIsSidebarOpen = useCallback((isOpen: boolean) => {
+        localStorage.setItem('brekkie-sidebar-state', isOpen ? 'open' : 'closed');
+        setIsSidebarOpenState(isOpen);
+    }, []);
+
+    const [selectedRecipeId, setSelectedRecipeIdState] = useState<string | null>(null);
+    const setSelectedRecipeId = useCallback((recipeId: string | null) => {
+        setSelectedRecipeIdState(recipeId);
+    }, []); 
 
     const value = useMemo<AppContextType>(
         () => ({
@@ -59,11 +67,23 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
                 setSelectedRecipeId,
             },
         }),
-        [config, isSidebarOpen, selectedRecipeId],
+        [config, isSidebarOpen, setIsSidebarOpen, selectedRecipeId, setSelectedRecipeId],
     );
 
     useEffect(() => {
-        userAccessManager.current.ensureUserAccess();
+        const checkAuth = async () => {
+            const claims = await supabaseAuthApiClient.current.getClaims();
+            const authExpirationDate = new Date(claims.exp * 1000);
+            const currentDate = new Date();
+            if (currentDate > authExpirationDate) {
+                await supabaseAuthApiClient.current.logout();
+                await userAccessApiClient.current.createAnonymousAccess();
+                userAccessManager.current.resetState();
+            } else {
+                userAccessManager.current.ensureUserAccess();
+            }
+        };
+        checkAuth();
     }, []);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

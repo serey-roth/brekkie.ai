@@ -19,9 +19,9 @@ interface AppManagers {
 
 export interface AppState {
     isSidebarOpen: boolean;
-    setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setIsSidebarOpen: (isOpen: boolean) => void;
     selectedRecipeId: string | null;
-    setSelectedRecipeId: React.Dispatch<React.SetStateAction<string | null>>;
+    setSelectedRecipeId: (recipeId: string | null) => void;
 }
 
 export interface AppContextType {

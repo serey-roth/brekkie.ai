@@ -15,7 +15,6 @@ primary_region = "iad"
 [env]
   PORT = "8080"
   ENVIRONMENT = "staging"
-  VITE_SUPABASE_API_KEY = "VITE_SUPABASE_API_KEY"
 
 [http_service]
   internal_port = 8080

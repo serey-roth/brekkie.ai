@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { CircleAlert, Loader } from 'lucide-react';
+import { CircleAlert, LoaderCircle } from 'lucide-react';
 import { ChatMessageGroup, AssistantThinkingMessageBubble } from '@/components/chat/MessageGroup';
 import type { RoleMessageGroup } from '@/data/schemas/messages';
 
@@ -39,7 +39,7 @@ export function MessageList({
                         transition={{ duration: 0.15 }}
                         className="text-contrast-subtle flex h-12 items-center justify-center gap-2 text-sm"
                     >
-                        <Loader className="h-4 w-4 animate-spin" />
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
                         <span>{loadingMessage}</span>
                     </motion.div>
                 )}

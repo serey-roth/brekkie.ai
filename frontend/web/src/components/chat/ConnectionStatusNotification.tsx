@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CircleAlert, WifiOff, Loader, Wifi } from 'lucide-react';
+import { CircleAlert, WifiOff, Wifi, LoaderCircle } from 'lucide-react';
 import { useMemo } from 'react';
 import type { ConnectionStatus } from '@/data/schemas/connection-state';
 
@@ -28,13 +28,13 @@ const STATUS_CONFIG: Record<
         message: 'Something went wrong',
     },
     connecting: {
-        icon: <Loader className="h-4 w-4 animate-spin" />,
+        icon: <LoaderCircle className="h-4 w-4 animate-spin" />,
         className:
             'bg-accent/90 border-accent-dark/50 text-contrast bg-opacity-90 border shadow-lg backdrop-blur-sm',
         message: 'Connecting...',
     },
     reconnecting: {
-        icon: <Loader className="h-4 w-4 animate-spin" />,
+        icon: <LoaderCircle className="h-4 w-4 animate-spin" />,
         className:
             'bg-accent/90 border-accent-dark/50 text-contrast bg-opacity-90 border shadow-lg backdrop-blur-sm',
         message: 'Reconnecting...',

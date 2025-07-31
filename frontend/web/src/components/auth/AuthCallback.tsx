@@ -143,7 +143,7 @@ export function AuthCallback() {
             if (userAccess.is_authenticated) {
                 setTimeout(() => {
                     navigate('/');
-                }, 500);
+                }, 1000);
             } else {
                 console.error('Failed to authenticate user');
                 setAuthError(true);

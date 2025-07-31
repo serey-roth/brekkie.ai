@@ -131,19 +131,8 @@ export const RecipeListView = () => {
                             exit={{ opacity: 0 }}
                             transition={{ delay: 0.2 }}
                         >
-                            My Recipes
+                            Cookbook
                         </motion.span>
-                        {recipes.length > 0 && (
-                            <motion.div
-                                className="text-contrast-subtle text-sm"
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                transition={{ delay: 0.3 }}
-                            >
-                                {recipes.length} recipe{recipes.length !== 1 ? 's' : ''}
-                            </motion.div>
-                        )}
                     </div>
                 </motion.div>
 

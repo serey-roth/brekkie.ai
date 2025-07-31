@@ -1,13 +1,15 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
-import { ChatMessageGroup, AssistantThinkingMessageBubble } from '@/components/chat/MessageGroup';
+import { ChatMessageGroup } from '@/components/chat/MessageGroup';
 import type { RoleMessageGroup } from '@/data/schemas/messages';
+import type { UserMetadata } from '@/supabase-client';
 
 interface MessageListProps {
     messageGroups: RoleMessageGroup[];
     isAssistantThinking: boolean;
     isAssistantResponding: boolean;
     selectedRecipeId: string | null;
+    currentUser: UserMetadata | null;
     onSelectRecipe: (recipeId: string | null) => void;
     isLoadingMoreMessages: boolean;
     loadingMessage: string | null;
@@ -19,6 +21,7 @@ export function MessageList({
     isAssistantThinking,
     isAssistantResponding,
     selectedRecipeId,
+    currentUser,
     onSelectRecipe,
     isLoadingMoreMessages,
     loadingMessage,
@@ -60,6 +63,8 @@ export function MessageList({
                 <ChatMessageGroup
                     key={idx}
                     group={group}
+                    currentUser={currentUser}
+                    isAssistantThinking={idx === messageGroups.length - 1 && isAssistantThinking}
                     isAssistantResponding={
                         idx === messageGroups.length - 1 && isAssistantResponding
                     }
@@ -67,7 +72,6 @@ export function MessageList({
                     onSelectRecipe={onSelectRecipe}
                 />
             ))}
-            {isAssistantThinking && <AssistantThinkingMessageBubble />}
         </AnimatePresence>
     );
 }

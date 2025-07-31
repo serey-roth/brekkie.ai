@@ -67,13 +67,7 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
                 setSelectedRecipeId,
             },
         }),
-        [
-            config,
-            isSidebarOpen,
-            setIsSidebarOpen,
-            selectedRecipeId,
-            setSelectedRecipeId
-        ],
+        [config, isSidebarOpen, setIsSidebarOpen, selectedRecipeId, setSelectedRecipeId],
     );
 
     useEffect(() => {

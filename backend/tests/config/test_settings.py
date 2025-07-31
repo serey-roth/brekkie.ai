@@ -18,11 +18,6 @@ class TestDefaultValues:
         assert settings.recipe_cache_ttl == 60 * 60 * 24  # 1 day
         assert settings.user_access_cache_ttl == 60 * 60 * 24  # 1 day
         
-        # Test rate limiting defaults
-        assert settings.ip_address_rate_limiter_ttl == 60 * 60 * 24  # 1 day
-        assert settings.ip_address_rate_limiter_anonymous_access_limit == 1
-        assert settings.ip_address_rate_limiter_violation_limit == 1
-        
         # Test session defaults
         assert settings.session_ttl == 60 * 30  # 30 minutes
         assert settings.authenticated_user_message_limit == 25
@@ -110,12 +105,6 @@ class TestDevelopmentSettings:
     def test_is_auth_enabled_method(self, settings: Settings):
         assert settings.is_auth_enabled() is True
 
-    def test_get_anonymous_access_limit_development(self, settings: Settings):
-        assert settings.get_anonymous_access_limit() == 100
-
-    def test_get_violation_limit_development(self, settings: Settings):
-        assert settings.get_violation_limit() == 50
-        
 
 class TestProductionSettings:
     @pytest.fixture
@@ -156,12 +145,6 @@ class TestProductionSettings:
     def test_is_auth_enabled_method(self, settings: Settings):
         assert settings.is_auth_enabled() is False
 
-    def test_get_anonymous_access_limit_production(self, settings: Settings):
-        assert settings.get_anonymous_access_limit() == 1
-
-    def test_get_violation_limit_production(self, settings: Settings):
-        assert settings.get_violation_limit() == 1
-        
         
 class TestTestSettings:
     @pytest.fixture
@@ -201,9 +184,3 @@ class TestTestSettings:
 
     def test_is_auth_enabled_method(self, settings: Settings):
         assert settings.is_auth_enabled() is True
-
-    def test_get_anonymous_access_limit_test(self, settings: Settings):
-        assert settings.get_anonymous_access_limit() == 1
-
-    def test_get_violation_limit_test(self, settings: Settings):
-        assert settings.get_violation_limit() == 1

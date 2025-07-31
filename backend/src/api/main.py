@@ -29,11 +29,6 @@ from services.chat_services.chat_session_limit_checker import ChatSessionLimitCh
 from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
 from services.chat_services.chat_session_store import ChatSessionStore
-from services.data_services.anonymous_access_service import AnonymousAccessService
-from services.data_services.ip_address_rate_limiter import (
-    IpAddressRateLimitConfig,
-    IpAddressRateLimiter,
-)
 from services.data_services.message_cache_service import MessageCacheService
 from services.data_services.message_service import MessageService
 from services.data_services.recipe_cache_service import RecipeCacheService
@@ -79,19 +74,6 @@ async def lifespan(app: FastAPI):
     )
     recipe_cache_service = RecipeCacheService(
         redis_client=redis_client, ttl=settings.recipe_cache_ttl
-    )
-
-    ip_rate_limiter = IpAddressRateLimiter(
-        redis_client=redis_client,
-        config=IpAddressRateLimitConfig(
-            ttl=settings.ip_address_rate_limiter_ttl,
-            anonymous_access_limit=settings.get_anonymous_access_limit(),
-            violation_limit=settings.get_violation_limit(),
-        ),
-    )
-    anonymous_access_service = AnonymousAccessService(
-        user_access_cache_service=user_access_cache_service,
-        ip_rate_limiter=ip_rate_limiter,
     )
 
     db_transaction_maker = create_db_transaction_maker(settings)
@@ -140,7 +122,6 @@ async def lifespan(app: FastAPI):
         db_transaction_maker=db_transaction_maker,  # type: ignore
         ai_food_agent=ai_food_agent,
         user_access_cache_service=user_access_cache_service,
-        anonymous_access_service=anonymous_access_service,
         user_service=user_service,
         message_service=message_service,
         message_cache_service=message_cache_service,

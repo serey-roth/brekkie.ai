@@ -77,12 +77,8 @@ class TestEnsureAccess:
         
         response = await async_client.post("/api/access/ensure-access", headers=headers)
         
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["access_token"] is not None
-        assert response.json()["user_id"] is not None
-        assert response.json()["is_authenticated"] is False
-        
-        assert response.cookies.get("bk_access_token") is not None
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json()["detail"]["message"] == "Missing access token"
         
     @pytest.mark.asyncio(loop_scope="session")
     async def test_invalid_token(self, async_client, service_container: ServiceContainer):
@@ -96,12 +92,8 @@ class TestEnsureAccess:
         
         response = await async_client.post("/api/access/ensure-access", headers=headers)
         
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["access_token"] is not None
-        assert response.json()["user_id"] is not None
-        assert response.json()["is_authenticated"] is False
-        
-        assert response.cookies.get("bk_access_token") is not None
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json()["detail"]["message"] == "Access record not found"
         
     @pytest.mark.asyncio(loop_scope="session")
     async def test_expired_token(self, async_client, service_container: ServiceContainer):
@@ -119,20 +111,13 @@ class TestEnsureAccess:
 
         response = await async_client.post("/api/access/ensure-access", headers=headers)
 
-        assert response.status_code == status.HTTP_200_OK
-        assert response.json()["access_token"] is not None
-        assert response.json()["access_token"] != user_access.access_token
-        assert response.json()["user_id"] is not None
-        assert response.json()["is_authenticated"] is False
-        assert response.json()["ip_address"] == sample_ip_address
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.json()["detail"]["message"] == "Access record not found"
         
-        assert response.cookies.get("bk_access_token") is not None
-
     @pytest.mark.asyncio(loop_scope="session")
     async def test_almost_expired_token(self, async_client, service_container: ServiceContainer):
         sample_ip_address = "127.0.0.6"
         
-        # Patch the specific instance method
         with patch.object(service_container.user_access_cache_service, 'get_ttl', return_value=10):
             user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
 
@@ -149,20 +134,15 @@ class TestEnsureAccess:
             response = await async_client.post("/api/access/ensure-access", headers=headers)
 
             assert response.status_code == status.HTTP_200_OK
-            assert response.json()["access_token"] is not None
-            assert response.json()["access_token"] == user_access.access_token
-            assert response.json()["user_id"] is not None
+            assert response.json()["access_token"] != user_access.access_token
+            assert response.json()["user_id"] == user_access.user_id
             assert response.json()["is_authenticated"] is False
+            assert response.json()["user_message_count"] == 0
+            assert response.json()["created_at"] is not None
+            assert response.json()["updated_at"] is not None
             assert response.json()["ip_address"] == sample_ip_address
             
             assert response.cookies.get("bk_access_token") is not None
             
-    @pytest.mark.asyncio(loop_scope="session")
-    async def test_access_rate_limit(self, async_client, service_container: ServiceContainer):
-        sample_ip_address = "127.0.0.7"
-        
-        await service_container.anonymous_access_service.get_or_create_user_access(sample_ip_address, "test_token_1")
-        
-        response = await async_client.post("/api/access/ensure-access", headers={"fly-client-ip": sample_ip_address})
-        assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
-            
+            old_user_access = await service_container.user_access_cache_service.get_user_access(user_access.access_token)
+            assert old_user_access is None

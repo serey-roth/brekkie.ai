@@ -2,6 +2,7 @@ import { User, CreditCard, LogOut, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
+import { useUserAccessManager } from '@/context/app-context';
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
 import type { UserMetadata } from '@/supabase-client';
 
@@ -17,6 +18,7 @@ export function SettingsModal({ isOpen, onClose, user }: SettingsModalProps) {
     const [activeTab, setActiveTab] = useState<TabType>('profile');
     const { logout } = useSupabaseAuth();
     const navigate = useNavigate();
+    const userAccessManager = useUserAccessManager();
 
     const tabs = [
         {
@@ -34,6 +36,7 @@ export function SettingsModal({ isOpen, onClose, user }: SettingsModalProps) {
     const handleSignOut = async () => {
         try {
             await logout();
+            await userAccessManager.revokeAccess();
             onClose();
             navigate('/');
         } catch (error) {

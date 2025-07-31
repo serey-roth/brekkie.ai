@@ -48,7 +48,7 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
     const userAccess = useUserAccess();
 
     const { hasLimitReached } = useChatLimit();
-    const { currentThreadId, startThread, resumeThread } = useCurrentThread();
+    const { currentThreadId, startThread, resumeThread, resetCurrentThread } = useCurrentThread();
     const { threadGroups, isFetching, error, fetchMoreObserverTarget } = useFetchThreads(
         isOpen,
         userAccess,
@@ -83,6 +83,7 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
     }, [addAuthStateChangeListener, getClaims]);
 
     const navigate = useNavigate();
+    const userAccessManager = useUserAccessManager();
 
     return (
         <>
@@ -168,7 +169,7 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                         <div
                             className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}
                         >
-                            <span className="text-sm whitespace-nowrap">Recipes</span>
+                            <span className="text-sm whitespace-nowrap">Cookbook</span>
                         </div>
                     </button>
                 </div>
@@ -344,7 +345,7 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                                         icon: (
                                             <div className="flex items-center gap-2">
                                                 <Avatar
-                                                    name={user?.name || 'User'}
+                                                    name={user?.name ?? null}
                                                     avatarUrl={user?.avatar_url}
                                                     size="sm"
                                                 />
@@ -406,6 +407,8 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                                         onClick: async () => {
                                             try {
                                                 await logout();
+                                                await userAccessManager.revokeAccess();
+                                                resetCurrentThread();
                                             } catch (error) {
                                                 console.error('Logout failed:', error);
                                             }

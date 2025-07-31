@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { useUserAccessManager } from '@/context/app-context';
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
 
 interface AuthGuardProps {
@@ -28,10 +29,10 @@ const LoadingAnimation = () => (
                 transition={{ duration: 0.5, delay: 0.4 }}
             >
                 <h2 className="text-contrast mb-2 text-2xl leading-tight font-semibold">
-                    Checking your access...
+                    Getting you set up...
                 </h2>
                 <p className="text-contrast-subtle text-base">
-                    Just a moment while we verify your access...
+                    Hang tight, we're getting everything ready for you!
                 </p>
             </motion.div>
 
@@ -60,23 +61,40 @@ const LoadingAnimation = () => (
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const { getClaims } = useSupabaseAuth();
+    const { getClaims, logout } = useSupabaseAuth();
+
+    const userAccessManager = useUserAccessManager();
 
     useEffect(() => {
-        const checkAuthentication = async () => {
+        const verifyAuth = async () => {
             try {
                 const claims = await getClaims();
-                setIsAuthenticated(claims.aud === 'authenticated');
+                if (claims.aud === 'authenticated') {
+                    const expirationDate = new Date(claims.exp * 1000);
+                    const currentDate = new Date();
+                    if (currentDate > expirationDate) {
+                        await logout();
+                        await userAccessManager.revokeAccess();
+                        setIsAuthenticated(false);
+                    } else {
+                        await userAccessManager.ensureAccess();
+                        setIsAuthenticated(true);
+                    }
+                } else {
+                    await userAccessManager.revokeAccess();
+                    setIsAuthenticated(false);
+                }
             } catch (error) {
                 console.error('Error checking authentication:', error);
                 setIsAuthenticated(false);
+                await userAccessManager.revokeAccess();
             } finally {
                 setIsLoading(false);
             }
         };
 
-        checkAuthentication();
-    }, [getClaims]);
+        verifyAuth();
+    }, [getClaims, logout, userAccessManager]);
 
     if (isLoading) {
         return fallback || <LoadingAnimation />;

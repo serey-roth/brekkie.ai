@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { SupabaseAuthApiClient } from '@/api-clients/auth';
 import { RecipesApiClient } from '@/api-clients/recipes';
 import { ThreadsApiClient } from '@/api-clients/threads';
@@ -69,22 +69,6 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
         }),
         [config, isSidebarOpen, setIsSidebarOpen, selectedRecipeId, setSelectedRecipeId],
     );
-
-    useEffect(() => {
-        const checkAuth = async () => {
-            const claims = await supabaseAuthApiClient.current.getClaims();
-            const authExpirationDate = new Date(claims.exp * 1000);
-            const currentDate = new Date();
-            if (currentDate > authExpirationDate) {
-                await supabaseAuthApiClient.current.logout();
-                await userAccessApiClient.current.createAnonymousAccess();
-                userAccessManager.current.resetState();
-            } else {
-                userAccessManager.current.ensureUserAccess();
-            }
-        };
-        checkAuth();
-    }, []);
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

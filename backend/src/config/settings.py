@@ -41,23 +41,6 @@ class Settings(BaseSettings):
     recipe_cache_ttl: int = 60 * 60 * 24  # 1 day
     user_access_cache_ttl: int = 60 * 60 * 24  # 1 day
 
-    # Rate Limiting
-    ip_address_rate_limiter_ttl: int = 60 * 60 * 24  # 1 day
-    ip_address_rate_limiter_anonymous_access_limit: int = 1
-    ip_address_rate_limiter_violation_limit: int = 1
-
-    def get_anonymous_access_limit(self) -> int:
-        """Get anonymous access limit based on environment."""
-        if self.is_staging() or self.is_development():
-            return 100  # Much higher for staging/development
-        return self.ip_address_rate_limiter_anonymous_access_limit
-
-    def get_violation_limit(self) -> int:
-        """Get violation limit based on environment."""
-        if self.is_staging() or self.is_development():
-            return 50  # Much higher for staging/development
-        return self.ip_address_rate_limiter_violation_limit
-
     # Session and Limits
     session_ttl: int = 60 * 30  # 30 minutes
     authenticated_user_message_limit: int = 25

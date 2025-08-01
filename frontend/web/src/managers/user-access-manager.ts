@@ -93,12 +93,13 @@ export class UserAccessManager {
             : this._config.maxMessageCountAnonymous;
     }
 
-    async ensureUserAccess() {
+    async ensureAccess() {
         try {
-            const accessData = await this._userAccessApiClient.ensureUserAccess();
+            const accessData = await this._userAccessApiClient.ensureAccess();
             this.setUserAccess(accessData);
             this._eventManager.publish('accessEnsured', accessData);
         } catch (error) {
+            this.setUserAccess(null);
             this._eventManager.publish(
                 'errorOccurred',
                 error instanceof Error ? error.message : 'Something went wrong. Please try again.',
@@ -106,10 +107,10 @@ export class UserAccessManager {
         }
     }
 
-    async createAnonymousAccess() {
+    async revokeAccess() {
         try {
-            const accessData = await this._userAccessApiClient.createAnonymousAccess();
-            this.setUserAccess(accessData);
+            await this._userAccessApiClient.revokeAccess();
+            this.setUserAccess(null);
         } catch (error) {
             this._eventManager.publish(
                 'errorOccurred',

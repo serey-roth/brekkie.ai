@@ -2,8 +2,8 @@ import { ApiErrorSchema } from '@/data/schemas/errors';
 import { type UserAccess, UserAccessSchema } from '@/data/schemas/user-access';
 
 export interface IUserAccessApiClient {
-    ensureUserAccess(): Promise<UserAccess>;
-    createAnonymousAccess(): Promise<UserAccess>;
+    ensureAccess(): Promise<UserAccess>;
+    revokeAccess(): Promise<void>;
 }
 
 export class UserAccessApiClient implements IUserAccessApiClient {
@@ -13,7 +13,7 @@ export class UserAccessApiClient implements IUserAccessApiClient {
         this._baseUrl = baseUrl;
     }
 
-    async ensureUserAccess(): Promise<UserAccess> {
+    async ensureAccess(): Promise<UserAccess> {
         const headers = {
             'Content-Type': 'application/json',
             Accept: 'application/json',
@@ -43,13 +43,13 @@ export class UserAccessApiClient implements IUserAccessApiClient {
         return result.data;
     }
 
-    async createAnonymousAccess(): Promise<UserAccess> {
+    async revokeAccess(): Promise<void> {
         const headers = {
             'Content-Type': 'application/json',
             Accept: 'application/json',
         } as Record<string, string>;
 
-        const response = await fetch(`${this._baseUrl}/access/create-anonymous-access`, {
+        const response = await fetch(`${this._baseUrl}/access/revoke-access`, {
             method: 'POST',
             headers,
             credentials: 'include',
@@ -64,12 +64,6 @@ export class UserAccessApiClient implements IUserAccessApiClient {
             throw new Error(`${json.detail.message || response.statusText}`);
         }
 
-        const json = await response.json();
-        const result = await UserAccessSchema.safeParseAsync(json);
-        if (!result.success) {
-            throw new Error(`Invalid response from server: ${JSON.stringify(json)}`);
-        }
-
-        return result.data;
+        return;
     }
 }

@@ -1,19 +1,29 @@
 import { motion } from 'framer-motion';
-import { User, Bot, Clock } from 'lucide-react';
+import { Bot, Info } from 'lucide-react';
 import { DateTime } from 'luxon';
 import { RecipeMessageCard } from '@/components/recipes/RecipeMessageCard';
+import { Avatar } from '@/components/ui/Avatar';
 import { Markdown } from '@/components/ui/Markdown';
 import type { AssistantMessage, RoleMessageGroup, UserMessage } from '@/data/schemas/messages';
+import type { UserMetadata } from '@/supabase-client';
 import { isAssistantMessage, isAssistantRecipeMessage } from '@/utils/message-utils';
 
 interface ChatMessageGroupProps {
     group: RoleMessageGroup;
+    isAssistantThinking: boolean;
     isAssistantResponding: boolean;
+    currentUser: UserMetadata | null;
     selectedRecipeId: string | null;
     onSelectRecipe: (recipeId: string | null) => void;
 }
 
-function UserMessageBubble({ message }: { message: UserMessage }) {
+function UserMessageBubble({
+    message,
+    currentUser,
+}: {
+    message: UserMessage;
+    currentUser: UserMetadata | null;
+}) {
     return (
         <div className="flex w-full items-end justify-end gap-3 sm:gap-2">
             <div className="flex max-w-10/12 min-w-8/12 flex-shrink-0 flex-col gap-1">
@@ -21,21 +31,25 @@ function UserMessageBubble({ message }: { message: UserMessage }) {
                     <div className="mb-2 flex items-center justify-between text-white/90">
                         <div className="flex items-center gap-2">
                             <div className="flex-shrink-0">
-                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 sm:h-8 sm:w-8">
-                                    <User size={18} className="text-white" />
-                                </div>
+                                <Avatar
+                                    name={currentUser?.name ?? null}
+                                    avatarUrl={currentUser?.avatar_url}
+                                    size="sm"
+                                />
                             </div>
-                            <span className="text-base font-medium">You</span>
+                            <span className="text-base font-medium">
+                                {currentUser?.name ?? 'You'}
+                            </span>
                         </div>
 
-                        <div className="flex items-center gap-2 text-xs opacity-80 sm:text-sm">
-                            <div className="flex items-center gap-1 text-white/90">
-                                <Clock size={12} />
-                                <span>
+                        <div className="flex items-center gap-2 self-start text-xs opacity-80 sm:text-sm">
+                            <div className="group relative flex items-center gap-1 text-white/90">
+                                <Info size={12} className="cursor-help" />
+                                <div className="absolute right-0 bottom-full mb-2 hidden whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white group-hover:block">
                                     {DateTime.fromISO(message.created_at).toLocaleString(
                                         DateTime.DATETIME_SHORT,
                                     )}
-                                </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -49,25 +63,20 @@ function UserMessageBubble({ message }: { message: UserMessage }) {
     );
 }
 
-function UserMessageGroup({ messages }: { messages: UserMessage[] }) {
+function UserMessageGroup({
+    messages,
+    currentUser,
+}: {
+    messages: UserMessage[];
+    currentUser: UserMetadata | null;
+}) {
     return (
         <div className="flex w-full items-start justify-start gap-3 sm:gap-2">
             <div className="flex w-full flex-shrink-0 flex-col">
                 {messages.map((msg) => (
-                    <UserMessageBubble key={msg.id} message={msg} />
+                    <UserMessageBubble key={msg.id} message={msg} currentUser={currentUser} />
                 ))}
             </div>
-        </div>
-    );
-}
-
-function AssistantMessageContent({ message }: { message: AssistantMessage }) {
-    // TODO: Future enhancement - Add typing effect with progressive markdown rendering
-    // Consider implementing a custom typing animation that works well with markdown elements
-    // like lists, headers, and code blocks without breaking the visual flow
-    return (
-        <div>
-            <Markdown>{message.text_content ?? ''}</Markdown>
         </div>
     );
 }
@@ -76,6 +85,7 @@ function AssistantMessageBubble({
     message,
     isFirst,
     isLast,
+    isAssistantThinking,
     isAssistantResponding,
     selectedRecipeId,
     onSelectRecipe,
@@ -83,6 +93,7 @@ function AssistantMessageBubble({
     message: AssistantMessage;
     isFirst: boolean;
     isLast: boolean;
+    isAssistantThinking: boolean;
     isAssistantResponding: boolean;
     selectedRecipeId: string | null;
     onSelectRecipe: (recipeId: string | null) => void;
@@ -116,7 +127,7 @@ function AssistantMessageBubble({
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.15 }}
                         >
-                            {isAssistantResponding ? (
+                            {isAssistantThinking || isAssistantResponding ? (
                                 <motion.div
                                     key="responding"
                                     initial={{ opacity: 0 }}
@@ -126,7 +137,7 @@ function AssistantMessageBubble({
                                     className="flex items-center gap-1"
                                 >
                                     <span className="text-primary/70 text-base font-medium">
-                                        Milo is responding
+                                        Milo is {isAssistantThinking ? 'thinking' : 'responding'}
                                     </span>
                                     <div className="mt-2 flex items-center gap-1">
                                         {[0, 1, 2].map((i) => (
@@ -161,14 +172,14 @@ function AssistantMessageBubble({
                         </motion.div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs opacity-80 sm:text-sm">
-                        <div className="text-contrast-subtle/90 flex items-center gap-1">
-                            <Clock size={12} />
-                            <span>
+                    <div className="flex items-center gap-2 self-start text-xs opacity-80 sm:text-sm">
+                        <div className="group text-contrast-subtle/90 relative flex items-center gap-1">
+                            <Info size={14} className="cursor-help" />
+                            <div className="absolute right-0 bottom-full mb-2 hidden whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white group-hover:block">
                                 {DateTime.fromISO(message.created_at).toLocaleString(
                                     DateTime.DATETIME_SHORT,
                                 )}
-                            </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -184,7 +195,9 @@ function AssistantMessageBubble({
                             selectedRecipeId={selectedRecipeId}
                         />
                     ) : message.text_content ? (
-                        <AssistantMessageContent message={message} />
+                        <div className="prose prose-base dark:prose-invert max-w-none">
+                            <Markdown>{message.text_content ?? ''}</Markdown>
+                        </div>
                     ) : null
                 ) : null}
             </div>
@@ -194,11 +207,13 @@ function AssistantMessageBubble({
 
 function AssistantMessageGroup({
     messages,
+    isAssistantThinking,
     isAssistantResponding,
     selectedRecipeId,
     onSelectRecipe,
 }: {
     messages: AssistantMessage[];
+    isAssistantThinking: boolean;
     isAssistantResponding: boolean;
     selectedRecipeId: string | null;
     onSelectRecipe: (recipeId: string | null) => void;
@@ -216,6 +231,7 @@ function AssistantMessageGroup({
                             message={msg}
                             isFirst={isFirst}
                             isLast={isLast}
+                            isAssistantThinking={isLast && isAssistantThinking}
                             isAssistantResponding={isLast && isAssistantResponding}
                             selectedRecipeId={selectedRecipeId}
                             onSelectRecipe={onSelectRecipe}
@@ -227,60 +243,12 @@ function AssistantMessageGroup({
     );
 }
 
-export function AssistantThinkingMessageBubble() {
-    return (
-        <div className="flex w-full items-start justify-start gap-3 sm:gap-2">
-            <div className="flex w-full flex-shrink-0 flex-col">
-                <div className="text-contrast-subtle rounded-2xl bg-white px-4 py-3 text-sm leading-relaxed sm:text-base">
-                    <div className="text-contrast-subtle mb-2 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="flex-shrink-0">
-                                <div className="bg-primary/10 border-primary/20 flex h-6 w-6 items-center justify-center rounded-full border sm:h-8 sm:w-8">
-                                    <Bot size={18} className="text-primary" />
-                                </div>
-                            </div>
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.15 }}
-                            >
-                                <div className="flex items-center gap-1">
-                                    <span className="text-primary/70 text-base font-medium">
-                                        Milo is thinking
-                                    </span>
-                                    <div className="mt-2 flex items-center gap-1">
-                                        {[0, 1, 2].map((i) => (
-                                            <motion.div
-                                                key={i}
-                                                className="bg-primary/40 h-1 w-1 rounded-full"
-                                                animate={{
-                                                    y: [0, -4, 0],
-                                                    opacity: [0.5, 1, 0.5],
-                                                }}
-                                                transition={{
-                                                    duration: 0.6,
-                                                    repeat: Infinity,
-                                                    delay: i * 0.2,
-                                                    ease: 'easeInOut',
-                                                }}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
 export function ChatMessageGroup({
     group,
+    currentUser,
     selectedRecipeId,
     onSelectRecipe,
+    isAssistantThinking = false,
     isAssistantResponding = false,
 }: ChatMessageGroupProps) {
     const { role, messages } = group;
@@ -288,10 +256,11 @@ export function ChatMessageGroup({
     return (
         <div className="mb-3 flex w-full flex-col gap-3">
             {role === 'user' ? (
-                <UserMessageGroup messages={messages} />
+                <UserMessageGroup messages={messages} currentUser={currentUser} />
             ) : (
                 <AssistantMessageGroup
                     messages={messages}
+                    isAssistantThinking={isAssistantThinking}
                     isAssistantResponding={isAssistantResponding}
                     selectedRecipeId={selectedRecipeId}
                     onSelectRecipe={onSelectRecipe}

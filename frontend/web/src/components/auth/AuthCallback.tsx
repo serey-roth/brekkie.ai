@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useLayoutEffect, useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useUserAccessManager } from '@/context/app-context';
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
 import type { AuthChangeEvent, User, Session as AuthSession } from '@/supabase-client';
 
@@ -26,10 +27,10 @@ const LoadingAnimation = ({ name }: { name: string | undefined }) => (
                 transition={{ duration: 0.5, delay: 0.4 }}
             >
                 <h2 className="text-contrast mb-2 text-2xl leading-tight font-medium">
-                    Welcome back{name ? `, ${name}!` : '!'}
+                    Hey there{name ? `, ${name}!` : '!'}
                 </h2>
                 <p className="text-contrast-subtle text-base">
-                    Just a moment while we get everything ready...
+                    Almost there, just getting things sorted for you...
                 </p>
             </motion.div>
 
@@ -81,10 +82,10 @@ const ErrorAnimation = () => (
             </motion.div>
             <div>
                 <h2 className="text-contrast mb-2 text-2xl leading-tight font-medium">
-                    Something went wrong
+                    Oops! Something went wrong
                 </h2>
                 <p className="text-contrast-subtle text-base">
-                    Redirecting you back to the login page...
+                    Redirecting you to sign in...
                 </p>
             </div>
 
@@ -115,7 +116,8 @@ export function AuthCallback() {
     const [authError, setAuthError] = useState(false);
     const [user, setUser] = useState<User | null>(null);
 
-    const { verifyJWT, logout, addAuthStateChangeListener, getClaims } = useSupabaseAuth();
+    const userAccessManager = useUserAccessManager();   
+    const { verifyJWT, logout, getClaims, addAuthStateChangeListener } = useSupabaseAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -141,7 +143,7 @@ export function AuthCallback() {
             if (userAccess.is_authenticated) {
                 setTimeout(() => {
                     navigate('/');
-                }, 500);
+                }, 1000);
             } else {
                 console.error('Failed to authenticate user');
                 setAuthError(true);
@@ -156,6 +158,7 @@ export function AuthCallback() {
                 const claims = await getClaims();
                 if (claims.aud === 'authenticated') {
                     await logout();
+                    await userAccessManager.revokeAccess();
                 } else {
                     setTimeout(() => {
                         navigate('/auth');
@@ -168,7 +171,7 @@ export function AuthCallback() {
                 }, 1000);
             }
         }
-    }, [verifyJWT, navigate, logout, getClaims]);
+    }, [verifyJWT, navigate, logout, getClaims, userAccessManager]);
 
     useLayoutEffect(() => {
         handleAuthCallback();

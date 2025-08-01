@@ -50,14 +50,12 @@ from services.data_services.thread_cache_service import ThreadCacheService
 from services.data_services.message_cache_service import MessageCacheService
 from services.data_services.recipe_cache_service import RecipeCacheService
 from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
-from services.data_services.ip_address_rate_limiter import IpAddressRateLimitConfig, IpAddressRateLimiter
 from services.safety_guards.regex_safety_guard import RegexSafetyGuard
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
 from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
-from services.data_services.anonymous_access_service import AnonymousAccessService
 from services.websocket_event_sender import WebSocketEventSender
 
 from schemas.users import User
@@ -290,15 +288,6 @@ async def service_container(db_transaction_maker, redis_client, test_settings: S
     thread_cache_service = ThreadCacheService(redis_client, ttl=test_settings.thread_cache_ttl)
     message_cache_service = MessageCacheService(redis_client, ttl=test_settings.message_cache_ttl)
     recipe_cache_service = RecipeCacheService(redis_client, ttl=test_settings.recipe_cache_ttl)
-    anonymous_access_rate_limiter = IpAddressRateLimiter(
-        redis_client, 
-        IpAddressRateLimitConfig(
-            ttl=test_settings.ip_address_rate_limiter_ttl,
-            anonymous_access_limit=test_settings.ip_address_rate_limiter_anonymous_access_limit,
-            violation_limit=test_settings.ip_address_rate_limiter_violation_limit
-        )
-    )
-    anonymous_access_service = AnonymousAccessService(user_access_cache_service, anonymous_access_rate_limiter)
     websocket_event_sender = WebSocketEventSender()
     ai_food_agent = GoogleAIFoodAgent(checkpointer=InMemorySaver())
 
@@ -347,7 +336,6 @@ async def service_container(db_transaction_maker, redis_client, test_settings: S
         chat_session_store=chat_session_store,
         chat_session_limit_checker=chat_session_limit_checker,
         chat_session_orchestrator=chat_session_orchestrator,
-        anonymous_access_service=anonymous_access_service
     )
     
     

@@ -24,6 +24,7 @@ import type { Message, RoleMessageGroup } from '@/data/schemas/messages';
 import type { Thread } from '@/data/schemas/threads';
 import type { UserAccess } from '@/data/schemas/user-access';
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import type { UserMetadata } from '@/supabase-client';
 import { groupMessagesByRole } from '@/utils/message-utils';
 import { RecipeListView } from './RecipeListView';
 import { Sidebar } from './Sidebar';
@@ -98,17 +99,19 @@ export function MainView() {
         }, [scrollRef, scrollToBottom]),
     });
 
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [user, setUser] = useState<UserMetadata | null>(null);
     useEffect(() => {
-        const unsubscribe = addAuthStateChangeListener((event) => {
-            if (event === 'SIGNED_IN') {
-                setIsAuthenticated(true);
+        const unsubscribe = addAuthStateChangeListener((event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) {
+                setUser(session.user.user_metadata);
+            } else if (!session?.user && event === 'SIGNED_OUT') {
+                setUser(null);
             }
         });
         const checkAuthentication = async () => {
             const claims = await getClaims();
-            if (claims.aud === 'authenticated') {
-                setIsAuthenticated(true);
+            if (claims.aud === 'authenticated' && claims['user_metadata']) {
+                setUser(claims.user_metadata);
             }
         };
         checkAuthentication();
@@ -148,13 +151,14 @@ export function MainView() {
                             isLoadingMoreMessages ||
                             !connectionState.isConnected
                         }
-                        isAuthenticated={isAuthenticated}
+                        isAuthenticated={!!user}
                         onSignIn={() => navigate('/auth')}
                         threadTitle={threadTitle}
                         threadTitleState={threadTitleState}
                     >
                         {messageGroups.length > 0 ? (
                             <MessageList
+                                currentUser={user}
                                 messageGroups={messageGroups}
                                 isLoadingMoreMessages={isLoadingMoreMessages}
                                 isAssistantThinking={currentChatState?.isAssistantThinking ?? false}
@@ -383,8 +387,11 @@ function useChatLimit() {
             messageCount: number,
             isAuthenticated: boolean,
         ) => {
+            console.log('messageCount', messageCount);
+            console.log('limit', limit);
+            console.log('isAuthenticated', isAuthenticated);
             if (messageCount >= limit) {
-                return `You've reached your limit of ${limit} messages.${featureFlags.enableAuth && isAuthenticated ? ' Paid plans with higher limits are coming soon.' : ''}`;
+                return `You've reached your daily limit of ${limit} messages.${featureFlags.enableAuth && isAuthenticated ? ' Paid plans with higher limits are coming soon.' : ''}`;
             } else if (isAuthenticated && messageCount > 0 && Math.abs(messageCount - limit) < 10) {
                 return `You have ${limit - messageCount} messages left.`;
             } else if (!isAuthenticated && messageCount > 0) {

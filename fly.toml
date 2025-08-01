@@ -3,7 +3,7 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
 app = "brekkie-ai"
-primary_region = "iad"
+primary_region = "sea"
 
 [build.args]
   VITE_API_BASE_URL = "https://brekkie-ai.fly.dev/api"

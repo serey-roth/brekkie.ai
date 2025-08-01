@@ -3,18 +3,18 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 
 app = "brekkie-ai-staging"
-primary_region = "iad"
+primary_region = "sea"
 
 [build.args]
   VITE_API_BASE_URL = "https://brekkie-ai-staging.fly.dev/api"
   VITE_WS_BASE_URL = "wss://brekkie-ai-staging.fly.dev/ws"
   VITE_APP_BASE_URL = "https://brekkie-ai-staging.fly.dev"
   VITE_SUPABASE_URL = "https://towqqrlctvsstlntfxtf.supabase.co"
+  VITE_ENVIRONMENT = "staging"
   MODE = "staging"
 
 [env]
   PORT = "8080"
-  ENVIRONMENT = "staging"
 
 [http_service]
   internal_port = 8080

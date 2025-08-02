@@ -1,6 +1,9 @@
 from datetime import datetime
 from typing import Any, Callable
 
+from schemas.conversation_stream_events import TextMessageChunkGeneratedPayload, TextMessageStartedPayload
+from schemas.message_content_type import MessageContentType
+from schemas.message_role import MessageRole
 from schemas.messages import (
     CreateAssistantRecipeMessageParams,
     CreateAssistantTextMessageParams,
@@ -10,9 +13,12 @@ from schemas.messages import (
     Message,
     PaginatedMessages,
     UpdateMessageParams,
+    UpdateMessageAIModelOrToolUsageParams,
 )
 from schemas.recipes import (
     CreateRecipeParams,
+    Recipe,
+    RecipeField,
     UpdateRecipeFieldParams,
     UpdateRecipeParams,
     UserRecipe,
@@ -84,11 +90,11 @@ class ChatSessionStore:
         )
 
     async def create_thread(
-        self, db: AsyncSession, user_access: UserAccess, params: CreateThreadParams
+        self, db: AsyncSession, user_access: UserAccess, params: CreateThreadParams, flush_db: bool = True
     ) -> Thread:
         return await self._dispatch(
             user_access,
-            lambda: self.thread_service.create_thread(db, params),
+            lambda: self.thread_service.create_thread(db, params, flush_db),
             lambda: self.thread_cache_service.create_thread(params),
         )
 
@@ -102,20 +108,20 @@ class ChatSessionStore:
         )
 
     async def update_thread(
-        self, db: AsyncSession, user_access: UserAccess, params: UpdateThreadParams
+        self, db: AsyncSession, user_access: UserAccess, params: UpdateThreadParams, flush_db: bool = True
     ) -> Thread:
         return await self._dispatch(
             user_access,
-            lambda: self.thread_service.update_thread(db, params),
+            lambda: self.thread_service.update_thread(db, params, flush_db),
             lambda: self.thread_cache_service.update_thread(user_access.user_id, params),
         )
 
     async def resume_thread(
-        self, db: AsyncSession, user_access: UserAccess, params: ResumeThreadParams
+        self, db: AsyncSession, user_access: UserAccess, params: ResumeThreadParams, flush_db: bool = True
     ) -> Thread:
         return await self._dispatch(
             user_access,
-            lambda: self.thread_service.resume_thread(db, params),
+            lambda: self.thread_service.resume_thread(db, params, flush_db),
             lambda: self.thread_cache_service.resume_thread(user_access.user_id, params),
         )
 
@@ -150,6 +156,7 @@ class ChatSessionStore:
         timestamp: datetime,
         ip_address: str | None = None,
         safety_guard_result: SafetyGuardResult | None = None,
+        flush_db: bool = True,
     ) -> Message:
         async def authenticated_create():
             thread = await self.thread_service.get_thread(db, thread_id)
@@ -164,6 +171,7 @@ class ChatSessionStore:
                         updated_at=timestamp,
                         is_empty=False,
                     ),
+                    flush_db,
                 )
 
             return await self.message_service.create_user_message(
@@ -210,10 +218,11 @@ class ChatSessionStore:
         db: AsyncSession,
         user_access: UserAccess,
         params: CreateAssistantTextMessageParams,
+        flush_db: bool = True,
     ) -> Message:
         return await self._dispatch(
             user_access,
-            lambda: self.message_service.create_assistant_text_message(db, params),
+            lambda: self.message_service.create_assistant_text_message(db, params, flush_db),
             lambda: self.message_cache_service.create_assistant_text_message(
                 user_access.user_id, params=params
             ),
@@ -224,10 +233,11 @@ class ChatSessionStore:
         db: AsyncSession,
         user_access: UserAccess,
         params: CreateAssistantRecipeMessageParams,
+        flush_db: bool = True,
     ) -> Message:
         return await self._dispatch(
             user_access,
-            lambda: self.message_service.create_assistant_recipe_message(db, params),
+            lambda: self.message_service.create_assistant_recipe_message(db, params, flush_db),
             lambda: self.message_cache_service.create_assistant_recipe_message(
                 user_access.user_id, params=params
             ),
@@ -238,10 +248,11 @@ class ChatSessionStore:
         db: AsyncSession,
         user_access: UserAccess,
         params: CreateAssistantToolMessageParams,
+        flush_db: bool = True,
     ) -> Message:
         return await self._dispatch(
             user_access,
-            lambda: self.message_service.create_assistant_tool_message(db, params),
+            lambda: self.message_service.create_assistant_tool_message(db, params, flush_db),
             lambda: self.message_cache_service.create_assistant_tool_message(
                 user_access.user_id, params=params
             ),
@@ -253,10 +264,11 @@ class ChatSessionStore:
         user_access: UserAccess,
         thread_id: str,
         params: UpdateMessageParams,
+        flush_db: bool = True,
     ) -> Message:
         return await self._dispatch(
             user_access,
-            lambda: self.message_service.update_message(db, params),
+            lambda: self.message_service.update_message(db, params, flush_db),
             lambda: self.message_cache_service.update_message(
                 user_access.user_id, thread_id, params=params
             ),
@@ -291,6 +303,7 @@ class ChatSessionStore:
         thread_id: str,
         recipe_id: str,
         timestamp: datetime,
+        flush_db: bool = True,
     ) -> UserRecipe:
         params = CreateRecipeParams(
             id=recipe_id,
@@ -302,7 +315,7 @@ class ChatSessionStore:
 
         return await self._dispatch(
             user_access,
-            lambda: self.recipe_service.create_recipe(db, params),
+            lambda: self.recipe_service.create_recipe(db, params, flush_db),
             lambda: self.recipe_cache_service.create_recipe(params),
         )
 
@@ -312,10 +325,11 @@ class ChatSessionStore:
         user_access: UserAccess,
         thread_id: str,
         params: UpdateRecipeParams,
+        flush_db: bool = True,
     ) -> UserRecipe:
         return await self._dispatch(
             user_access,
-            lambda: self.recipe_service.update_recipe(db, params),
+            lambda: self.recipe_service.update_recipe(db, params, flush_db),
             lambda: self.recipe_cache_service.update_recipe(
                 user_access.user_id, thread_id, params
             ),
@@ -327,10 +341,11 @@ class ChatSessionStore:
         user_access: UserAccess,
         thread_id: str,
         params: UpdateRecipeFieldParams,
+        flush_db: bool = True,
     ) -> UserRecipe:
         return await self._dispatch(
             user_access,
-            lambda: self.recipe_service.update_recipe_field(db, params),
+            lambda: self.recipe_service.update_recipe_field(db, params, flush_db),
             lambda: self.recipe_cache_service.update_recipe_field(
                 user_access.user_id, thread_id, params
             ),
@@ -358,3 +373,108 @@ class ChatSessionStore:
             )
 
         return await self._dispatch(user_access, authenticated_get, unauthenticated_get)
+
+    async def update_message_ai_model_or_tool_usage(
+        self,
+        db: AsyncSession,
+        user_access: UserAccess,
+        thread_id: str,
+        params: UpdateMessageAIModelOrToolUsageParams,
+        flush_db: bool = True,
+    ) -> Message:
+        async def authenticated_update():
+            return await self.message_service.update_message_tool_usage(db, params, flush_db)
+
+        async def unauthenticated_update():
+            current_message = await self.message_cache_service.get_message(
+                user_access.user_id, thread_id, params.id
+            )
+            if current_message is None:
+                raise ValueError(f"Message {params.id} not found")
+
+            updated_message_params = UpdateMessageParams(
+                id=params.id,
+                updated_at=params.updated_at,
+                model_name=params.model_name,
+                input_tokens=(current_message.input_tokens or 0) + (params.input_tokens or 0) if params.input_tokens is not None else None,
+                output_tokens=(current_message.output_tokens or 0) + (params.output_tokens or 0) if params.output_tokens is not None else None,
+                tool_name=params.tool_name,
+                tool_input=params.tool_input,
+                tool_output=params.tool_output,
+                is_recipe_generation_started=params.is_recipe_generation_started,
+                is_recipe_generation_completed=params.is_recipe_generation_completed,
+                text_content=(current_message.text_content or "") + params.text_chunk if params.text_chunk is not None else None,
+            )
+            
+            return await self.message_cache_service.update_message(
+                user_access.user_id, thread_id, params=updated_message_params
+            )
+
+        return await self._dispatch(user_access, authenticated_update, unauthenticated_update)
+    
+    async def update_recipe_field_by_message_id(
+        self,
+        db: AsyncSession,
+        user_access: UserAccess,
+        thread_id: str,
+        message_id: str,
+        field: RecipeField,
+        timestamp: datetime,
+        flush_db: bool = True,
+    ) -> UserRecipe:
+        
+        async def authenticated_update():
+            return await self.recipe_service.update_recipe_field_by_message_id(db, message_id, field, timestamp, flush_db)
+
+        async def unauthenticated_update():
+            current_message = await self.message_cache_service.get_message(
+                user_access.user_id, thread_id, message_id
+            )
+            if current_message is None:
+                raise ValueError(f"Message {message_id} not found")
+            
+            if current_message.recipe_id is None:
+                raise ValueError(f"Message {message_id} has no recipe id")
+            
+            return await self.recipe_cache_service.update_recipe_field(
+                user_access.user_id, thread_id, UpdateRecipeFieldParams(
+                    id=current_message.recipe_id,
+                    updated_at=timestamp,
+                    field=field,
+                )
+            )
+
+        return await self._dispatch(user_access, authenticated_update, unauthenticated_update)
+    
+    async def update_recipe_by_message_id(
+        self,
+        db: AsyncSession,
+        user_access: UserAccess,
+        thread_id: str,
+        message_id: str,
+        recipe: Recipe,
+        timestamp: datetime,
+        flush_db: bool = True,
+    ) -> UserRecipe:
+        async def authenticated_update():
+            return await self.recipe_service.update_recipe_by_message_id(db, message_id, recipe, timestamp, flush_db)
+
+        async def unauthenticated_update():
+            current_message = await self.message_cache_service.get_message(
+                user_access.user_id, thread_id, message_id
+            )
+            if current_message is None:
+                raise ValueError(f"Message {message_id} not found")
+            
+            if current_message.recipe_id is None:
+                raise ValueError(f"Message {message_id} has no recipe id")
+            
+            return await self.recipe_cache_service.update_recipe(
+                user_access.user_id, thread_id, UpdateRecipeParams(
+                    id=current_message.recipe_id,
+                    updated_at=timestamp,
+                    **recipe.model_dump(),
+                )
+            )
+
+        return await self._dispatch(user_access, authenticated_update, unauthenticated_update)

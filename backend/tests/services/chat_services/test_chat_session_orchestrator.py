@@ -36,6 +36,7 @@ from utils.date_utils import to_utc_isostring
 @pytest.fixture
 def mock_db_transaction_maker():
     mock_session = MagicMock()
+    mock_session.flush = AsyncMock()
     
     @asynccontextmanager
     async def mock_transaction_maker():
@@ -328,7 +329,7 @@ class TestStartSession:
 
 class TestResumeSession:
     @pytest.mark.asyncio
-    async def test_resume_session_success(
+    async def test_resume_session_success_without_recipes(
         self,
         orchestrator,
         mock_websocket,
@@ -344,15 +345,56 @@ class TestResumeSession:
     ):
         mock_user_access_cache_service.get_user_access = AsyncMock(return_value=sample_anonymous_user_access)
         
-        with patch.object(mock_chat_session_store, 'get_thread', new_callable=AsyncMock, return_value=sample_thread), \
-            patch.object(mock_chat_session_store, 'resume_thread', new_callable=AsyncMock, return_value=sample_thread), \
+        with patch.object(mock_chat_session_store, 'resume_thread', new_callable=AsyncMock, return_value=sample_thread), \
             patch.object(mock_chat_session_store, 'get_paginated_messages', new_callable=AsyncMock, return_value=sample_paginated_messages), \
             patch.object(mock_chat_session_store, 'get_recipes_by_message_id', new_callable=AsyncMock, return_value=sample_recipes), \
             patch('services.chat_services.chat_session_engine.ChatSessionEngine.run', new_callable=AsyncMock) as mock_run:
                         
             await orchestrator.resume_session(sample_access_token, sample_thread_id, mock_websocket)
             
-            mock_chat_session_store.get_thread.assert_called_once()
+            mock_chat_session_store.resume_thread.assert_called_once()
+            mock_chat_session_store.get_paginated_messages.assert_called_once()
+            mock_chat_session_store.get_recipes_by_message_id.assert_not_called()
+            mock_websocket_event_sender.send_event.assert_called_once_with(
+                mock_websocket,
+                "thread_resumed",
+                {
+                    "user_access": sample_anonymous_user_access.model_dump(),
+                    "thread": sample_thread.model_dump(),
+                    "paginated_messages": sample_paginated_messages.model_dump(),
+                    "recipes": []
+                }
+            )
+            
+            mock_run.assert_called_once()
+            
+    @pytest.mark.asyncio
+    async def test_resume_session_success_with_recipes(
+        self,
+        orchestrator,
+        mock_websocket,
+        mock_user_access_cache_service,
+        mock_chat_session_store,
+        mock_websocket_event_sender,
+        sample_access_token,
+        sample_thread_id,
+        sample_anonymous_user_access,
+        sample_thread,
+        sample_paginated_messages,
+        sample_recipes
+    ):
+        mock_user_access_cache_service.get_user_access = AsyncMock(return_value=sample_anonymous_user_access)
+        
+        paginated_messages_with_recipes = sample_paginated_messages.copy()
+        paginated_messages_with_recipes.messages[0].recipe_id = sample_recipes[0].id
+        
+        with patch.object(mock_chat_session_store, 'resume_thread', new_callable=AsyncMock, return_value=sample_thread), \
+            patch.object(mock_chat_session_store, 'get_paginated_messages', new_callable=AsyncMock, return_value=paginated_messages_with_recipes), \
+            patch.object(mock_chat_session_store, 'get_recipes_by_message_id', new_callable=AsyncMock, return_value=sample_recipes), \
+            patch('services.chat_services.chat_session_engine.ChatSessionEngine.run', new_callable=AsyncMock) as mock_run:
+                
+            await orchestrator.resume_session(sample_access_token, sample_thread_id, mock_websocket)
+            
             mock_chat_session_store.resume_thread.assert_called_once()
             mock_chat_session_store.get_paginated_messages.assert_called_once()
             mock_chat_session_store.get_recipes_by_message_id.assert_called_once()
@@ -362,7 +404,7 @@ class TestResumeSession:
                 {
                     "user_access": sample_anonymous_user_access.model_dump(),
                     "thread": sample_thread.model_dump(),
-                    "paginated_messages": sample_paginated_messages.model_dump(),
+                    "paginated_messages": paginated_messages_with_recipes.model_dump(),
                     "recipes": [recipe.model_dump() for recipe in sample_recipes]
                 }
             )
@@ -408,11 +450,11 @@ class TestResumeSession:
     ):
         
         mock_user_access_cache_service.get_user_access = AsyncMock(return_value=sample_anonymous_user_access)
-        mock_chat_session_store.get_thread = AsyncMock(return_value=None)
+        mock_chat_session_store.resume_thread = AsyncMock(return_value=None)
         
         await orchestrator.resume_session(sample_access_token, sample_thread_id, mock_websocket)
         
-        chat_error = ThreadNotFoundError(sample_thread_id)
+        chat_error = ThreadNotFoundError(thread_id=sample_thread_id)
         mock_websocket_event_sender.send_event.assert_called_once_with(
             mock_websocket,
             "chat_session_error",
@@ -487,5 +529,3 @@ class TestResumeSession:
                 chat_error.dict()
             )
             mock_websocket.close.assert_called_once() 
-        
-        

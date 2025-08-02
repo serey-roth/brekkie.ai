@@ -1,6 +1,6 @@
 from database.schema import DBUser
 from schemas.users import CreateUserParams, UpdateUserParams
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from utils.date_utils import strip_timezone
 
@@ -8,7 +8,7 @@ from utils.date_utils import strip_timezone
 class UserRepository:
     """Repository for user account operations including creation, retrieval, and updates."""
 
-    async def create_user(self, db: AsyncSession, params: CreateUserParams) -> DBUser:
+    async def create_user(self, db: AsyncSession, params: CreateUserParams, flush_db: bool = True) -> DBUser:
         existing_user = await self.get_user_by_external_id(db, params.external_id)
         if existing_user is not None:
             raise ValueError(f"External ID {params.external_id} already in use")
@@ -23,7 +23,8 @@ class UserRepository:
             name=params.name
         )
         db.add(new_user)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return new_user
 
     async def get_user_by_id(self, db: AsyncSession, user_id: str) -> DBUser | None:
@@ -38,7 +39,7 @@ class UserRepository:
         result = await db.execute(select(DBUser).where(DBUser.email == email))
         return result.scalar_one_or_none()
 
-    async def update_user(self, db: AsyncSession, user_id: str, params: UpdateUserParams) -> DBUser:
+    async def update_user(self, db: AsyncSession, user_id: str, params: UpdateUserParams, flush_db: bool = True) -> DBUser:
         user = await self.get_user_by_id(db, user_id)
         if user is None:
             raise ValueError(f"User with ID {user_id} not found")
@@ -53,6 +54,10 @@ class UserRepository:
                 setattr(user, key, value)
 
         db.add(user)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return user
     
+    async def get_user_by_external_id_or_email(self, db: AsyncSession, external_id: str, email: str | None) -> DBUser | None:
+        result = await db.execute(select(DBUser).where(or_(DBUser.external_id == external_id, DBUser.email == email)))
+        return result.scalar_one_or_none()

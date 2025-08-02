@@ -1,6 +1,5 @@
-
 from database.schema import DBMessage
-from schemas.messages import CreateMessageParams, GetDBMessagesParams, UpdateMessageParams
+from schemas.messages import CreateMessageParams, GetDBMessagesParams, UpdateMessageParams, UpdateMessageAIModelOrToolUsageParams
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -10,7 +9,7 @@ from utils.date_utils import strip_timezone
 class MessageRepository:
     """Repository for managing message database operations including creation, retrieval, updates, and counting."""
 
-    async def create_message(self, db: AsyncSession, params: CreateMessageParams) -> DBMessage:
+    async def create_message(self, db: AsyncSession, params: CreateMessageParams, flush_db: bool = True) -> DBMessage:
         """Creates a new message record with the given parameters.
 
         Args:
@@ -28,7 +27,8 @@ class MessageRepository:
             ),
         )
         db.add(db_message)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return db_message
 
     async def get_messages(self, db: AsyncSession, params: GetDBMessagesParams) -> list[DBMessage]:
@@ -94,7 +94,7 @@ class MessageRepository:
         result = await db.execute(select(DBMessage).where(DBMessage.id == message_id))
         return result.scalar_one_or_none()
 
-    async def update_message(self, db: AsyncSession, params: UpdateMessageParams) -> DBMessage:
+    async def update_message(self, db: AsyncSession, params: UpdateMessageParams, flush_db: bool = True) -> DBMessage:
         """Updates an existing message record with the given parameters.
 
         Args:
@@ -124,7 +124,8 @@ class MessageRepository:
         setattr(db_message, "updated_at", strip_timezone(updated_at))
 
         db.add(db_message)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return db_message
 
     async def count_thread_messages(self, db: AsyncSession, thread_id: str) -> int:
@@ -160,7 +161,7 @@ class MessageRepository:
         return result.scalar_one()
 
     async def create_messages(
-        self, db: AsyncSession, params: list[CreateMessageParams]
+        self, db: AsyncSession, params: list[CreateMessageParams], flush_db: bool = True
     ) -> list[DBMessage]:
         """Creates messages in the database.
 
@@ -182,5 +183,54 @@ class MessageRepository:
             for message in params
         ]
         db.add_all(db_messages)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return db_messages
+
+    async def update_message_tool_usage(self, db: AsyncSession, params: UpdateMessageAIModelOrToolUsageParams, flush_db: bool = True) -> DBMessage:
+        """Updates a message's tool usage.
+
+        Args:
+            db: Database session for the operation
+            params: Parameters for updating a message's tool usage
+        """
+        message_id = params.id
+        
+        db_message = await db.get(DBMessage, message_id)
+        if db_message is None:
+            raise ValueError(f"Message {message_id} not found")
+        
+        setattr(db_message, "updated_at", strip_timezone(params.updated_at))
+        
+        if params.model_name is not None:  
+            setattr(db_message, "model_name", params.model_name)
+            
+        if params.input_tokens is not None:
+            setattr(db_message, "input_tokens", (db_message.input_tokens if db_message.input_tokens is not None else 0) + params.input_tokens)
+            
+        if params.output_tokens is not None:
+            setattr(db_message, "output_tokens", (db_message.output_tokens if db_message.output_tokens is not None else 0) + params.output_tokens)
+        
+        if params.tool_name is not None:
+            setattr(db_message, "tool_name", params.tool_name)
+            
+        if params.tool_input is not None:
+            setattr(db_message, "tool_input", params.tool_input)
+            
+        if params.tool_output is not None:
+            setattr(db_message, "tool_output", params.tool_output)
+        
+        if params.is_recipe_generation_started is not None:
+            setattr(db_message, "is_recipe_generation_started", params.is_recipe_generation_started)
+            
+        if params.is_recipe_generation_completed is not None:
+            setattr(db_message, "is_recipe_generation_completed", params.is_recipe_generation_completed)
+            
+        if params.text_chunk is not None:
+            setattr(db_message, "text_content", (str(db_message.text_content) or "") + params.text_chunk)
+        
+        db.add(db_message)
+        if flush_db:
+            await db.flush()
+            
+        return db_message

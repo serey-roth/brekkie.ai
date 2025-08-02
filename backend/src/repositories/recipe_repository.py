@@ -1,9 +1,12 @@
+from datetime import datetime
 from database.schema import DBMessage, DBRecipe
 from schemas.recipes import (
     CreateRecipeParams,
+    Recipe,
     RecipeCategory,
     RecipeIngredient,
     RecipeInstruction,
+    RecipeField,
     UpdateRecipeFieldParams,
     UpdateRecipeParams,
 )
@@ -15,7 +18,7 @@ from utils.date_utils import strip_timezone
 class RecipeRepository:
     """Repository for managing recipe database operations including creation, retrieval, updates, and field-specific modifications."""
 
-    async def create_recipe(self, db: AsyncSession, params: CreateRecipeParams) -> DBRecipe:
+    async def create_recipe(self, db: AsyncSession, params: CreateRecipeParams, flush_db: bool = True) -> DBRecipe:
         """Creates a new recipe record with the given parameters.
 
         Args:
@@ -33,7 +36,8 @@ class RecipeRepository:
             ),
         )
         db.add(db_recipe)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return db_recipe
 
     async def get_recipe(self, db: AsyncSession, recipe_id: str) -> DBRecipe | None:
@@ -62,7 +66,7 @@ class RecipeRepository:
         result = await db.execute(select(DBRecipe).where(DBRecipe.user_id == user_id))
         return list(result.scalars().all())
 
-    async def update_recipe(self, db: AsyncSession, params: UpdateRecipeParams) -> DBRecipe:
+    async def update_recipe(self, db: AsyncSession, params: UpdateRecipeParams, flush_db: bool = True) -> DBRecipe:
         """Updates an existing recipe record with the given parameters.
 
         Args:
@@ -104,11 +108,12 @@ class RecipeRepository:
                 setattr(db_recipe, field, value)
 
         db.add(db_recipe)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return db_recipe
 
     async def update_recipe_field(
-        self, db: AsyncSession, params: UpdateRecipeFieldParams
+        self, db: AsyncSession, params: UpdateRecipeFieldParams, flush_db: bool = True
     ) -> DBRecipe:
         """Updates a single field of an existing recipe record.
 
@@ -178,7 +183,8 @@ class RecipeRepository:
         setattr(db_recipe, "updated_at", strip_timezone(params.updated_at))
 
         db.add(db_recipe)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return db_recipe
 
     async def get_thread_recipes(self, db: AsyncSession, thread_id: str) -> list[DBRecipe]:
@@ -215,7 +221,7 @@ class RecipeRepository:
         return list(result.scalars().all())
 
     async def create_recipes(
-        self, db: AsyncSession, params: list[CreateRecipeParams]
+        self, db: AsyncSession, params: list[CreateRecipeParams], flush_db: bool = True
     ) -> list[DBRecipe]:
         """Creates recipes in the database.
 
@@ -234,5 +240,47 @@ class RecipeRepository:
             for recipe in params
         ]
         db.add_all(db_recipes)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return db_recipes
+
+    async def update_recipe_field_by_message_id(self, db: AsyncSession, message_id: str, field: RecipeField, timestamp: datetime, flush_db: bool = True) -> DBRecipe:
+        """Updates a single field of an existing recipe record by message id.
+
+        Args:
+            db: Database session for the operation
+            message_id: The message's id
+            params: Field update parameters with type-safe field and value
+        """
+        db_message = await db.get(DBMessage, message_id)
+        if db_message is None:
+            raise ValueError(f"Message {message_id} not found")
+        
+        if db_message.recipe_id is None:
+            raise ValueError(f"Message {message_id} has no recipe id")
+        
+        return await self.update_recipe_field(db, UpdateRecipeFieldParams(
+            id=str(db_message.recipe_id),
+            updated_at=timestamp,
+            field=field,
+        ), flush_db)
+
+    async def update_recipe_by_message_id(self, db: AsyncSession, message_id: str, recipe: Recipe, timestamp: datetime, flush_db: bool = True) -> DBRecipe:
+        """Updates a recipe after recipe generation.
+
+        Args:
+            db: Database session for the operation
+            message_id: The message's id
+        """
+        db_message = await db.get(DBMessage, message_id)
+        if db_message is None:
+            raise ValueError(f"Message {message_id} not found")
+        
+        if db_message.recipe_id is None:
+            raise ValueError(f"Message {message_id} has no recipe id")
+        
+        return await self.update_recipe(db, UpdateRecipeParams(
+            id=str(db_message.recipe_id),
+            updated_at=timestamp,
+            **recipe.model_dump(),
+        ), flush_db)

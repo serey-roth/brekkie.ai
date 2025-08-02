@@ -154,7 +154,7 @@ class TestCreateUserMessage:
             created_at=timestamp,
             updated_at=timestamp,
             is_empty=False,
-        ))
+        ), True)
         mock_message_service.create_user_message.assert_called_once_with(mock_db, CreateUserMessageParams(
             id=message_id,
             user_id=user_access.user_id,
@@ -248,7 +248,7 @@ class TestCreateRecipe:
             thread_id=thread_id,
             created_at=timestamp,
             updated_at=timestamp,
-        ))
+        ), True)
         mock_recipe_cache_service.create_recipe.assert_not_called()
 
 
@@ -420,4 +420,3 @@ class TestGetRecipesByMessageId:
         mock_message_cache_service.get_messages_by_id.assert_called_once_with(user_access.user_id, thread_id, message_ids)
         mock_recipe_cache_service.get_recipes_by_ids.assert_not_called()
         mock_recipe_service.get_recipes_by_message_id.assert_not_called()
-

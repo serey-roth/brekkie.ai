@@ -32,6 +32,7 @@ from schemas.messages import (
     CreateAssistantRecipeMessageParams,
     CreateAssistantToolMessageParams,
     UpdateMessageParams,
+    UpdateMessageAIModelOrToolUsageParams,
 )
 from schemas.threads import (
     Thread,
@@ -146,6 +147,7 @@ class TestAssistantStartedResponding:
                 error_message=None,
                 is_empty=False,
             ),
+            flush_db=False,
         )
         mock_chat_session_store.create_assistant_text_message.assert_called_once_with(
             mock_async_session,
@@ -161,6 +163,7 @@ class TestAssistantStartedResponding:
                 role=MessageRole.assistant,
                 content_type=MessageContentType.text,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
@@ -252,9 +255,8 @@ class TestAssistantResponding:
             output_tokens=metadata.output_tokens,
         )
         
-        mock_chat_session_store.get_message.return_value = initial_message
+        mock_chat_session_store.update_message_ai_model_or_tool_usage.return_value = expected_message
         mock_chat_session_store.update_thread.return_value = expected_thread
-        mock_chat_session_store.update_message.return_value = expected_message
         
         result = await chat_session_handlers.handle_text_message_chunk_generated(
             user_access=sample_user_access,
@@ -276,19 +278,21 @@ class TestAssistantResponding:
                 error_message=None,
                 is_empty=False,
             ),
+            flush_db=False,
         )
-        mock_chat_session_store.update_message.assert_called_once_with(
+        mock_chat_session_store.update_message_ai_model_or_tool_usage.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
-            UpdateMessageParams(
+            UpdateMessageAIModelOrToolUsageParams(
                 id=assistant_message_id,
                 updated_at=timestamp,
-                text_content=(initial_message.text_content or "") + message_chunk,
+                text_chunk=message_chunk,
                 model_name=metadata.model_name,
-                input_tokens=(initial_message.input_tokens or 0) + metadata.input_tokens,
-                output_tokens=(initial_message.output_tokens or 0) + metadata.output_tokens,
+                input_tokens=metadata.input_tokens,
+                output_tokens=metadata.output_tokens,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
@@ -372,6 +376,7 @@ class TestAssistantFinishedResponding:
                 error_message=None,
                 is_empty=False,
             ),
+            flush_db=False,
         )
         mock_chat_session_store.update_message.assert_called_once_with(
             mock_async_session,
@@ -382,6 +387,7 @@ class TestAssistantFinishedResponding:
                 updated_at=timestamp,
                 text_content=full_message,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
@@ -497,6 +503,7 @@ class TestRecipeGenerationStarted:
                     error_message=None,
                     is_empty=False,
                 ),
+                flush_db=False,
             )
             mock_chat_session_store.create_assistant_recipe_message.assert_called_once_with(
                 mock_async_session,
@@ -515,6 +522,7 @@ class TestRecipeGenerationStarted:
                     role=MessageRole.assistant,
                     content_type=MessageContentType.recipe,
                 ),
+                flush_db=False,
             )
             
             assert_deep_equal(result, {
@@ -559,25 +567,6 @@ class TestRecipeFieldDetected:
         timestamp = datetime.now(timezone.utc)
         field = RecipeField(name="name", value="Test Recipe")
         
-        existing_message = Message(
-            id=assistant_message_id,
-            user_id=sample_user_access.user_id,
-            thread_id=thread_id,
-            recipe_id="recipe_123",
-            created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),
-            role=MessageRole.assistant,
-            content_type=MessageContentType.recipe
-        )
-        
-        expected_thread = Thread(
-            id=thread_id,
-            user_id=sample_user_access.user_id,
-            error_message=None,
-            is_empty=False,
-            created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),
-        )
         expected_recipe = UserRecipe(
             id="recipe_123",
             user_id=sample_user_access.user_id,
@@ -601,21 +590,8 @@ class TestRecipeFieldDetected:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = MessageResponse(
-            id=assistant_message_id,
-            user_id=sample_user_access.user_id,
-            thread_id=thread_id,
-            recipe_id=expected_recipe.id,
-            created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),
-            role=MessageRole.assistant,
-            content_type=MessageContentType.recipe
-        )
         
-        mock_chat_session_store.get_message.return_value = existing_message
-        mock_chat_session_store.update_recipe_field.return_value = expected_recipe
-        mock_chat_session_store.update_thread.return_value = expected_thread
-        mock_chat_session_store.update_message.return_value = expected_message
+        mock_chat_session_store.update_recipe_field_by_message_id.return_value = expected_recipe
         
         result = await chat_session_handlers.handle_recipe_field_detected(
             user_access=sample_user_access,
@@ -627,81 +603,19 @@ class TestRecipeFieldDetected:
             timestamp=timestamp,
         )
         
-        mock_chat_session_store.get_message.assert_called_once_with(
+        mock_chat_session_store.update_recipe_field_by_message_id.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
             assistant_message_id,
+            field,
+            timestamp,
+            flush_db=False,
         )
-        
-        assert existing_message.recipe_id is not None
-        mock_chat_session_store.update_recipe_field.assert_called_once_with(
-            mock_async_session,
-            sample_user_access,
-            thread_id,
-            UpdateRecipeFieldParams(
-                id=existing_message.recipe_id,
-                updated_at=timestamp,
-                field=field,
-            ),
-        )
-        mock_chat_session_store.update_thread.assert_called_once_with(
-            mock_async_session,
-            sample_user_access,
-            UpdateThreadParams(
-                id=thread_id,
-                updated_at=timestamp,
-                error_message=None,
-                is_empty=False,
-            ),
-        )
-        mock_chat_session_store.update_message.assert_called_once_with(
-            mock_async_session,
-            sample_user_access,
-            thread_id,
-            UpdateMessageParams(
-                id=assistant_message_id,
-                updated_at=timestamp,
-                recipe_id=expected_recipe.id,
-            ),
-        )
-        
+
         assert_deep_equal(result, {
-            "thread": expected_thread,
-            "message": expected_message,
             "recipe": expected_recipe,
         })
-        
-    @pytest.mark.asyncio
-    async def test_message_without_recipe_id(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
-        thread_id = "123"
-        assistant_message_id = "123"
-        timestamp = datetime.now(timezone.utc)
-        field = RecipeField(name="name", value="Test Recipe")
-        
-        existing_message = Message(
-            id=assistant_message_id,
-            user_id=sample_user_access.user_id,
-            thread_id=thread_id,
-            recipe_id=None,
-            created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),
-            role=MessageRole.assistant,
-            content_type=MessageContentType.recipe
-        )
-        
-        mock_chat_session_store.get_message.return_value = existing_message
-        
-        with pytest.raises(ValueError):
-            await chat_session_handlers.handle_recipe_field_detected(
-                user_access=sample_user_access,
-                thread_id=thread_id,
-                assistant_message_id=assistant_message_id,
-                payload=RecipeFieldDetectedPayload(
-                    field=field,
-                ),
-                timestamp=timestamp,
-            )
         
     @pytest.mark.asyncio
     async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
@@ -803,10 +717,9 @@ class TestRecipeGenerationCompleted:
             output_tokens=recipe_tool_metadata.output_tokens,
         )
         
-        mock_chat_session_store.get_message.return_value = existing_message
-        mock_chat_session_store.update_recipe.return_value = expected_recipe
+        mock_chat_session_store.update_message_ai_model_or_tool_usage.return_value = expected_message
         mock_chat_session_store.update_thread.return_value = expected_thread
-        mock_chat_session_store.update_message.return_value = expected_message
+        mock_chat_session_store.update_recipe_by_message_id.return_value = expected_recipe
         
         result = await chat_session_handlers.handle_recipe_generation_completed(
             user_access=sample_user_access,
@@ -820,23 +733,14 @@ class TestRecipeGenerationCompleted:
             timestamp=timestamp,
         )
         
-        mock_chat_session_store.get_message.assert_called_once_with(
+        mock_chat_session_store.update_recipe_by_message_id.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
             assistant_message_id,
-        )
-        
-        assert existing_message.recipe_id is not None
-        mock_chat_session_store.update_recipe.assert_called_once_with(
-            mock_async_session,
-            sample_user_access,
-            thread_id,
-            UpdateRecipeParams(
-                id=existing_message.recipe_id,
-                updated_at=timestamp,
-                **recipe.model_dump(),
-            ),
+            recipe,
+            timestamp,
+            flush_db=False,
         )
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
@@ -847,15 +751,15 @@ class TestRecipeGenerationCompleted:
                 error_message=None,
                 is_empty=False,
             ),
+            flush_db=False,
         )
-        mock_chat_session_store.update_message.assert_called_once_with(
+        mock_chat_session_store.update_message_ai_model_or_tool_usage.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
-            UpdateMessageParams(
+            UpdateMessageAIModelOrToolUsageParams(
                 id=assistant_message_id,
                 updated_at=timestamp,
-                recipe_id=expected_recipe.id,
                 is_recipe_generation_started=False,
                 is_recipe_generation_completed=True,
                 tool_output=recipe_tool_output,
@@ -863,6 +767,7 @@ class TestRecipeGenerationCompleted:
                 input_tokens=recipe_tool_metadata.input_tokens,
                 output_tokens=recipe_tool_metadata.output_tokens,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
@@ -987,6 +892,7 @@ class TestSearchStarted:
                 error_message=None, 
                 is_empty=False,
             ),
+            flush_db=False,
         )
         
         mock_chat_session_store.create_assistant_tool_message.assert_called_once_with(
@@ -1004,6 +910,7 @@ class TestSearchStarted:
                 role=MessageRole.assistant,
                 content_type=MessageContentType.tool,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
@@ -1085,9 +992,8 @@ class TestSearchCompleted:
             output_tokens=search_tool_metadata.output_tokens,
         )
         
-        mock_chat_session_store.get_message.return_value = existing_message
         mock_chat_session_store.update_thread.return_value = expected_thread
-        mock_chat_session_store.update_message.return_value = expected_message
+        mock_chat_session_store.update_message_ai_model_or_tool_usage.return_value = expected_message
         
         result = await chat_session_handlers.handle_search_completed(
             user_access=sample_user_access,
@@ -1100,13 +1006,6 @@ class TestSearchCompleted:
             timestamp=timestamp,
         )
         
-        mock_chat_session_store.get_message.assert_called_once_with(
-            mock_async_session,
-            sample_user_access,
-            thread_id,
-            assistant_message_id,
-        )
-        
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
             sample_user_access,
@@ -1116,13 +1015,14 @@ class TestSearchCompleted:
                 error_message=None,
                 is_empty=False,
             ),
+            flush_db=False,
         )
         
-        mock_chat_session_store.update_message.assert_called_once_with(
+        mock_chat_session_store.update_message_ai_model_or_tool_usage.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
-            UpdateMessageParams(
+            UpdateMessageAIModelOrToolUsageParams(
                 id=assistant_message_id,
                 updated_at=timestamp,
                 tool_output=search_tool_output,
@@ -1130,40 +1030,14 @@ class TestSearchCompleted:
                 input_tokens=search_tool_metadata.input_tokens,
                 output_tokens=search_tool_metadata.output_tokens,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
             "thread": expected_thread,
             "message": expected_message,
         })
-        
-    @pytest.mark.asyncio
-    async def test_message_not_found(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
-        thread_id = "123"
-        assistant_message_id = "123"
-        timestamp = datetime.now(timezone.utc)
-
-        search_tool_output = { "search_results": "test search results" }
-        search_tool_metadata = ConversationStreamMetadata(
-            model_name="test_model",
-            input_tokens=10,
-            output_tokens=20,
-        )
-        
-        mock_chat_session_store.get_message.return_value = None
-        
-        with pytest.raises(ValueError):
-            await chat_session_handlers.handle_search_completed(
-                user_access=sample_user_access,
-                thread_id=thread_id,
-                assistant_message_id=assistant_message_id,
-                payload=SearchCompletedPayload(
-                    tool_output=search_tool_output,
-                    tool_metadata=search_tool_metadata,
-                ),
-                timestamp=timestamp,
-            )
-            
+    
     @pytest.mark.asyncio
     async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
         thread_id = "123"
@@ -1177,7 +1051,7 @@ class TestSearchCompleted:
             output_tokens=20,
         )
         
-        mock_chat_session_store.get_message.side_effect = Exception("test error")
+        mock_chat_session_store.update_message_ai_model_or_tool_usage.side_effect = Exception("test error")
         
         with pytest.raises(Exception):
             await chat_session_handlers.handle_search_completed(
@@ -1228,6 +1102,7 @@ class TestAiAgentError:
                 error_message=error_message,
                 is_empty=False,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
@@ -1292,6 +1167,7 @@ class TestSummaryUpdated:
                 is_empty=False,
                 summary=summary,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
@@ -1355,6 +1231,7 @@ class TestThreadTitleUpdated:
                 is_empty=False,
                 title=thread_title,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
@@ -1415,6 +1292,7 @@ class TestUserMessageRejected:
                 error_message=None,
                 is_empty=False,
             ),
+            flush_db=False,
         )
         
         mock_chat_session_store.create_assistant_text_message.assert_called_once_with(      
@@ -1431,10 +1309,10 @@ class TestUserMessageRejected:
                 role=MessageRole.assistant,
                 content_type=MessageContentType.text,
             ),
+            flush_db=False,
         )
         
         assert_deep_equal(result, {
             "thread": expected_thread,
             "message": expected_message,
         })
-        

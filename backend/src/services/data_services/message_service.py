@@ -17,6 +17,7 @@ from schemas.messages import (
     MessageResponse,
     PaginatedMessages,
     UpdateMessageParams,
+    UpdateMessageAIModelOrToolUsageParams,
 )
 from schemas.safety_guards import SafetyGuardResult
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,40 +64,40 @@ class MessageService:
             else None,
         )
 
-    async def create_message(self, db: AsyncSession, params: CreateMessageParams) -> Message:
+    async def create_message(self, db: AsyncSession, params: CreateMessageParams, flush_db: bool = True) -> Message:
         logger.debug(f"Creating message with {params}")
-        message = await self.repository.create_message(db, params)
+        message = await self.repository.create_message(db, params, flush_db)
         return self._to_message_dto(message)
 
     async def create_user_message(
-        self, db: AsyncSession, params: CreateUserMessageParams
+        self, db: AsyncSession, params: CreateUserMessageParams, flush_db: bool = True
     ) -> Message:
         logger.debug(f"Creating user message for thread {params.thread_id} with {params}")
-        return await self.create_message(db, params)
+        return await self.create_message(db, params, flush_db)
 
     async def create_assistant_text_message(
-        self, db: AsyncSession, params: CreateAssistantTextMessageParams
+        self, db: AsyncSession, params: CreateAssistantTextMessageParams, flush_db: bool = True
     ) -> Message:
         logger.debug(f"Creating assistant text message for thread {params.thread_id} with {params}")
-        return await self.create_message(db, params)
+        return await self.create_message(db, params, flush_db)
 
     async def create_assistant_recipe_message(
-        self, db: AsyncSession, params: CreateAssistantRecipeMessageParams
+        self, db: AsyncSession, params: CreateAssistantRecipeMessageParams, flush_db: bool = True
     ) -> Message:
         logger.debug(
             f"Creating assistant recipe message for thread {params.thread_id} with {params}"
         )
-        return await self.create_message(db, params)
+        return await self.create_message(db, params, flush_db)
 
     async def create_assistant_tool_message(
-        self, db: AsyncSession, params: CreateAssistantToolMessageParams
+        self, db: AsyncSession, params: CreateAssistantToolMessageParams, flush_db: bool = True
     ) -> Message:
         logger.debug(f"Creating assistant tool message for thread {params.thread_id} with {params}")
-        return await self.create_message(db, params)
+        return await self.create_message(db, params, flush_db)
 
-    async def update_message(self, db: AsyncSession, params: UpdateMessageParams) -> Message:
+    async def update_message(self, db: AsyncSession, params: UpdateMessageParams, flush_db: bool = True) -> Message:
         logger.debug(f"Updating message {params.id} with {params}")
-        message = await self.repository.update_message(db, params)
+        message = await self.repository.update_message(db, params, flush_db)
         return self._to_message_dto(message)
 
     async def get_message(self, db: AsyncSession, message_id: str) -> Message | None:
@@ -159,8 +160,13 @@ class MessageService:
         return await self.repository.count_thread_messages(db, thread_id)
 
     async def create_messages(
-        self, db: AsyncSession, params: list[CreateMessageParams]
+        self, db: AsyncSession, params: list[CreateMessageParams], flush_db: bool = True
     ) -> list[Message]:
         logger.debug(f"Creating messages with {params}")
-        db_messages = await self.repository.create_messages(db, params)
+        db_messages = await self.repository.create_messages(db, params, flush_db)
         return [self._to_message_dto(message) for message in db_messages]
+
+    async def update_message_tool_usage(self, db: AsyncSession, params: UpdateMessageAIModelOrToolUsageParams, flush_db: bool = True) -> Message:
+        logger.debug(f"Updating message {params.id} tool usage with {params}")
+        db_message = await self.repository.update_message_tool_usage(db, params, flush_db)
+        return self._to_message_dto(db_message)

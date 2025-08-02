@@ -102,34 +102,33 @@ async def verify(
             current_message_count = 0
             
             async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
-                # Try to find user by Supabase external_id first
-                user = await service_container.user_service.get_user_by_external_id(db, supabase_user_id)
-                if user is None and email:
-                    # If not found by external_id, try to find by email (for Auth0 migration)
-                    user = await service_container.user_service.get_user_by_email(db, email)
+                try:
+                    user = await service_container.user_service.get_user_by_external_id_or_email(db, supabase_user_id, email)
+                    
+                    if user is None:
+                        user = await service_container.user_service.create_user(db, CreateUserParams(
+                            id=str(uuid4()), 
+                            external_id=supabase_user_id,
+                            created_at=timestamp,
+                            updated_at=timestamp,
+                            last_signed_in_at=timestamp,
+                            email=email,
+                            name=name
+                        ), flush_db=False)
+                    else:
+                        user = await service_container.user_service.update_user(db, user.id, UpdateUserParams(
+                            id=user.id,
+                            external_id=supabase_user_id, # even if external_id is the Auth0 ID, we need to update the user with the Supabase ID
+                            updated_at=timestamp,
+                            last_signed_in_at=timestamp,
+                            email=email,
+                            name=name
+                        ), flush_db=False)
+                        current_message_count = await service_container.message_service.count_total_messages_sent_by_user(db, user.id)
                 
-                if user is None:
-                    # Create new user if not found by external_id or email
-                    user = await service_container.user_service.create_user(db, CreateUserParams(
-                        id=str(uuid4()), 
-                        external_id=supabase_user_id,
-                        created_at=timestamp,
-                        updated_at=timestamp,
-                        last_signed_in_at=timestamp,
-                        email=email,
-                        name=name
-                    ))
-                else:
-                    # Update existing user (no migration needed)
-                    user = await service_container.user_service.update_user(db, user.id, UpdateUserParams(
-                        id=user.id,
-                        external_id=supabase_user_id, # even if external_id is the Auth0 ID, we need to update the user with the Supabase ID
-                        updated_at=timestamp,
-                        last_signed_in_at=timestamp,
-                        email=email,
-                        name=name
-                    ))
-                    current_message_count = await service_container.message_service.count_total_messages_sent_by_user(db, user.id)
+                except Exception as e:
+                    logger.error(f"Error verifying Supabase token: {e}")
+                    raise HTTPException(status_code=500, detail={"message": "Token verification failed"})
 
             ttl = int(expires_at) - int(timestamp.timestamp()) if expires_at is not None else None
             if ttl is not None and ttl < 0:

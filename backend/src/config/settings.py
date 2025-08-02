@@ -56,8 +56,8 @@ class Settings(BaseSettings):
     access_token_refresh_ttl: int = 60 * 60 * 3  # 3 hours
 
     # Database Pool Settings
-    db_pool_size: int = 5
-    db_max_overflow: int = 10
+    db_pool_size: int = 2
+    db_max_overflow: int = 3
     db_pool_timeout: int = 30
     db_pool_recycle: int = 3600
 

@@ -150,14 +150,14 @@ class ChatSessionOrchestrator:
         self, websocket: WebSocket, user_access: UserAccess, thread_id: str
     ) -> dict:
         async with self.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
-            thread = await self.chat_session_store.get_thread(db, user_access, thread_id)
-            if thread is None:
-                raise ThreadNotFoundError(thread_id)
-
-            timestamp = datetime.now(timezone.utc)
+            timestamp = datetime.now(timezone.utc)  
+            
             thread = await self.chat_session_store.resume_thread(
-                db, user_access, ResumeThreadParams(id=thread_id, resumed_at=timestamp)
+                db, user_access, ResumeThreadParams(id=thread_id, resumed_at=timestamp), flush_db=False
             )
+            if thread is None:
+                raise ThreadNotFoundError(thread_id=thread_id)
+            
             paginated_messages = await self.chat_session_store.get_paginated_messages(
                 db,
                 user_access,
@@ -169,11 +169,15 @@ class ChatSessionOrchestrator:
                     sort_order="desc",
                 ),
             )
-            message_ids = [msg.id for msg in paginated_messages.messages]
-            recipes = await self.chat_session_store.get_recipes_by_message_id(
-                db, user_access, thread_id, message_ids
-            )
-
+            
+            if len(paginated_messages.messages) > 0:
+                recipe_message_ids = [msg.id for msg in paginated_messages.messages if msg.recipe_id]
+                recipes = await self.chat_session_store.get_recipes_by_message_id(
+                    db, user_access, thread_id, recipe_message_ids
+                ) if len(recipe_message_ids) > 0 else []
+            else:
+                recipes = []
+                
             return {
                 "thread": thread.model_dump(),
                 "paginated_messages": paginated_messages.model_dump(),

@@ -245,6 +245,7 @@ class ChatSessionEngine:
 
     async def _reject_user_message(
         self,
+        db: AsyncSession,
         user_access: UserAccess,
         user_message_id: str,
         user_input: str,
@@ -261,7 +262,7 @@ class ChatSessionEngine:
             rejection_message = "I can't respond to that message. Let's keep our conversation respectful and focused on food and cooking!"
 
         await self.message_processor.reject_user_message(
-            user_access, self.thread_id, user_message_id, rejection_message
+            db, user_access, self.thread_id, user_message_id, rejection_message
         )
 
     async def run(self):
@@ -290,22 +291,23 @@ class ChatSessionEngine:
                         safety_guard_result=safety_guard_result,
                     )
 
-                if (
-                    safety_guard_result is not None
-                    and safety_guard_result.is_blocked
-                    and len(safety_guard_result.issues) > 0
-                ):
-                    await self._reject_user_message(
-                        user_access,
-                        user_message_id,
-                        user_message_content,
-                        safety_guard_result.issues,
-                    )
-                    continue
+                    if (
+                        safety_guard_result is not None
+                        and safety_guard_result.is_blocked
+                        and len(safety_guard_result.issues) > 0
+                    ):
+                        await self._reject_user_message(
+                            db,
+                            user_access,
+                            user_message_id,
+                            user_message_content,
+                            safety_guard_result.issues,
+                        )
+                        continue
 
-                await self.message_processor.process_user_message(
-                    user_access, self.thread_id, user_message_id, user_message_content
-                )
+                    await self.message_processor.process_user_message(
+                        db, user_access, self.thread_id, user_message_id, user_message_content
+                    )
 
             except WebSocketDisconnect:
                 break

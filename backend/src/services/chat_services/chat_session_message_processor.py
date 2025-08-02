@@ -2,6 +2,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Awaitable, Callable, TypedDict
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from schemas.conversation_stream_events import (
     AIAgentErrorPayload,
     ConversationStreamEvent,
@@ -108,6 +110,7 @@ class ChatSessionMessageProcessor:
 
     async def _call_handler(
         self,
+        db: AsyncSession,
         user_access: UserAccess,
         thread_id: str,
         user_message_id: str,
@@ -122,6 +125,7 @@ class ChatSessionMessageProcessor:
             raise ValueError(f"Unknown event name: {event_name}")
 
         kwargs = {
+            "db": db,
             "user_access": user_access,
             "thread_id": thread_id,
             "payload": event.payload,
@@ -141,6 +145,7 @@ class ChatSessionMessageProcessor:
 
     async def _handle_event(
         self,
+        db: AsyncSession,
         user_access: UserAccess,
         thread_id: str,
         user_message_id: str,
@@ -158,6 +163,7 @@ class ChatSessionMessageProcessor:
         timestamp = datetime.now(timezone.utc)
 
         result = await self._call_handler(
+            db=db,
             user_access=user_access,
             thread_id=thread_id,
             user_message_id=user_message_id,
@@ -176,6 +182,7 @@ class ChatSessionMessageProcessor:
 
     async def process_user_message(
         self,
+        db: AsyncSession,
         user_access: UserAccess,
         thread_id: str,
         user_message_id: str,
@@ -187,7 +194,7 @@ class ChatSessionMessageProcessor:
             )
 
             async def on_event(event: ConversationStreamEvent):
-                await self._handle_event(user_access, thread_id, user_message_id, event)
+                await self._handle_event(db, user_access, thread_id, user_message_id, event)
 
             await self.ai_food_agent.stream_conversation(
                 user_id=user_access.user_id,
@@ -199,6 +206,7 @@ class ChatSessionMessageProcessor:
         except Exception as e:
             logger.error(f"Error processing user message: {str(e)}")
             await self._handle_event(
+                db=db,
                 user_access=user_access,
                 thread_id=thread_id,
                 user_message_id=user_message_id,
@@ -209,12 +217,14 @@ class ChatSessionMessageProcessor:
 
     async def reject_user_message(
         self,
+        db: AsyncSession,
         user_access: UserAccess,
         thread_id: str,
         user_message_id: str,
         rejection_message: str,
     ):
         await self._handle_event(
+            db=db,
             user_access=user_access,
             thread_id=thread_id,
             user_message_id=user_message_id,

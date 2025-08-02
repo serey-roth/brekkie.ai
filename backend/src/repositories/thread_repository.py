@@ -14,7 +14,7 @@ from utils.date_utils import strip_timezone
 class ThreadRepository:
     """Repository for managing thread database operations including creation, retrieval, updates, and pagination."""
 
-    async def create_thread(self, db: AsyncSession, params: CreateThreadParams) -> DBThread:
+    async def create_thread(self, db: AsyncSession, params: CreateThreadParams, flush_db: bool = True) -> DBThread:
         """Creates a new thread record with the given parameters.
 
         Args:
@@ -35,7 +35,8 @@ class ThreadRepository:
             ),
         )
         db.add(thread)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return thread
 
     async def get_thread(self, db: AsyncSession, thread_id: str) -> DBThread | None:
@@ -106,7 +107,7 @@ class ThreadRepository:
         result = await db.execute(query)
         return list(result.scalars().all())
 
-    async def update_thread(self, db: AsyncSession, params: UpdateThreadParams) -> DBThread:
+    async def update_thread(self, db: AsyncSession, params: UpdateThreadParams, flush_db: bool = True) -> DBThread:
         """Updates an existing thread record with the given parameters.
 
         Args:
@@ -136,7 +137,8 @@ class ThreadRepository:
                     setattr(thread, field, value)
 
         db.add(thread)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return thread
 
     async def count_user_threads(self, db: AsyncSession, user_id: str) -> int:
@@ -155,7 +157,7 @@ class ThreadRepository:
         return result.scalar_one()
 
     async def create_threads(
-        self, db: AsyncSession, params: list[CreateThreadParams]
+        self, db: AsyncSession, params: list[CreateThreadParams], flush_db: bool = True
     ) -> list[DBThread]:
         """Creates threads in the database.
 
@@ -177,10 +179,11 @@ class ThreadRepository:
             for thread in params
         ]
         db.add_all(db_threads)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return db_threads
 
-    async def resume_thread(self, db: AsyncSession, params: ResumeThreadParams) -> DBThread:
+    async def resume_thread(self, db: AsyncSession, params: ResumeThreadParams, flush_db: bool = True) -> DBThread:
         """Resumes a thread.
 
         Args:
@@ -196,5 +199,6 @@ class ThreadRepository:
         setattr(thread, "resumed_at", strip_timezone(params.resumed_at))
 
         db.add(thread)
-        await db.flush()
+        if flush_db:
+            await db.flush()
         return thread

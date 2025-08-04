@@ -1,8 +1,6 @@
 import uuid
-from contextlib import _AsyncGeneratorContextManager
 from datetime import datetime
-from functools import wraps
-from typing import Any, Callable, TypedDict, Union
+from typing import TypedDict, Union
 
 from schemas.conversation_stream_events import (
     AIAgentErrorPayload,
@@ -24,9 +22,12 @@ from schemas.messages import (
     CreateAssistantRecipeMessageParams,
     CreateAssistantTextMessageParams,
     CreateAssistantToolMessageParams,
-    MessageResponse,
-    UpdateMessageAIModelOrToolUsageParams,
+    ApiMessage,
     UpdateMessageParams,
+    UpdateMessageTextContentParams,
+    UpdateMessageInputTokensParams,
+    UpdateMessageOutputTokensParams,
+    UpdateStrategy,
 )
 from schemas.recipes import (
     UserRecipe,
@@ -42,13 +43,14 @@ from utils.logger import Logger
 
 logger = Logger("chat_session_handlers")
 
+
 class ThreadResult(TypedDict):
     thread: Thread
 
 
 class MessageResult(TypedDict):
     thread: Thread
-    message: MessageResponse
+    message: ApiMessage
 
 
 class MessageAndRecipeResult(MessageResult):
@@ -64,16 +66,16 @@ class ErrorResult(TypedDict):
     error_message: str
 
 
-ChatSessionHandlersResult = Union[ThreadResult, MessageResult, MessageAndRecipeResult, RecipeResult, ErrorResult]
+ChatSessionHandlersResult = Union[
+    ThreadResult, MessageResult, MessageAndRecipeResult, RecipeResult, ErrorResult
+]
 
 
 class ChatSessionHandlers:
     def __init__(
         self,
-        db_transaction_maker: _AsyncGeneratorContextManager[AsyncSession],
         chat_session_store: ChatSessionStore,
     ):
-        self.db_transaction_maker = db_transaction_maker
         self.chat_session_store = chat_session_store
 
     async def handle_text_message_started(
@@ -88,10 +90,6 @@ class ChatSessionHandlers:
         user_message_id: str,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Text message started for user_id {user_access.user_id} with message_id {assistant_message_id} and timestamp {timestamp}"
-            )
-            
             thread = await self.chat_session_store.update_thread(
                 db,
                 user_access,
@@ -101,7 +99,6 @@ class ChatSessionHandlers:
                     error_message=None,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
             message = await self.chat_session_store.create_assistant_text_message(
                 db,
@@ -117,10 +114,9 @@ class ChatSessionHandlers:
                     role=MessageRole.assistant,
                     content_type=MessageContentType.text,
                 ),
-                flush_db=False,
             )
 
-            return {"thread": thread, "message": MessageResponse.from_message(message)}
+            return {"thread": thread, "message": ApiMessage.from_message(message)}
 
         except Exception as e:
             logger.error(
@@ -138,27 +134,29 @@ class ChatSessionHandlers:
         timestamp: datetime,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Text message chunk generated for user_id {user_access.user_id} with message_id {assistant_message_id} and message chunk {payload.message_chunk[:50]}... and timestamp {timestamp}"
-            )
-            
-            updated_message = await self.chat_session_store.update_message_ai_model_or_tool_usage(
+            updated_message = await self.chat_session_store.update_message(
                 db,
                 user_access,
-                thread_id,  
-                UpdateMessageAIModelOrToolUsageParams(
+                thread_id,
+                UpdateMessageParams(
                     id=assistant_message_id,
                     updated_at=timestamp,
-                    text_chunk=payload.message_chunk,
+                    text_content_update=UpdateMessageTextContentParams(
+                        text_content=payload.message_chunk,
+                        strategy=UpdateStrategy.APPEND,
+                    ),
+                    input_tokens_update=UpdateMessageInputTokensParams(
+                        input_tokens=payload.metadata.input_tokens,
+                        strategy=UpdateStrategy.APPEND,
+                    ),
+                    output_tokens_update=UpdateMessageOutputTokensParams(
+                        output_tokens=payload.metadata.output_tokens,
+                        strategy=UpdateStrategy.APPEND,
+                    ),
                     model_name=payload.metadata.model_name,
-                    input_tokens=payload.metadata.input_tokens,
-                    output_tokens=payload.metadata.output_tokens,
                 ),
-                flush_db=False,
             )
-            if updated_message is None:
-                raise ValueError(f"Message {assistant_message_id} not found")
-                
+
             thread = await self.chat_session_store.update_thread(
                 db,
                 user_access,
@@ -168,10 +166,9 @@ class ChatSessionHandlers:
                     error_message=None,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
 
-            return {"thread": thread, "message": MessageResponse.from_message(updated_message)}
+            return {"thread": thread, "message": ApiMessage.from_message(updated_message)}
 
         except Exception as e:
             logger.error(
@@ -189,10 +186,6 @@ class ChatSessionHandlers:
         timestamp: datetime,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Text message completed for user_id {user_access.user_id} with message_id {assistant_message_id} and full_message {payload.full_message[:50]}..."
-            )
-
             updated_message = await self.chat_session_store.update_message(
                 db,
                 user_access,
@@ -200,13 +193,13 @@ class ChatSessionHandlers:
                 UpdateMessageParams(
                     id=assistant_message_id,
                     updated_at=timestamp,
-                    text_content=payload.full_message,
+                    text_content_update=UpdateMessageTextContentParams(
+                        text_content=payload.full_message,
+                        strategy=UpdateStrategy.REPLACE,
+                    ),
                 ),
-                flush_db=False,
             )
-            if updated_message is None:
-                raise ValueError(f"Message {assistant_message_id} not found")
-            
+
             updated_thread = await self.chat_session_store.update_thread(
                 db,
                 user_access,
@@ -216,10 +209,12 @@ class ChatSessionHandlers:
                     error_message=None,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
-            
-            return {"thread": updated_thread, "message": MessageResponse.from_message(updated_message)}
+
+            return {
+                "thread": updated_thread,
+                "message": ApiMessage.from_message(updated_message),
+            }
 
         except Exception as e:
             logger.error(
@@ -238,16 +233,12 @@ class ChatSessionHandlers:
         user_message_id: str,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Recipe generation started for user_id {user_access.user_id} with message_id {assistant_message_id} and timestamp {timestamp}"
-            )
-
             recipe_tool_name = payload.tool_name
             recipe_tool_input = payload.tool_input
             recipe_id = str(uuid.uuid4())
 
             recipe = await self.chat_session_store.create_recipe(
-                db, user_access, thread_id, recipe_id, timestamp, flush_db=False
+                db, user_access, thread_id, recipe_id, timestamp
             )
             message = await self.chat_session_store.create_assistant_recipe_message(
                 db,
@@ -266,7 +257,6 @@ class ChatSessionHandlers:
                     role=MessageRole.assistant,
                     content_type=MessageContentType.recipe,
                 ),
-                flush_db=False,
             )
             thread = await self.chat_session_store.update_thread(
                 db,
@@ -277,11 +267,10 @@ class ChatSessionHandlers:
                     error_message=None,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
             return {
                 "thread": thread,
-                "message": MessageResponse.from_message(message),
+                "message": ApiMessage.from_message(message),
                 "recipe": recipe,
             }
 
@@ -301,22 +290,17 @@ class ChatSessionHandlers:
         timestamp: datetime,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Recipe field detected for user_id {user_access.user_id} with message_id {assistant_message_id} and field {payload.field.name} and value {payload.field.value} and timestamp {timestamp}"
-            )
-
             field = payload.field
-            updated_recipe = await self.chat_session_store.update_recipe_field_by_message_id(
+            updated_recipe = await self.chat_session_store.update_message_recipe_field(
                 db,
                 user_access,
                 thread_id,
                 assistant_message_id,
                 field,
                 timestamp,
-                flush_db=False,
             )
 
-            return { "recipe": updated_recipe }
+            return {"recipe": updated_recipe}
 
         except Exception as e:
             logger.error(
@@ -334,39 +318,37 @@ class ChatSessionHandlers:
         timestamp: datetime,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Recipe generation completed for user_id {user_access.user_id} with message_id {assistant_message_id} and timestamp {timestamp}"
-            )
-
-            updated_message = await self.chat_session_store.update_message_ai_model_or_tool_usage(
+            updated_message = await self.chat_session_store.update_message(
                 db,
                 user_access,
                 thread_id,
-                UpdateMessageAIModelOrToolUsageParams(
+                UpdateMessageParams(
                     id=assistant_message_id,
                     updated_at=timestamp,
-                    model_name=payload.tool_metadata.model_name,
-                    input_tokens=payload.tool_metadata.input_tokens,
-                    output_tokens=payload.tool_metadata.output_tokens,
+                    input_tokens_update=UpdateMessageInputTokensParams(
+                        input_tokens=payload.tool_metadata.input_tokens,
+                        strategy=UpdateStrategy.APPEND,
+                    ),
+                    output_tokens_update=UpdateMessageOutputTokensParams(
+                        output_tokens=payload.tool_metadata.output_tokens,
+                        strategy=UpdateStrategy.APPEND,
+                    ),
                     tool_output=payload.tool_output,
                     is_recipe_generation_completed=True,
                     is_recipe_generation_started=False,
+                    model_name=payload.tool_metadata.model_name,
                 ),
-                flush_db=False,
             )
-            if updated_message is None:
-                raise ValueError(f"Message {assistant_message_id} not found")
 
-            recipe = await self.chat_session_store.update_recipe_by_message_id(
+            recipe = await self.chat_session_store.update_message_recipe(
                 db,
                 user_access,
                 thread_id,
                 assistant_message_id,
                 payload.recipe,
                 timestamp,
-                flush_db=False,
             )
-            
+
             thread = await self.chat_session_store.update_thread(
                 db,
                 user_access,
@@ -376,12 +358,11 @@ class ChatSessionHandlers:
                     error_message=None,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
 
             return {
                 "thread": thread,
-                "message": MessageResponse.from_message(updated_message),
+                "message": ApiMessage.from_message(updated_message),
                 "recipe": recipe,
             }
 
@@ -402,10 +383,6 @@ class ChatSessionHandlers:
         user_message_id: str,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Search started for user_id {user_access.user_id} with message_id {assistant_message_id} and timestamp {timestamp}"
-            )
-            
             updated_thread = await self.chat_session_store.update_thread(
                 db,
                 user_access,
@@ -415,7 +392,6 @@ class ChatSessionHandlers:
                     error_message=None,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
             message = await self.chat_session_store.create_assistant_tool_message(
                 db,
@@ -432,10 +408,9 @@ class ChatSessionHandlers:
                     role=MessageRole.assistant,
                     content_type=MessageContentType.tool,
                 ),
-                flush_db=False,
             )
 
-            return {"thread": updated_thread, "message": MessageResponse.from_message(message)}
+            return {"thread": updated_thread, "message": ApiMessage.from_message(message)}
 
         except Exception as e:
             logger.error(
@@ -453,27 +428,26 @@ class ChatSessionHandlers:
         timestamp: datetime,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Search completed for user_id {user_access.user_id} with message_id {assistant_message_id} and timestamp {timestamp}"
-            )
-            
-            updated_message = await self.chat_session_store.update_message_ai_model_or_tool_usage(
+            updated_message = await self.chat_session_store.update_message(
                 db,
                 user_access,
                 thread_id,
-                UpdateMessageAIModelOrToolUsageParams(
+                UpdateMessageParams(
                     id=assistant_message_id,
                     updated_at=timestamp,
-                    tool_output=payload.tool_output,
                     model_name=payload.tool_metadata.model_name,
-                    input_tokens=payload.tool_metadata.input_tokens,
-                    output_tokens=payload.tool_metadata.output_tokens,
+                    tool_output=payload.tool_output,
+                    input_tokens_update=UpdateMessageInputTokensParams(
+                        input_tokens=payload.tool_metadata.input_tokens,
+                        strategy=UpdateStrategy.APPEND,
+                    ),
+                    output_tokens_update=UpdateMessageOutputTokensParams(
+                        output_tokens=payload.tool_metadata.output_tokens,
+                        strategy=UpdateStrategy.APPEND,
+                    ),
                 ),
-                flush_db=False,
             )
-            if updated_message is None:
-                raise ValueError(f"Message {assistant_message_id} not found")
-            
+
             updated_thread = await self.chat_session_store.update_thread(
                 db,
                 user_access,
@@ -483,10 +457,12 @@ class ChatSessionHandlers:
                     error_message=None,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
-            
-            return {"thread": updated_thread, "message": MessageResponse.from_message(updated_message)}
+
+            return {
+                "thread": updated_thread,
+                "message": ApiMessage.from_message(updated_message),
+            }
 
         except Exception as e:
             logger.error(
@@ -516,7 +492,6 @@ class ChatSessionHandlers:
                     error_message=payload.error_message,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
 
             return {"thread": thread, "error_message": payload.error_message}
@@ -536,10 +511,6 @@ class ChatSessionHandlers:
         timestamp: datetime,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Summary updated for user_id {user_access.user_id} with timestamp {timestamp} and summary {payload.summary}"
-            )
-
             thread = await self.chat_session_store.update_thread(
                 db,
                 user_access,
@@ -550,7 +521,6 @@ class ChatSessionHandlers:
                     is_empty=False,
                     summary=payload.summary,
                 ),
-                flush_db=False,
             )
 
             return {"thread": thread}
@@ -570,10 +540,6 @@ class ChatSessionHandlers:
         timestamp: datetime,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"Thread title updated for user_id {user_access.user_id} with timestamp {timestamp} and thread_title {payload.thread_title}"
-            )
-
             thread = await self.chat_session_store.update_thread(
                 db,
                 user_access,
@@ -584,7 +550,6 @@ class ChatSessionHandlers:
                     is_empty=False,
                     title=payload.thread_title,
                 ),
-                flush_db=False,
             )
 
             return {"thread": thread}
@@ -606,10 +571,6 @@ class ChatSessionHandlers:
         user_message_id: str,
     ) -> ChatSessionHandlersResult:
         try:
-            logger.debug(
-                f"User message rejected for user_id {user_access.user_id} with timestamp {timestamp}"
-            )
-
             updated_thread = await self.chat_session_store.update_thread(
                 db,
                 user_access,
@@ -618,7 +579,6 @@ class ChatSessionHandlers:
                     updated_at=timestamp,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
 
             message = await self.chat_session_store.create_assistant_text_message(
@@ -635,10 +595,9 @@ class ChatSessionHandlers:
                     role=MessageRole.assistant,
                     content_type=MessageContentType.text,
                 ),
-                flush_db=False,
             )
 
-            return {"thread": updated_thread, "message": MessageResponse.from_message(message)}
+            return {"thread": updated_thread, "message": ApiMessage.from_message(message)}
 
         except Exception as e:
             logger.error(

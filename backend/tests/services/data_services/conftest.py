@@ -1,9 +1,14 @@
-import pytest
+from typing import AsyncGenerator
 import pytest_asyncio
 
 from fakeredis.aioredis import FakeRedis
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    AsyncEngine,
+    create_async_engine,
+    async_sessionmaker,
+)
 
 from database.schema import Base
 
@@ -11,7 +16,7 @@ DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_engine():
+async def async_engine() -> AsyncGenerator[AsyncEngine, None]:
     engine = create_async_engine(DATABASE_URL, echo=False, future=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -20,16 +25,15 @@ async def async_engine():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def async_session(async_engine):
-    async_session = async_sessionmaker(
-        async_engine, class_=AsyncSession, expire_on_commit=False
-    )
+async def async_session(async_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    async_session = async_sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
     async with async_session() as session:
         yield session
         await session.rollback()
 
 
 @pytest_asyncio.fixture(scope="function")
-async def redis_client() -> FakeRedis:
+async def redis_client() -> AsyncGenerator[FakeRedis, None]:
     redis = await FakeRedis()
-    return redis
+    yield redis
+    await redis.flushall()

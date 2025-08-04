@@ -1,12 +1,16 @@
-from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+
 import pytest
-import pytest_asyncio
 from unittest.mock import AsyncMock, patch
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from services.chat_services.chat_session_store import ChatSessionStore
+from services.chat_services.chat_session_handlers import ChatSessionHandlers
 
 from schemas.conversation_stream_events import (
     TextMessageCompletedPayload,
-    TextMessageStartedPayload, 
+    TextMessageStartedPayload,
     ConversationStreamMetadata,
     TextMessageChunkGeneratedPayload,
     AIAgentErrorPayload,
@@ -19,20 +23,18 @@ from schemas.conversation_stream_events import (
     ThreadTitleUpdatedPayload,
     UserMessageRejectedPayload,
 )
-
-from services.chat_services.chat_session_store import ChatSessionStore
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from services.chat_services.chat_session_handlers import ChatSessionHandlers
-
 from schemas.messages import (
     Message,
-    MessageResponse,
+    Message,
     CreateAssistantTextMessageParams,
     CreateAssistantRecipeMessageParams,
     CreateAssistantToolMessageParams,
+    ApiMessage,
     UpdateMessageParams,
-    UpdateMessageAIModelOrToolUsageParams,
+    UpdateMessageTextContentParams,
+    UpdateMessageInputTokensParams,
+    UpdateMessageOutputTokensParams,
+    UpdateStrategy,
 )
 from schemas.threads import (
     Thread,
@@ -43,8 +45,6 @@ from schemas.recipes import (
     UserRecipe,
     RecipeField,
     RecipeIngredient,
-    UpdateRecipeParams,
-    UpdateRecipeFieldParams,
 )
 from schemas.user_access import UserAccess
 from schemas.message_role import MessageRole
@@ -55,58 +55,54 @@ from utils.date_utils import to_utc_isostring
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
+
 @pytest.fixture
-def mock_async_session():
+def mock_async_session() -> AsyncSession:
     async_session = AsyncMock(spec=AsyncSession)
     return async_session
 
 
-@pytest_asyncio.fixture
-async def mock_db_transaction_maker(mock_async_session):
-    db_transaction = mock_async_session
-    
-    @asynccontextmanager
-    async def transaction():
-        yield db_transaction
-        
-    return transaction
-
-
-@pytest_asyncio.fixture
-def mock_chat_session_store():
+@pytest.fixture
+def mock_chat_session_store() -> ChatSessionStore:
     chat_session_store = AsyncMock(spec=ChatSessionStore)
     return chat_session_store
 
 
 @pytest.fixture
-def chat_session_handlers(mock_db_transaction_maker, mock_chat_session_store):
+def chat_session_handlers(
+    mock_chat_session_store: ChatSessionStore,
+) -> ChatSessionHandlers:
     return ChatSessionHandlers(
-        db_transaction_maker=mock_db_transaction_maker,
         chat_session_store=mock_chat_session_store,
     )
-    
-    
+
+
 @pytest.fixture
-def sample_user_access():
+def sample_user_access() -> UserAccess:
     return UserAccess(
-        user_id="123",
-        access_token="123",
-        is_authenticated=False,
-        user_message_count=1
+        user_id="123", access_token="123", is_authenticated=False, user_message_count=1
     )
-    
-    
+
+
 @pytest.fixture
-def sample_user_message_id():
+def sample_user_message_id() -> str:
     return "123"
-    
+
+
 class TestAssistantStartedResponding:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access, sample_user_message_id):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+        sample_user_message_id: str,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
@@ -115,7 +111,7 @@ class TestAssistantStartedResponding:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = MessageResponse(
+        expected_message = ApiMessage(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
             thread_id=thread_id,
@@ -123,21 +119,22 @@ class TestAssistantStartedResponding:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
             role=MessageRole.assistant,
-            content_type=MessageContentType.text
+            content_type=MessageContentType.text,
         )
-        
+
         mock_chat_session_store.update_thread.return_value = expected_thread
         mock_chat_session_store.create_assistant_text_message.return_value = expected_message
-        
+
         result = await chat_session_handlers.handle_text_message_started(
+            db=mock_async_session,
+            payload=TextMessageStartedPayload(),
             user_access=sample_user_access,
             thread_id=thread_id,
             assistant_message_id=assistant_message_id,
             user_message_id=sample_user_message_id,
-            payload=TextMessageStartedPayload(),
             timestamp=timestamp,
         )
-        
+
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
             sample_user_access,
@@ -147,7 +144,6 @@ class TestAssistantStartedResponding:
                 error_message=None,
                 is_empty=False,
             ),
-            flush_db=False,
         )
         mock_chat_session_store.create_assistant_text_message.assert_called_once_with(
             mock_async_session,
@@ -163,42 +159,35 @@ class TestAssistantStartedResponding:
                 role=MessageRole.assistant,
                 content_type=MessageContentType.text,
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,
-            "message": expected_message,
-        })
-        
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+                "message": expected_message,
+            },
+        )
+
     @pytest.mark.asyncio
-    async def test_no_db_transaction(self, chat_session_handlers, sample_user_access, sample_user_message_id):
-        @asynccontextmanager
-        async def bad_transaction():
-            yield None
-            
-        chat_session_handlers.db_transaction_maker = bad_transaction
-        
-        with pytest.raises(ValueError):
-            await chat_session_handlers.handle_text_message_started(
-                user_access=sample_user_access,
-                thread_id="123",
-                assistant_message_id="123",
-                user_message_id=sample_user_message_id,
-                timestamp=datetime.now(timezone.utc),
-            )
-    
-    
-    @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access, sample_user_message_id):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+        sample_user_message_id: str,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
-        
+
         mock_chat_session_store.update_thread.side_effect = Exception("test error")
-        
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_text_message_started(
+                db=mock_async_session,
+                payload=TextMessageStartedPayload(),
                 user_access=sample_user_access,
                 thread_id=thread_id,
                 assistant_message_id=assistant_message_id,
@@ -209,7 +198,13 @@ class TestAssistantStartedResponding:
 
 class TestAssistantResponding:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         message_chunk = "test_chunk"
@@ -219,7 +214,7 @@ class TestAssistantResponding:
             output_tokens=20,
         )
         timestamp = datetime.now(timezone.utc)
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
@@ -228,7 +223,7 @@ class TestAssistantResponding:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        
+
         initial_message = Message(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
@@ -241,7 +236,7 @@ class TestAssistantResponding:
             input_tokens=0,
             output_tokens=0,
         )
-        expected_message = MessageResponse(
+        expected_message = ApiMessage(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
             thread_id=thread_id,
@@ -254,21 +249,22 @@ class TestAssistantResponding:
             input_tokens=metadata.input_tokens,
             output_tokens=metadata.output_tokens,
         )
-        
-        mock_chat_session_store.update_message_ai_model_or_tool_usage.return_value = expected_message
+
+        mock_chat_session_store.update_message.return_value = expected_message
         mock_chat_session_store.update_thread.return_value = expected_thread
-        
+
         result = await chat_session_handlers.handle_text_message_chunk_generated(
-            user_access=sample_user_access,
-            thread_id=thread_id,
-            assistant_message_id=assistant_message_id,
+            db=mock_async_session,
             payload=TextMessageChunkGeneratedPayload(
                 message_chunk=message_chunk,
                 metadata=metadata,
             ),
             timestamp=timestamp,
+            assistant_message_id=assistant_message_id,
+            thread_id=thread_id,
+            user_access=sample_user_access,
         )
-        
+
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
             sample_user_access,
@@ -278,30 +274,43 @@ class TestAssistantResponding:
                 error_message=None,
                 is_empty=False,
             ),
-            flush_db=False,
         )
-        mock_chat_session_store.update_message_ai_model_or_tool_usage.assert_called_once_with(
+        mock_chat_session_store.update_message.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
-            UpdateMessageAIModelOrToolUsageParams(
+            UpdateMessageParams(
                 id=assistant_message_id,
                 updated_at=timestamp,
-                text_chunk=message_chunk,
+                text_content_update=UpdateMessageTextContentParams(
+                    text_content=message_chunk, strategy=UpdateStrategy.APPEND
+                ),
                 model_name=metadata.model_name,
-                input_tokens=metadata.input_tokens,
-                output_tokens=metadata.output_tokens,
+                input_tokens_update=UpdateMessageInputTokensParams(
+                    input_tokens=metadata.input_tokens, strategy=UpdateStrategy.APPEND
+                ),
+                output_tokens_update=UpdateMessageOutputTokensParams(
+                    output_tokens=metadata.output_tokens, strategy=UpdateStrategy.APPEND
+                ),
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,
-            "message": expected_message,
-        })
-        
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+                "message": expected_message,
+            },
+        )
+
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         message_chunk = "test_chunk"
@@ -311,30 +320,37 @@ class TestAssistantResponding:
             output_tokens=20,
         )
         timestamp = datetime.now(timezone.utc)
-        
+
         mock_chat_session_store.update_thread.side_effect = Exception("test error")
-        
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_text_message_chunk_generated(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
                 assistant_message_id=assistant_message_id,
+                timestamp=timestamp,
                 payload=TextMessageChunkGeneratedPayload(
                     message_chunk=message_chunk,
                     metadata=metadata,
                 ),
-                timestamp=timestamp,
             )
 
 
 class TestAssistantFinishedResponding:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         full_message = "This is the complete response"
         timestamp = datetime.now(timezone.utc)
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
@@ -343,7 +359,7 @@ class TestAssistantFinishedResponding:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = MessageResponse(
+        expected_message = ApiMessage(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
             thread_id=thread_id,
@@ -351,22 +367,23 @@ class TestAssistantFinishedResponding:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
             role=MessageRole.assistant,
-            content_type=MessageContentType.text
+            content_type=MessageContentType.text,
         )
-        
+
         mock_chat_session_store.update_thread.return_value = expected_thread
         mock_chat_session_store.update_message.return_value = expected_message
-        
+
         result = await chat_session_handlers.handle_text_message_completed(
+            db=mock_async_session,
             user_access=sample_user_access,
             thread_id=thread_id,
+            timestamp=timestamp,
             assistant_message_id=assistant_message_id,
             payload=TextMessageCompletedPayload(
                 full_message=full_message,
             ),
-            timestamp=timestamp,
         )
-        
+
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
             sample_user_access,
@@ -376,7 +393,6 @@ class TestAssistantFinishedResponding:
                 error_message=None,
                 is_empty=False,
             ),
-            flush_db=False,
         )
         mock_chat_session_store.update_message.assert_called_once_with(
             mock_async_session,
@@ -385,50 +401,68 @@ class TestAssistantFinishedResponding:
             UpdateMessageParams(
                 id=assistant_message_id,
                 updated_at=timestamp,
-                text_content=full_message,
+                text_content_update=UpdateMessageTextContentParams(
+                    text_content=full_message, strategy=UpdateStrategy.REPLACE
+                ),
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,
-            "message": expected_message,
-        })
-        
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+                "message": expected_message,
+            },
+        )
+
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         full_message = "This is the complete response"
         timestamp = datetime.now(timezone.utc)
-        
+
         mock_chat_session_store.update_thread.side_effect = Exception("test error")
-        
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_text_message_completed(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
+                timestamp=timestamp,
                 assistant_message_id=assistant_message_id,
                 payload=TextMessageCompletedPayload(
                     full_message=full_message,
                 ),
-                timestamp=timestamp,
             )
 
 
 class TestRecipeGenerationStarted:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access, sample_user_message_id):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+        sample_user_message_id: str,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
-        
+
         recipe_tool_name = "recipe_tool"
         recipe_tool_input = {
             "idea": "recipe idea",
             "context": "recipe context",
         }
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
@@ -460,7 +494,7 @@ class TestRecipeGenerationStarted:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = MessageResponse(
+        expected_message = ApiMessage(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
             thread_id=thread_id,
@@ -473,26 +507,27 @@ class TestRecipeGenerationStarted:
             tool_input=recipe_tool_input,
             parent_id=sample_user_message_id,
         )
-        
+
         mock_chat_session_store.create_recipe.return_value = expected_recipe
         mock_chat_session_store.update_thread.return_value = expected_thread
         mock_chat_session_store.create_assistant_recipe_message.return_value = expected_message
-        
+
         with patch("src.services.chat_services.chat_session_handlers.uuid.uuid4") as mock_uuid:
             mock_uuid.return_value = "recipe_123"
-            
+
             result = await chat_session_handlers.handle_recipe_generation_started(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
+                timestamp=timestamp,
                 assistant_message_id=assistant_message_id,
                 user_message_id=sample_user_message_id,
                 payload=RecipeGenerationStartedPayload(
                     tool_name=recipe_tool_name,
                     tool_input=recipe_tool_input,
                 ),
-                timestamp=timestamp,
             )
-            
+
             mock_chat_session_store.create_recipe.assert_called_once()
             mock_chat_session_store.update_thread.assert_called_once_with(
                 mock_async_session,
@@ -503,7 +538,6 @@ class TestRecipeGenerationStarted:
                     error_message=None,
                     is_empty=False,
                 ),
-                flush_db=False,
             )
             mock_chat_session_store.create_assistant_recipe_message.assert_called_once_with(
                 mock_async_session,
@@ -522,51 +556,67 @@ class TestRecipeGenerationStarted:
                     role=MessageRole.assistant,
                     content_type=MessageContentType.recipe,
                 ),
-                flush_db=False,
             )
-            
-            assert_deep_equal(result, {
-                "thread": expected_thread,
-                "message": expected_message,
-                "recipe": expected_recipe,
-            })
-        
+
+            assert_deep_equal(
+                result,
+                {
+                    "thread": expected_thread,
+                    "message": expected_message,
+                    "recipe": expected_recipe,
+                },
+            )
+
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access, sample_user_message_id):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+        sample_user_message_id: str,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
-        
+
         recipe_tool_name = "recipe_tool"
         recipe_tool_input = {
             "idea": "recipe idea",
             "context": "recipe context",
         }
-        
+
         mock_chat_session_store.create_recipe.side_effect = Exception("test error")
-        
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_recipe_generation_started(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
+                timestamp=timestamp,
                 assistant_message_id=assistant_message_id,
                 user_message_id=sample_user_message_id,
                 payload=RecipeGenerationStartedPayload(
                     tool_name=recipe_tool_name,
                     tool_input=recipe_tool_input,
                 ),
-                timestamp=timestamp,
             )
 
 
 class TestRecipeFieldDetected:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
         field = RecipeField(name="name", value="Test Recipe")
-        
+
         expected_recipe = UserRecipe(
             id="recipe_123",
             user_id=sample_user_access.user_id,
@@ -590,55 +640,73 @@ class TestRecipeFieldDetected:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        
-        mock_chat_session_store.update_recipe_field_by_message_id.return_value = expected_recipe
-        
+
+        mock_chat_session_store.update_message_recipe_field.return_value = expected_recipe
+
         result = await chat_session_handlers.handle_recipe_field_detected(
+            db=mock_async_session,
             user_access=sample_user_access,
             thread_id=thread_id,
+            timestamp=timestamp,
             assistant_message_id=assistant_message_id,
             payload=RecipeFieldDetectedPayload(
                 field=field,
             ),
-            timestamp=timestamp,
         )
-        
-        mock_chat_session_store.update_recipe_field_by_message_id.assert_called_once_with(
+
+        mock_chat_session_store.update_message_recipe_field.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
             assistant_message_id,
             field,
             timestamp,
-            flush_db=False,
         )
 
-        assert_deep_equal(result, {
-            "recipe": expected_recipe,
-        })
-        
+        assert_deep_equal(
+            result,
+            {
+                "recipe": expected_recipe,
+            },
+        )
+
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
         field = RecipeField(name="name", value="Test Recipe")
-        
-        mock_chat_session_store.get_message.side_effect = Exception("test error")
-        
+
+        mock_chat_session_store.update_message_recipe_field.side_effect = Exception("test error")
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_recipe_field_detected(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
-                assistant_message_id=assistant_message_id,
-                field=field,
                 timestamp=timestamp,
+                assistant_message_id=assistant_message_id,
+                payload=RecipeFieldDetectedPayload(
+                    field=field,
+                ),
             )
 
 
 class TestRecipeGenerationCompleted:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
@@ -652,14 +720,14 @@ class TestRecipeGenerationCompleted:
             cook_time_minutes=20,
             servings="4",
         )
-        
-        recipe_tool_output = { "recipe_xml": "test recipe xml" }
+
+        recipe_tool_output = {"recipe_xml": "test recipe xml"}
         recipe_tool_metadata = ConversationStreamMetadata(
             model_name="test_model",
             input_tokens=10,
             output_tokens=20,
         )
-        
+
         existing_message = Message(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
@@ -668,9 +736,9 @@ class TestRecipeGenerationCompleted:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
             role=MessageRole.assistant,
-            content_type=MessageContentType.recipe
+            content_type=MessageContentType.recipe,
         )
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
@@ -702,7 +770,7 @@ class TestRecipeGenerationCompleted:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        expected_message = MessageResponse(
+        expected_message = ApiMessage(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
             thread_id=thread_id,
@@ -716,31 +784,31 @@ class TestRecipeGenerationCompleted:
             input_tokens=recipe_tool_metadata.input_tokens,
             output_tokens=recipe_tool_metadata.output_tokens,
         )
-        
-        mock_chat_session_store.update_message_ai_model_or_tool_usage.return_value = expected_message
+
+        mock_chat_session_store.update_message.return_value = expected_message
         mock_chat_session_store.update_thread.return_value = expected_thread
-        mock_chat_session_store.update_recipe_by_message_id.return_value = expected_recipe
-        
+        mock_chat_session_store.update_message_recipe.return_value = expected_recipe
+
         result = await chat_session_handlers.handle_recipe_generation_completed(
+            db=mock_async_session,
             user_access=sample_user_access,
             thread_id=thread_id,
+            timestamp=timestamp,
             assistant_message_id=assistant_message_id,
             payload=RecipeGenerationCompletedPayload(
                 recipe=recipe,
                 tool_output=recipe_tool_output,
                 tool_metadata=recipe_tool_metadata,
             ),
-            timestamp=timestamp,
         )
-        
-        mock_chat_session_store.update_recipe_by_message_id.assert_called_once_with(
+
+        mock_chat_session_store.update_message_recipe.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
             assistant_message_id,
             recipe,
             timestamp,
-            flush_db=False,
         )
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
@@ -751,45 +819,58 @@ class TestRecipeGenerationCompleted:
                 error_message=None,
                 is_empty=False,
             ),
-            flush_db=False,
         )
-        mock_chat_session_store.update_message_ai_model_or_tool_usage.assert_called_once_with(
+        mock_chat_session_store.update_message.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
-            UpdateMessageAIModelOrToolUsageParams(
+            UpdateMessageParams(
                 id=assistant_message_id,
                 updated_at=timestamp,
                 is_recipe_generation_started=False,
                 is_recipe_generation_completed=True,
                 tool_output=recipe_tool_output,
                 model_name=recipe_tool_metadata.model_name,
-                input_tokens=recipe_tool_metadata.input_tokens,
-                output_tokens=recipe_tool_metadata.output_tokens,
+                input_tokens_update=UpdateMessageInputTokensParams(
+                    input_tokens=recipe_tool_metadata.input_tokens,
+                    strategy=UpdateStrategy.APPEND,
+                ),
+                output_tokens_update=UpdateMessageOutputTokensParams(
+                    output_tokens=recipe_tool_metadata.output_tokens,
+                    strategy=UpdateStrategy.APPEND,
+                ),
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,
-            "message": expected_message,
-            "recipe": expected_recipe,
-        })
-        
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+                "message": expected_message,
+                "recipe": expected_recipe,
+            },
+        )
+
     @pytest.mark.asyncio
-    async def test_message_without_recipe_id(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_message_without_recipe_id(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
         recipe = Recipe(name="Test Recipe")
-        
-        recipe_tool_output = { "recipe_xml": "test recipe xml" }
+
+        recipe_tool_output = {"recipe_xml": "test recipe xml"}
         recipe_tool_metadata = ConversationStreamMetadata(
             model_name="test_model",
             input_tokens=10,
             output_tokens=20,
         )
-        
+
         existing_message = Message(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
@@ -798,55 +879,81 @@ class TestRecipeGenerationCompleted:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
             role=MessageRole.assistant,
-            content_type=MessageContentType.recipe
+            content_type=MessageContentType.recipe,
         )
-        
+
         mock_chat_session_store.get_message.return_value = existing_message
-        
+
         with pytest.raises(ValueError):
             await chat_session_handlers.handle_recipe_generation_completed(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
+                timestamp=timestamp,
                 assistant_message_id=assistant_message_id,
                 payload=RecipeGenerationCompletedPayload(
                     recipe=recipe,
                     tool_output=recipe_tool_output,
                     tool_metadata=recipe_tool_metadata,
                 ),
-                timestamp=timestamp,
             )
-        
+
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
         recipe = Recipe(name="Test Recipe")
-        
-        mock_chat_session_store.get_message.side_effect = Exception("test error")
-        
+
+        recipe_tool_output = {"recipe_xml": "test recipe xml"}
+        recipe_tool_metadata = ConversationStreamMetadata(
+            model_name="test_model",
+            input_tokens=10,
+            output_tokens=20,
+        )
+
+        mock_chat_session_store.update_message_recipe.side_effect = Exception("test error")
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_recipe_generation_completed(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
-                assistant_message_id=assistant_message_id,
-                recipe=recipe,
                 timestamp=timestamp,
+                assistant_message_id=assistant_message_id,
+                payload=RecipeGenerationCompletedPayload(
+                    recipe=recipe,
+                    tool_output=recipe_tool_output,
+                    tool_metadata=recipe_tool_metadata,
+                ),
             )
 
 
 class TestSearchStarted:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access, sample_user_message_id):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+        sample_user_message_id: str,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
-        
+
         search_tool_name = "search_tool"
         search_tool_input = {
             "query": "test query",
         }
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
@@ -855,8 +962,8 @@ class TestSearchStarted:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        
-        expected_message = MessageResponse(
+
+        expected_message = ApiMessage(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
             thread_id=thread_id,
@@ -867,34 +974,34 @@ class TestSearchStarted:
             role=MessageRole.assistant,
             content_type=MessageContentType.tool,
         )
-        
+
         mock_chat_session_store.update_thread.return_value = expected_thread
         mock_chat_session_store.create_assistant_tool_message.return_value = expected_message
-        
+
         result = await chat_session_handlers.handle_search_started(
+            db=mock_async_session,
             user_access=sample_user_access,
             thread_id=thread_id,
+            timestamp=timestamp,
             assistant_message_id=assistant_message_id,
             user_message_id=sample_user_message_id,
             payload=SearchStartedPayload(
                 tool_name=search_tool_name,
                 tool_input=search_tool_input,
             ),
-            timestamp=timestamp,
         )
-        
-        mock_chat_session_store.update_thread.assert_called_once_with(  
+
+        mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             UpdateThreadParams(
                 id=thread_id,
                 updated_at=timestamp,
-                error_message=None, 
+                error_message=None,
                 is_empty=False,
             ),
-            flush_db=False,
         )
-        
+
         mock_chat_session_store.create_assistant_tool_message.assert_called_once_with(
             mock_async_session,
             sample_user_access,
@@ -910,55 +1017,71 @@ class TestSearchStarted:
                 role=MessageRole.assistant,
                 content_type=MessageContentType.tool,
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,  
-            "message": expected_message,
-        })
-        
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+                "message": expected_message,
+            },
+        )
+
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access, sample_user_message_id):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+        sample_user_message_id: str,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
-        
+
         search_tool_name = "search_tool"
         search_tool_input = {
             "query": "test query",
         }
-        
+
         mock_chat_session_store.update_thread.side_effect = Exception("test error")
-        
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_search_started(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
+                timestamp=timestamp,
                 assistant_message_id=assistant_message_id,
                 user_message_id=sample_user_message_id,
                 payload=SearchStartedPayload(
                     tool_name=search_tool_name,
                     tool_input=search_tool_input,
                 ),
-                timestamp=timestamp,
             )
-            
+
 
 class TestSearchCompleted:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
-        
-        search_tool_output = { "search_results": "test search results" }
+
+        search_tool_output = {"search_results": "test search results"}
         search_tool_metadata = ConversationStreamMetadata(
             model_name="test_model",
             input_tokens=10,
             output_tokens=20,
         )
-        
+
         existing_message = Message(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
@@ -968,7 +1091,7 @@ class TestSearchCompleted:
             role=MessageRole.assistant,
             content_type=MessageContentType.tool,
         )
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
@@ -977,8 +1100,8 @@ class TestSearchCompleted:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        
-        expected_message = MessageResponse(
+
+        expected_message = ApiMessage(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
             thread_id=thread_id,
@@ -991,21 +1114,22 @@ class TestSearchCompleted:
             input_tokens=search_tool_metadata.input_tokens,
             output_tokens=search_tool_metadata.output_tokens,
         )
-        
+
         mock_chat_session_store.update_thread.return_value = expected_thread
-        mock_chat_session_store.update_message_ai_model_or_tool_usage.return_value = expected_message
-        
+        mock_chat_session_store.update_message.return_value = expected_message
+
         result = await chat_session_handlers.handle_search_completed(
+            db=mock_async_session,
             user_access=sample_user_access,
-            thread_id=thread_id,    
+            thread_id=thread_id,
+            timestamp=timestamp,
             assistant_message_id=assistant_message_id,
             payload=SearchCompletedPayload(
                 tool_output=search_tool_output,
                 tool_metadata=search_tool_metadata,
             ),
-            timestamp=timestamp,
         )
-        
+
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
             sample_user_access,
@@ -1015,64 +1139,84 @@ class TestSearchCompleted:
                 error_message=None,
                 is_empty=False,
             ),
-            flush_db=False,
         )
-        
-        mock_chat_session_store.update_message_ai_model_or_tool_usage.assert_called_once_with(
+
+        mock_chat_session_store.update_message.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             thread_id,
-            UpdateMessageAIModelOrToolUsageParams(
+            UpdateMessageParams(
                 id=assistant_message_id,
                 updated_at=timestamp,
                 tool_output=search_tool_output,
                 model_name=search_tool_metadata.model_name,
-                input_tokens=search_tool_metadata.input_tokens,
-                output_tokens=search_tool_metadata.output_tokens,
+                input_tokens_update=UpdateMessageInputTokensParams(
+                    input_tokens=search_tool_metadata.input_tokens,
+                    strategy=UpdateStrategy.APPEND,
+                ),
+                output_tokens_update=UpdateMessageOutputTokensParams(
+                    output_tokens=search_tool_metadata.output_tokens,
+                    strategy=UpdateStrategy.APPEND,
+                ),
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,
-            "message": expected_message,
-        })
-    
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+                "message": expected_message,
+            },
+        )
+
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
-        
-        search_tool_output = { "search_results": "test search results" }
+
+        search_tool_output = {"search_results": "test search results"}
         search_tool_metadata = ConversationStreamMetadata(
             model_name="test_model",
             input_tokens=10,
             output_tokens=20,
         )
-        
-        mock_chat_session_store.update_message_ai_model_or_tool_usage.side_effect = Exception("test error")
-        
+
+        mock_chat_session_store.update_message.side_effect = Exception("test error")
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_search_completed(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
+                timestamp=timestamp,
                 assistant_message_id=assistant_message_id,
-                payload=SearchCompletedPayload( 
+                payload=SearchCompletedPayload(
                     tool_output=search_tool_output,
                     tool_metadata=search_tool_metadata,
                 ),
-                timestamp=timestamp,
             )
 
 
 class TestAiAgentError:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         error_message = "An error occurred"
         timestamp = datetime.now(timezone.utc)
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
@@ -1081,18 +1225,19 @@ class TestAiAgentError:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        
+
         mock_chat_session_store.update_thread.return_value = expected_thread
-        
+
         result = await chat_session_handlers.handle_ai_agent_error(
+            db=mock_async_session,
             user_access=sample_user_access,
             thread_id=thread_id,
+            timestamp=timestamp,
             payload=AIAgentErrorPayload(
                 error_message=error_message,
             ),
-            timestamp=timestamp,
         )
-        
+
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
             sample_user_access,
@@ -1102,42 +1247,57 @@ class TestAiAgentError:
                 error_message=error_message,
                 is_empty=False,
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,
-            "error_message": error_message,
-        })
-        
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+                "error_message": error_message,
+            },
+        )
+
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         error_message = "An error occurred"
         timestamp = datetime.now(timezone.utc)
-        
+
         mock_chat_session_store.update_thread.side_effect = Exception("test error")
-        
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_ai_agent_error(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
+                timestamp=timestamp,
                 payload=AIAgentErrorPayload(
                     error_message=error_message,
                 ),
-                timestamp=timestamp,
             )
-            
+
 
 class TestSummaryUpdated:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         summary = "This is a test summary"
         timestamp = datetime.now(timezone.utc)
-        
+
         expected_thread = Thread(
-            id=thread_id,   
+            id=thread_id,
             user_id=sample_user_access.user_id,
             error_message=None,
             is_empty=False,
@@ -1145,18 +1305,19 @@ class TestSummaryUpdated:
             updated_at=to_utc_isostring(timestamp),
             summary=summary,
         )
-        
+
         mock_chat_session_store.update_thread.return_value = expected_thread
-        
+
         result = await chat_session_handlers.handle_summary_updated(
+            db=mock_async_session,
             user_access=sample_user_access,
             thread_id=thread_id,
+            timestamp=timestamp,
             payload=SummaryUpdatedPayload(
                 summary=summary,
             ),
-            timestamp=timestamp,
-        )           
-        
+        )
+
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
             sample_user_access,
@@ -1167,60 +1328,76 @@ class TestSummaryUpdated:
                 is_empty=False,
                 summary=summary,
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,
-        })
-        
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+            },
+        )
+
     @pytest.mark.asyncio
-    async def test_error(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_error(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         summary = "This is a test summary"
         timestamp = datetime.now(timezone.utc)
-        
+
         mock_chat_session_store.update_thread.side_effect = Exception("test error")
-        
+
         with pytest.raises(Exception):
             await chat_session_handlers.handle_summary_updated(
+                db=mock_async_session,
                 user_access=sample_user_access,
                 thread_id=thread_id,
+                timestamp=timestamp,
                 payload=SummaryUpdatedPayload(
                     summary=summary,
                 ),
-                timestamp=timestamp,
             )
-            
+
 
 class TestThreadTitleUpdated:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+    ) -> None:
         thread_id = "123"
         thread_title = "This is a test title"
         timestamp = datetime.now(timezone.utc)
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
             error_message=None,
             is_empty=False,
             created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),     
+            updated_at=to_utc_isostring(timestamp),
             title=thread_title,
         )
-        
+
         mock_chat_session_store.update_thread.return_value = expected_thread
-        
+
         result = await chat_session_handlers.handle_thread_title_updated(
+            db=mock_async_session,
             user_access=sample_user_access,
             thread_id=thread_id,
-            payload=ThreadTitleUpdatedPayload(      
+            timestamp=timestamp,
+            payload=ThreadTitleUpdatedPayload(
                 thread_title=thread_title,
             ),
-            timestamp=timestamp,
         )
-        
+
         mock_chat_session_store.update_thread.assert_called_once_with(
             mock_async_session,
             sample_user_access,
@@ -1231,23 +1408,32 @@ class TestThreadTitleUpdated:
                 is_empty=False,
                 title=thread_title,
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,
-        })
-        
-        
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+            },
+        )
+
+
 class TestUserMessageRejected:
     @pytest.mark.asyncio
-    async def test_success(self, chat_session_handlers, mock_chat_session_store, mock_async_session, sample_user_access, sample_user_message_id):
+    async def test_success(
+        self,
+        chat_session_handlers: ChatSessionHandlers,
+        mock_chat_session_store: ChatSessionStore,
+        mock_async_session: AsyncSession,
+        sample_user_access: UserAccess,
+        sample_user_message_id: str,
+    ) -> None:
         thread_id = "123"
         assistant_message_id = "123"
         timestamp = datetime.now(timezone.utc)
-        
+
         rejection_message = "This is a test rejection message"
-        
+
         expected_thread = Thread(
             id=thread_id,
             user_id=sample_user_access.user_id,
@@ -1256,8 +1442,8 @@ class TestUserMessageRejected:
             created_at=to_utc_isostring(timestamp),
             updated_at=to_utc_isostring(timestamp),
         )
-        
-        expected_message = MessageResponse(
+
+        expected_message = ApiMessage(
             id=assistant_message_id,
             user_id=sample_user_access.user_id,
             thread_id=thread_id,
@@ -1268,23 +1454,24 @@ class TestUserMessageRejected:
             content_type=MessageContentType.text,
             parent_id=sample_user_message_id,
         )
-        
+
         mock_chat_session_store.update_thread.return_value = expected_thread
         mock_chat_session_store.create_assistant_text_message.return_value = expected_message
-        
+
         result = await chat_session_handlers.handle_user_message_rejected(
+            db=mock_async_session,
             user_access=sample_user_access,
             thread_id=thread_id,
+            timestamp=timestamp,
             assistant_message_id=assistant_message_id,
+            user_message_id=sample_user_message_id,
             payload=UserMessageRejectedPayload(
                 rejection_message=rejection_message,
             ),
-            timestamp=timestamp,
-            user_message_id=sample_user_message_id,
         )
-        
+
         mock_chat_session_store.update_thread.assert_called_once_with(
-            mock_async_session, 
+            mock_async_session,
             sample_user_access,
             UpdateThreadParams(
                 id=thread_id,
@@ -1292,10 +1479,9 @@ class TestUserMessageRejected:
                 error_message=None,
                 is_empty=False,
             ),
-            flush_db=False,
         )
-        
-        mock_chat_session_store.create_assistant_text_message.assert_called_once_with(      
+
+        mock_chat_session_store.create_assistant_text_message.assert_called_once_with(
             mock_async_session,
             sample_user_access,
             CreateAssistantTextMessageParams(
@@ -1305,14 +1491,16 @@ class TestUserMessageRejected:
                 text_content=rejection_message,
                 created_at=timestamp,
                 updated_at=timestamp,
-                parent_id=sample_user_message_id,   
+                parent_id=sample_user_message_id,
                 role=MessageRole.assistant,
                 content_type=MessageContentType.text,
             ),
-            flush_db=False,
         )
-        
-        assert_deep_equal(result, {
-            "thread": expected_thread,
-            "message": expected_message,
-        })
+
+        assert_deep_equal(
+            result,
+            {
+                "thread": expected_thread,
+                "message": expected_message,
+            },
+        )

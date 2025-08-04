@@ -307,7 +307,6 @@ async def service_container(db_transaction_maker, redis_client, test_settings: S
         unauthenticated_user_message_limit=test_settings.unauthenticated_user_message_limit
     )
     chat_session_handlers = ChatSessionHandlers(
-        db_transaction_maker=db_transaction_maker,
         chat_session_store=chat_session_store
     )
     chat_session_orchestrator = ChatSessionOrchestrator(

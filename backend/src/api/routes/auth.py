@@ -11,12 +11,19 @@ from api.deps import (
     get_service_container,
     get_settings,
 )
+
 from config.settings import Settings
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from jose import JWTError, jwt
 from jose.jwk import construct as jwk_construct
-from schemas.users import CreateUserParams, UpdateUserParams
+
 from services.service_container import ServiceContainer
+
+from schemas.messages import CountMessagesParams
+from schemas.message_role import MessageRole
+from schemas.users import CreateUserParams, UpdateUserParams
+
 from utils.date_utils import to_utc_isostring
 from utils.logger import Logger
 
@@ -114,17 +121,17 @@ async def verify(
                             last_signed_in_at=timestamp,
                             email=email,
                             name=name
-                        ), flush_db=False)
+                        ))
                     else:
-                        user = await service_container.user_service.update_user(db, user.id, UpdateUserParams(
+                        user = await service_container.user_service.update_user(db, UpdateUserParams(
                             id=user.id,
                             external_id=supabase_user_id, # even if external_id is the Auth0 ID, we need to update the user with the Supabase ID
                             updated_at=timestamp,
                             last_signed_in_at=timestamp,
                             email=email,
                             name=name
-                        ), flush_db=False)
-                        current_message_count = await service_container.message_service.count_total_messages_sent_by_user(db, user.id)
+                        ))
+                        current_message_count = await service_container.message_service.count_messages(db, CountMessagesParams(user_id=user.id, role=MessageRole.user))
                 
                 except Exception as e:
                     logger.error(f"Error verifying Supabase token: {e}")

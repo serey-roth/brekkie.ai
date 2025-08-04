@@ -1,8 +1,9 @@
 import types
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 
-def _assert_deep_equal(actual, expected, path=""):
+def _assert_deep_equal(actual: Any, expected: Any, path: str = "") -> None:
     """
     Comprehensive deep equality assertion that compares values recursively.
     
@@ -126,7 +127,7 @@ def _assert_deep_equal(actual, expected, path=""):
         raise AssertionError(f"At {path}: Expected {expected!r}, but got {actual!r}")
 
 
-def assert_deep_equal(actual, expected):
+def assert_deep_equal(actual: Any, expected: Any) -> None:
     """
     Simple wrapper for deep equality assertion.
     

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Awaitable, Callable, TypedDict
+from typing import Awaitable, Callable, TypedDict, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +38,7 @@ class ChatSessionMessageProcessor:
         self.chat_session_handlers = chat_session_handlers
         self.on_message_processed = on_message_processed
 
-        self.assistant_message_id = None
+        self.assistant_message_id: str | None = None
 
         self._event_handlers: dict[
             ConversationStreamEventName, Callable[..., Awaitable[ChatSessionHandlersResult]]
@@ -150,7 +150,7 @@ class ChatSessionMessageProcessor:
         thread_id: str,
         user_message_id: str,
         event: ConversationStreamEvent,
-    ):
+    ) -> None:
         if self._should_create_assistant_message(event):
             self.assistant_message_id = str(uuid.uuid4())
 
@@ -187,13 +187,13 @@ class ChatSessionMessageProcessor:
         thread_id: str,
         user_message_id: str,
         user_input: str,
-    ):
+    ) -> None:
         try:
             logger.debug(
                 f"Processing chat message from user {user_access.user_id}: {user_input[:50]}..."
             )
 
-            async def on_event(event: ConversationStreamEvent):
+            async def on_event(event: ConversationStreamEvent) -> None:
                 await self._handle_event(db, user_access, thread_id, user_message_id, event)
 
             await self.ai_food_agent.stream_conversation(
@@ -222,7 +222,7 @@ class ChatSessionMessageProcessor:
         thread_id: str,
         user_message_id: str,
         rejection_message: str,
-    ):
+    ) -> None:
         await self._handle_event(
             db=db,
             user_access=user_access,

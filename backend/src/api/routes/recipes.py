@@ -33,4 +33,4 @@ async def get_user_recipes(
             return await recipe_service.get_user_recipes(db, user_access.user_id)
     else:
         recipe_cache_service = service_container.recipe_cache_service
-        return await recipe_cache_service.get_recipes_by_user_id(user_access.user_id)
+        return await recipe_cache_service.get_user_recipes(user_access.user_id)

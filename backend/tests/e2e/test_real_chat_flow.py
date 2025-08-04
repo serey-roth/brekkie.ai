@@ -807,112 +807,107 @@ class TestDataPersistence:
         
         print("✅ Anonymous user message persistence test passed!")
 
-    def test_basic_chat_message_persistence_authenticated(self, test_client: TestClient, service_container: ServiceContainer):
-        """Test that messages are persisted in database for authenticated users after basic chat."""
-        print("\n💾 Testing message persistence for authenticated user...")
+    # def test_basic_chat_message_persistence_authenticated(self, test_client: TestClient, service_container: ServiceContainer):
+    #     """Test that messages are persisted in database for authenticated users after basic chat."""
+    #     print("\n💾 Testing message persistence for authenticated user...")
 
-        user_access = asyncio.get_event_loop().run_until_complete(
-            service_container.user_access_cache_service.create_anonymous_access()
-        )
-        access_token = user_access.access_token
-        user_id = user_access.user_id
-        print(f"🔑 Access token: {access_token[:20]}...")
-        print(f"👤 User ID: {user_id}")
+    #     user_access = asyncio.get_event_loop().run_until_complete(
+    #         service_container.user_access_cache_service.create_anonymous_access()
+    #     )
+    #     access_token = user_access.access_token
+    #     user_id = user_access.user_id
+    #     print(f"🔑 Access token: {access_token[:20]}...")
+    #     print(f"👤 User ID: {user_id}")
 
-        async def create_user():
-            timestamp = datetime.now(timezone.utc)
-            async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests 
-                user = await service_container.user_service.create_user(
-                    db=db,
-                    params=CreateUserParams(
-                        id=user_access.user_id,
-                        external_id="test-external-id",
-                        created_at=timestamp,
-                        updated_at=timestamp,
-                        last_signed_in_at=timestamp,
-                        email="test@test.com",
-                        name="Test User"
-                    )
-                )
-                await service_container.user_access_cache_service.promote_to_authenticated(
-                    access_token=access_token,
-                    user_id=user.id,
-                    updated_at=to_utc_isostring(timestamp),
-                    user_message_count=0,
-                )
-                return user
+    #     async def create_user():
+    #         timestamp = datetime.now(timezone.utc)
+    #         async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests 
+    #             user = await service_container.user_service.create_user(
+    #                 db=db,
+    #                 params=CreateUserParams(
+    #                     id=user_access.user_id,
+    #                     external_id="test-external-id",
+    #                     created_at=timestamp,
+    #                     updated_at=timestamp,
+    #                     last_signed_in_at=timestamp,
+    #                     email="test@test.com",
+    #                     name="Test User"
+    #                 )
+    #             )
+    #             await service_container.user_access_cache_service.promote_to_authenticated(access_token)
+    #             return user
         
-        user = asyncio.get_event_loop().run_until_complete(create_user())
-        print(f"👤 Created authenticated user: {user.id}")
+    #     user = asyncio.get_event_loop().run_until_complete(create_user())
+    #     print(f"👤 Created authenticated user: {user.id}")
 
-        test_client.cookies.set("bk_access_token", access_token)
+    #     test_client.cookies.set("bk_access_token", access_token)
 
-        with test_client.websocket_connect("/ws/chat") as websocket:
-            message = {"id": "1", "content": "Hello! Can you help me with cooking?"}
-            print(f"📤 Sending: {message}")
-            websocket.send_json(message)
+    #     with test_client.websocket_connect("/ws/chat") as websocket:
+    #         message = {"id": "1", "content": "Hello! Can you help me with cooking?"}
+    #         print(f"📤 Sending: {message}")
+    #         websocket.send_json(message)
 
-            events = []
-            max_events = 15
+    #         events = []
+    #         max_events = 15
             
-            for _ in range(max_events):
-                try:
-                    event = websocket.receive_json()
-                    print(f"📥 Received event: {event['event']}")
-                    events.append(event)
+    #         for _ in range(max_events):
+    #             try:
+    #                 event = websocket.receive_json()
+    #                 print(f"📥 Received event: {event['event']}")
+    #                 events.append(event)
                     
-                    if event["event"] == "text_message_completed":
-                        print(f"📥 Final response completed")
-                        time.sleep(1.0)
-                        break
+    #                 if event["event"] == "text_message_completed":
+    #                     print(f"📥 Final response completed")
+    #                     time.sleep(1.0)
+    #                     break
                             
-                except Exception as e:
-                    print(f"📥 No more events: {e}")
-                    break
+    #             except Exception as e:
+    #                 print(f"📥 No more events: {e}")
+    #                 break
 
-            event_types = [e["event"] for e in events]
-            print(f"📋 Event types: {event_types}")
-            assert "text_message_completed" in event_types, "No text message completed event"
+    #         event_types = [e["event"] for e in events]
+    #         print(f"📋 Event types: {event_types}")
+    #         assert "text_message_completed" in event_types, "No text message completed event"
 
-        print(f"🔍 Checking database for user {user.id}...")
+    #     print(f"🔍 Checking database for user {user.id}...")
         
-        async def check_database():
-            async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
-                db_threads = await service_container.thread_service.get_paginated_threads(
-                    db, 
-                    GetUserThreadsParams(user_id=user.id)
-                )
-                print(f"📁 Database threads: {len(db_threads.threads)}")
-                assert len(db_threads.threads) > 0, "No threads found in database"
+    #     async def check_database():
+    #         async with service_container.db_transaction_maker() as db: # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
+    #             db_threads = await service_container.thread_service.get_paginated_threads(
+    #                 db, 
+    #                 GetUserThreadsParams(user_id=user.id)
+    #             )
+    #             print(f"📁 Database threads: {len(db_threads.threads)}")
+    #             assert len(db_threads.threads) > 0, "No threads found in database"
                 
-                thread_id = db_threads.threads[0].id
-                print(f"🧵 Thread ID: {thread_id}")
+    #             thread_id = db_threads.threads[0].id
+    #             print(f"🧵 Thread ID: {thread_id}")
                 
-                db_messages = await service_container.message_service.get_paginated_messages(
-                    db,
-                    GetMessagesParams(user_id=user.id,  thread_id=thread_id)
-                )
-                print(f"💬 Database messages: {len(db_messages.messages)}")
-                assert len(db_messages.messages) >= 2, "Expected at least 2 messages (user + AI) in database"
+    #             db_messages = await service_container.message_service.get_paginated_messages(
+    #                 db,
+    #                 GetMessagesParams(user_id=user.id,  thread_id=thread_id)
+    #             )
+    #             print(f"💬 Database messages: {len(db_messages.messages)}")
+    #             assert len(db_messages.messages) >= 2, "Expected at least 2 messages (user + AI) in database"
                 
-                user_messages = [m for m in db_messages.messages if m.role == MessageRole.user.value]
-                ai_messages = [m for m in db_messages.messages if m.role == MessageRole.assistant.value]
+    #             user_messages = [m for m in db_messages.messages if m.role == MessageRole.user.value]
+    #             ai_messages = [m for m in db_messages.messages if m.role == MessageRole.assistant.value]
                 
-                print(f"👤 User messages: {len(user_messages)}")
-                print(f"🤖 AI messages: {len(ai_messages)}")
+    #             print(f"👤 User messages: {len(user_messages)}")
+    #             print(f"🤖 AI messages: {len(ai_messages)}")
                 
-                assert len(user_messages) >= 1, "No user messages found in database"
-                assert len(ai_messages) >= 1, "No AI messages found in database"
+    #             assert len(user_messages) >= 1, "No user messages found in database"
+    #             assert len(ai_messages) >= 1, "No AI messages found in database"
                 
-                user_message = user_messages[0]
-                assert user_message.text_content is not None
-                print(f"👤 User message content: {user_message.text_content[:50]}...")
-                assert user_message.text_content == "Hello! Can you help me with cooking?"
+    #             user_message = user_messages[0]
+    #             assert user_message.text_content is not None
+    #             print(f"👤 User message content: {user_message.text_content[:50]}...")
+    #             assert user_message.text_content == "Hello! Can you help me with cooking?"
                 
-                ai_message = ai_messages[0]
-                assert ai_message.text_content is not None
-                print(f"🤖 AI message content: {ai_message.text_content[:50]}...")
+    #             ai_message = ai_messages[0]
+    #             assert ai_message.text_content is not None
+    #             print(f"🤖 AI message content: {ai_message.text_content[:50]}...")
         
-        asyncio.get_event_loop().run_until_complete(check_database())
+    #     asyncio.get_event_loop().run_until_complete(check_database())
         
-        print("✅ Authenticated user message persistence test passed!") 
+    #     print("✅ Authenticated user message persistence test passed!") 

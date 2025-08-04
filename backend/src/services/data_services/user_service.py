@@ -25,14 +25,16 @@ class UserService:
             external_id=str(user.external_id),
             created_at=to_utc_isostring(cast(datetime, user.created_at)),
             updated_at=to_utc_isostring(cast(datetime, user.updated_at)),
-            last_signed_in_at=to_utc_isostring(cast(datetime, user.last_signed_in_at)) if user.last_signed_in_at is not None else None,
+            last_signed_in_at=to_utc_isostring(cast(datetime, user.last_signed_in_at))
+            if user.last_signed_in_at is not None
+            else None,
             email=str(user.email) if user.email is not None else None,
-            name=str(user.name) if user.name is not None else None
+            name=str(user.name) if user.name is not None else None,
         )
 
-    async def create_user(self, db: AsyncSession, params: CreateUserParams, flush_db: bool = True) -> User:
+    async def create_user(self, db: AsyncSession, params: CreateUserParams) -> User:
         logger.debug(f"Creating user with external_id: {params.external_id}")
-        user = await self.repository.create_user(db, params, flush_db)
+        user = await self.repository.create_user(db, params)
         return self._to_user_dto(user)
 
     async def get_user_by_id(self, db: AsyncSession, user_id: str) -> User | None:
@@ -49,13 +51,15 @@ class UserService:
         logger.debug(f"Getting user by email: {email}")
         user = await self.repository.get_user_by_email(db, email)
         return self._to_user_dto(user) if user else None
-    
-    async def get_user_by_external_id_or_email(self, db: AsyncSession, external_id: str, email: str | None) -> User | None:
+
+    async def get_user_by_external_id_or_email(
+        self, db: AsyncSession, external_id: str, email: str | None
+    ) -> User | None:
         logger.debug(f"Getting user by email or external_id: {email} or {external_id}")
         user = await self.repository.get_user_by_external_id_or_email(db, external_id, email)
         return self._to_user_dto(user) if user else None
 
-    async def update_user(self, db: AsyncSession, user_id: str, params: UpdateUserParams, flush_db: bool = True) -> User:
-        logger.debug(f"Updating user with id: {user_id}")
-        user = await self.repository.update_user(db, user_id, params, flush_db)
+    async def update_user(self, db: AsyncSession, params: UpdateUserParams) -> User:
+        logger.debug(f"Updating user with id: {params.id}")
+        user = await self.repository.update_user(db, params)
         return self._to_user_dto(user)

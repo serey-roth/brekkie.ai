@@ -254,7 +254,7 @@ class TestVerifyJWT:
             ))
         
         # Mock message count to return a specific value
-        with patch.object(service_container.message_service, 'count_total_messages_sent_by_user', return_value=5):
+        with patch.object(service_container.message_service, 'count_messages', return_value=5):
             headers = {
                 "fly-client-ip": sample_ip_address,
                 "Authorization": f"Bearer {sample_supabase_token}"

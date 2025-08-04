@@ -27,6 +27,12 @@ class ThreadCacheService:
     async def get_thread(self, user_id: str, thread_id: str) -> Thread | None:
         return await self.thread_cache.get_json(self._get_thread_key(user_id, thread_id), Thread)
 
+    async def get_threads(self, user_id: str) -> list[Thread]:
+        result = await self.thread_cache.get_all_json_by_pattern(
+            pattern=self._get_all_threads_key(user_id), model=Thread
+        )
+        return list(result)
+
     async def set_thread(
         self, thread: Thread, ttl: int | None = None, keep_ttl: bool = False
     ) -> None:
@@ -39,11 +45,6 @@ class ThreadCacheService:
             thread,
             ttl=set_ttl,
             keep_ttl=keep_ttl,
-        )
-
-    async def get_threads(self, user_id: str) -> list[Thread]:
-        return await self.thread_cache.get_all_json_by_pattern(
-            pattern=self._get_all_threads_key(user_id), model=Thread
         )
 
     async def create_thread(self, params: CreateThreadParams, ttl: int | None = None) -> Thread:
@@ -66,22 +67,26 @@ class ThreadCacheService:
         if thread is None:
             raise ValueError(f"Thread {params.id} not found for user {user_id}")
 
-        items_to_update = params.model_dump(exclude_none=True)
-        for key, value in items_to_update.items():
-            if key in ["resumed_at", "updated_at"] and isinstance(value, datetime):
-                items_to_update[key] = to_utc_isostring(value)
-            else:
-                items_to_update[key] = value
+        new_thread = thread.model_copy(deep=True)
+        new_thread.updated_at = to_utc_isostring(params.updated_at)
 
-        updated_thread = thread.model_copy(update=items_to_update, deep=True)
+        if params.resumed_at is not None:
+            new_thread.resumed_at = to_utc_isostring(params.resumed_at)
+
+        items_to_update = params.model_dump(
+            exclude={"id", "updated_at", "resumed_at"}, exclude_none=True, exclude_unset=True
+        )
+        for key, value in items_to_update.items():
+            if value is not None:
+                setattr(new_thread, key, value)
 
         previous_ttl = await self.thread_cache.get_ttl(self._get_thread_key(user_id, params.id))
         if previous_ttl is None or previous_ttl < 0:
-            await self.set_thread(updated_thread, ttl=self.ttl)
+            await self.set_thread(new_thread, ttl=self.ttl)
         else:
-            await self.set_thread(updated_thread, keep_ttl=True)
+            await self.set_thread(new_thread, keep_ttl=True)
 
-        return updated_thread
+        return new_thread
 
     async def is_thread_empty(self, user_id: str, thread_id: str) -> bool:
         thread = await self.get_thread(user_id, thread_id)
@@ -91,11 +96,7 @@ class ThreadCacheService:
         threads = await self.get_threads(user_id)
         return len(threads)
 
-    async def delete_threads_by_user_id(self, user_id: str) -> None:
-        await self.thread_cache.delete_by_pattern(pattern=self._get_all_threads_key(user_id))
-
     # TODO: Duplicate logic in message_cache_service.py. Extract sorting and filtering to a separate class?
-
     def _sort_threads(self, threads: list[Thread], sort_by: str, sort_order: str) -> list[Thread]:
         copied_threads = [t.model_copy(deep=True) for t in threads]
 

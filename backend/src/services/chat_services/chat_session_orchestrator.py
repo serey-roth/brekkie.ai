@@ -1,23 +1,12 @@
 import uuid
-from contextlib import _AsyncGeneratorContextManager
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
-from schemas.chat_session_errors import (
-    AccessTokenNotFoundError,
-    ChatSessionError,
-    InternalServerError,
-    OverMessageLimitError,
-    ThreadNotFoundError,
-)
-from schemas.messages import GetMessagesParams
-from schemas.threads import (
-    CreateThreadParams,
-    ResumeThreadParams,
-    Thread,
-)
-from schemas.user_access import UserAccess
+
+from database.index import DBTransactionMaker
+
 from services.ai_food_agent.ai_food_agent import AIFoodAgent
 from services.chat_services.chat_session_engine import ChatSessionEngine
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
@@ -26,7 +15,23 @@ from services.chat_services.chat_session_message_guard import ChatSessionMessage
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.data_services.user_access_cache_service import UserAccessCacheService
 from services.websocket_event_sender import WebSocketEventSender
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from schemas.chat_session_errors import (
+    AccessTokenNotFoundError,
+    ChatSessionError,
+    InternalServerError,
+    OverMessageLimitError,
+    ThreadNotFoundError,
+)
+
+from schemas.messages import GetMessagesParams
+from schemas.threads import (
+    CreateThreadParams,
+    ResumeThreadParams,
+    Thread,
+)
+from schemas.user_access import UserAccess
+
 from utils.logger import Logger
 
 logger = Logger("chat_session_maker")
@@ -36,7 +41,7 @@ class ChatSessionOrchestrator:
     def __init__(
         self,
         session_ttl: int,
-        db_transaction_maker: _AsyncGeneratorContextManager[AsyncSession],
+        db_transaction_maker: DBTransactionMaker,
         user_access_cache_service: UserAccessCacheService,
         ai_food_agent: AIFoodAgent,
         websocket_event_sender: WebSocketEventSender,
@@ -73,7 +78,9 @@ class ChatSessionOrchestrator:
             chat_session_message_guard=self.chat_session_message_guard,
         )
 
-    async def _handle_chat_session_error(self, websocket: WebSocket, error: ChatSessionError):
+    async def _handle_chat_session_error(
+        self, websocket: WebSocket, error: ChatSessionError
+    ) -> None:
         sent = await self.websocket_event_sender.send_event(
             websocket, "chat_session_error", error.dict()
         )
@@ -83,24 +90,18 @@ class ChatSessionOrchestrator:
     async def _create_new_thread(
         self, user_access: UserAccess, thread_id: str | None = None
     ) -> Thread:
-        if thread_id is None:
-            thread_id = str(uuid.uuid4())
-
         timestamp = datetime.now(timezone.utc)
-        async with self.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
-            return await self.chat_session_store.create_thread(
-                db,
-                user_access,
-                CreateThreadParams(
-                    id=thread_id,
-                    user_id=user_access.user_id,
-                    created_at=timestamp,
-                    updated_at=timestamp,
-                    is_empty=True,
-                ),
-            )
+        return await self.chat_session_store.create_thread(
+            CreateThreadParams(
+                id=thread_id or str(uuid.uuid4()),
+                user_id=user_access.user_id,
+                created_at=timestamp,
+                updated_at=timestamp,
+                is_empty=True,
+            ),
+        )
 
-    async def start_session(self, access_token: str, websocket: WebSocket):
+    async def start_session(self, access_token: str, websocket: WebSocket) -> None:
         logger.info(f"Starting session for access token: {access_token}")
 
         try:
@@ -148,16 +149,16 @@ class ChatSessionOrchestrator:
 
     async def _resume_thread(
         self, websocket: WebSocket, user_access: UserAccess, thread_id: str
-    ) -> dict:
+    ) -> dict[str, Any]:
         async with self.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
-            timestamp = datetime.now(timezone.utc)  
-            
+            timestamp = datetime.now(timezone.utc)
+
             thread = await self.chat_session_store.resume_thread(
-                db, user_access, ResumeThreadParams(id=thread_id, resumed_at=timestamp), flush_db=False
+                db, user_access, ResumeThreadParams(id=thread_id, resumed_at=timestamp)
             )
             if thread is None:
                 raise ThreadNotFoundError(thread_id=thread_id)
-            
+
             paginated_messages = await self.chat_session_store.get_paginated_messages(
                 db,
                 user_access,
@@ -169,22 +170,28 @@ class ChatSessionOrchestrator:
                     sort_order="desc",
                 ),
             )
-            
+
             if len(paginated_messages.messages) > 0:
-                recipe_message_ids = [msg.id for msg in paginated_messages.messages if msg.recipe_id]
-                recipes = await self.chat_session_store.get_recipes_by_message_id(
-                    db, user_access, thread_id, recipe_message_ids
-                ) if len(recipe_message_ids) > 0 else []
+                recipe_message_ids = [
+                    msg.id for msg in paginated_messages.messages if msg.recipe_id
+                ]
+                recipes = (
+                    await self.chat_session_store.get_recipes_by_message_ids(
+                        db, user_access, thread_id, recipe_message_ids
+                    )
+                    if len(recipe_message_ids) > 0
+                    else []
+                )
             else:
                 recipes = []
-                
+
             return {
                 "thread": thread.model_dump(),
                 "paginated_messages": paginated_messages.model_dump(),
                 "recipes": [recipe.model_dump() for recipe in recipes],
             }
 
-    async def resume_session(self, access_token: str, thread_id: str, websocket: WebSocket):
+    async def resume_session(self, access_token: str, thread_id: str, websocket: WebSocket) -> None:
         logger.info(f"Resuming session for access token: {access_token}, thread: {thread_id}")
 
         try:

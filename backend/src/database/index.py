@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, _AsyncGeneratorContextManager
+from typing import Callable
 
 from config.settings import Settings
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -37,7 +38,10 @@ def get_db_session_factory(settings: Settings):
     return async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
-def create_db_transaction_maker(settings: Settings):
+type DBTransactionMaker = Callable[[], _AsyncGeneratorContextManager[AsyncSession]]
+
+
+def create_db_transaction_maker(settings: Settings) -> DBTransactionMaker:
     session_factory = get_db_session_factory(settings)
 
     @asynccontextmanager

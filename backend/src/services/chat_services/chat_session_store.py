@@ -1,10 +1,9 @@
 from datetime import datetime
-from typing import Any, Callable
 
-from schemas.conversation_stream_events import TextMessageChunkGeneratedPayload, TextMessageStartedPayload
 from schemas.message_content_type import MessageContentType
 from schemas.message_role import MessageRole
 from schemas.messages import (
+    CountMessagesParams,
     CreateAssistantRecipeMessageParams,
     CreateAssistantTextMessageParams,
     CreateAssistantToolMessageParams,
@@ -13,7 +12,6 @@ from schemas.messages import (
     Message,
     PaginatedMessages,
     UpdateMessageParams,
-    UpdateMessageAIModelOrToolUsageParams,
 )
 from schemas.recipes import (
     CreateRecipeParams,
@@ -46,7 +44,6 @@ from utils.logger import Logger
 logger = Logger("chat_session_store")
 
 
-# TODO: Use a custom TTL when creating data? Currently use each cache's default TTL.
 class ChatSessionStore:
     def __init__(
         self,
@@ -66,85 +63,112 @@ class ChatSessionStore:
         self.thread_cache_service = thread_cache_service
         self.user_access_cache_service = user_access_cache_service
 
-    async def _dispatch(
-        self,
-        user_access: UserAccess,
-        authenticated_func: Callable[..., Any],
-        unauthenticated_func: Callable[..., Any],
-        *args,
-        **kwargs,
-    ) -> Any:
-        """Dispatch to either authenticated or unauthenticated function based on user access data."""
-        if user_access.is_authenticated:
-            return await authenticated_func(*args, **kwargs)
-        else:
-            return await unauthenticated_func(*args, **kwargs)
-
-    async def get_thread(
+    async def get_user_thread(
         self, db: AsyncSession, user_access: UserAccess, thread_id: str
     ) -> Thread | None:
-        return await self._dispatch(
-            user_access,
-            lambda: self.thread_service.get_thread(db, thread_id),
-            lambda: self.thread_cache_service.get_thread(user_access.user_id, thread_id),
-        )
+        cached_thread = await self.thread_cache_service.get_thread(user_access.user_id, thread_id)
+        if cached_thread is not None:
+            return cached_thread
 
-    async def create_thread(
-        self, db: AsyncSession, user_access: UserAccess, params: CreateThreadParams, flush_db: bool = True
-    ) -> Thread:
-        return await self._dispatch(
-            user_access,
-            lambda: self.thread_service.create_thread(db, params, flush_db),
-            lambda: self.thread_cache_service.create_thread(params),
-        )
+        thread = await self.thread_service.get_thread(db, thread_id)
+        if thread is not None:
+            await self.thread_cache_service.set_thread(thread)
+
+        return thread
+
+    async def create_thread(self, params: CreateThreadParams) -> Thread:
+        cached_thread = await self.thread_cache_service.create_thread(params)
+        return cached_thread
 
     async def is_thread_empty(
         self, db: AsyncSession, user_access: UserAccess, thread_id: str
     ) -> bool:
-        return await self._dispatch(
-            user_access,
-            lambda: self.thread_service.is_thread_empty(db, thread_id),
-            lambda: self.thread_cache_service.is_thread_empty(user_access.user_id, thread_id),
-        )
+        cached_thread = await self.thread_cache_service.get_thread(user_access.user_id, thread_id)
+        if cached_thread is not None:
+            return bool(cached_thread.is_empty)
+
+        thread = await self.thread_service.get_thread(db, thread_id)
+        if thread is not None:
+            await self.thread_cache_service.set_thread(thread)
+            return bool(thread.is_empty)
+
+        return False
 
     async def update_thread(
-        self, db: AsyncSession, user_access: UserAccess, params: UpdateThreadParams, flush_db: bool = True
+        self, db: AsyncSession, user_access: UserAccess, params: UpdateThreadParams
     ) -> Thread:
-        return await self._dispatch(
-            user_access,
-            lambda: self.thread_service.update_thread(db, params, flush_db),
-            lambda: self.thread_cache_service.update_thread(user_access.user_id, params),
-        )
+        cached_thread = await self.thread_cache_service.update_thread(user_access.user_id, params)
+        if cached_thread is not None:
+            return await self.thread_cache_service.update_thread(user_access.user_id, params)
+
+        thread = await self.thread_service.update_thread(db, params)
+        if thread is None:
+            logger.error(f"Thread {params.id} not found for user {user_access.user_id}")
+            raise ValueError(f"Thread {params.id} not found for user {user_access.user_id}")
+
+        updated_thread = await self.thread_cache_service.update_thread(user_access.user_id, params)
+        await self.thread_cache_service.set_thread(updated_thread)
+        return updated_thread
 
     async def resume_thread(
-        self, db: AsyncSession, user_access: UserAccess, params: ResumeThreadParams, flush_db: bool = True
+        self, db: AsyncSession, user_access: UserAccess, params: ResumeThreadParams
     ) -> Thread:
-        return await self._dispatch(
-            user_access,
-            lambda: self.thread_service.resume_thread(db, params, flush_db),
-            lambda: self.thread_cache_service.resume_thread(user_access.user_id, params),
-        )
+        cached_thread = await self.thread_cache_service.resume_thread(user_access.user_id, params)
+        if cached_thread is not None:
+            return await self.thread_cache_service.resume_thread(user_access.user_id, params)
 
-    # TODO: Weird that we're passing user_access and including user_id in params
+        thread = await self.thread_service.resume_thread(db, params)
+        if thread is None:
+            logger.error(f"Thread {params.id} not found for user {user_access.user_id}")
+            raise ValueError(f"Thread {params.id} not found for user {user_access.user_id}")
+
+        resumed_thread = await self.thread_cache_service.resume_thread(user_access.user_id, params)
+        await self.thread_cache_service.set_thread(resumed_thread)
+        return resumed_thread
+
     async def get_paginated_threads(
-        self, db: AsyncSession, user_access: UserAccess, params: GetUserThreadsParams
+        self, db: AsyncSession, params: GetUserThreadsParams
     ) -> PaginatedThreads:
-        return await self._dispatch(
-            user_access,
-            lambda: self.thread_service.get_paginated_threads(db, params),
-            lambda: self.thread_cache_service.get_paginated_threads(params),
-        )
+        cached_paginated_threads = await self.thread_cache_service.get_paginated_threads(params)
+        if len(cached_paginated_threads.threads) > 0:
+            return cached_paginated_threads
+
+        paginated_threads = await self.thread_service.get_paginated_threads(db, params)
+        if len(paginated_threads.threads) > 0:
+            for thread in paginated_threads.threads:
+                await self.thread_cache_service.set_thread(thread)
+
+        return paginated_threads
 
     async def get_message(
         self, db: AsyncSession, user_access: UserAccess, thread_id: str, message_id: str
     ) -> Message | None:
-        return await self._dispatch(
-            user_access,
-            lambda: self.message_service.get_message(db, message_id),
-            lambda: self.message_cache_service.get_message(
-                user_access.user_id, thread_id, message_id
-            ),
+        cached_message = await self.message_cache_service.get_message(
+            user_access.user_id, thread_id, message_id
         )
+        if cached_message is not None:
+            return cached_message
+
+        message = await self.message_service.get_message(db, message_id)
+        if message is not None:
+            await self.message_cache_service.set_message(user_access.user_id, message)
+        return message
+
+    async def get_messages_by_ids(
+        self, db: AsyncSession, user_access: UserAccess, thread_id: str, message_ids: list[str]
+    ) -> list[Message]:
+        cached_messages = await self.message_cache_service.get_messages_by_ids(
+            user_access.user_id, thread_id, message_ids
+        )
+        if len(cached_messages) > 0:
+            return list(cached_messages)
+
+        messages = await self.message_service.get_messages_by_ids(db, message_ids)
+        if len(messages) > 0:
+            for message in messages:
+                await self.message_cache_service.set_message(user_access.user_id, message)
+
+        return list(messages)
 
     async def create_user_message(
         self,
@@ -156,107 +180,76 @@ class ChatSessionStore:
         timestamp: datetime,
         ip_address: str | None = None,
         safety_guard_result: SafetyGuardResult | None = None,
-        flush_db: bool = True,
     ) -> Message:
-        async def authenticated_create():
-            thread = await self.thread_service.get_thread(db, thread_id)
-            if thread is None:
-                await self.create_thread(
-                    db,
-                    user_access,
-                    CreateThreadParams(
-                        id=thread_id,
-                        user_id=user_access.user_id,
-                        created_at=timestamp,
-                        updated_at=timestamp,
-                        is_empty=False,
-                    ),
-                    flush_db,
+        cached_message = await self.message_cache_service.create_user_message(
+            user_access.user_id,
+            CreateUserMessageParams(
+                id=message_id,
+                role=MessageRole.user,
+                content_type=MessageContentType.text,
+                user_id=user_access.user_id,
+                thread_id=thread_id,
+                text_content=content,
+                created_at=timestamp,
+                updated_at=timestamp,
+                ip_address=ip_address,
+                safety_guard_result=safety_guard_result,
+            ),
+        )
+
+        thread = await self.get_user_thread(db, user_access, thread_id)
+        if thread is None:
+            thread = await self.create_thread(
+                CreateThreadParams(
+                    id=thread_id,
+                    user_id=user_access.user_id,
+                    created_at=timestamp,
+                    updated_at=timestamp,
+                    is_empty=False,
                 )
-
-            return await self.message_service.create_user_message(
-                db,
-                CreateUserMessageParams(
-                    id=message_id,
-                    user_id=user_access.user_id,
-                    thread_id=thread_id,
-                    text_content=content,
-                    created_at=timestamp,
-                    updated_at=timestamp,
-                    ip_address=ip_address,
-                    safety_guard_result=safety_guard_result,
-                ),  # type: ignore
             )
-
-        async def unauthenticated_create():
-            message = await self.message_cache_service.create_user_message(
-                user_access.user_id,
-                CreateUserMessageParams(
-                    id=message_id,
-                    user_id=user_access.user_id,
-                    thread_id=thread_id,
-                    text_content=content,
-                    created_at=timestamp,
-                    updated_at=timestamp,
-                    ip_address=ip_address,
-                    safety_guard_result=safety_guard_result,
-                ),  # type: ignore
-            )
+        else:
             await self.thread_cache_service.update_thread(
                 user_access.user_id,
                 UpdateThreadParams(id=thread_id, updated_at=timestamp, is_empty=False),
             )
-            await self.user_access_cache_service.increment_user_message_count(
-                user_access.access_token
-            )
-            return message
 
-        return await self._dispatch(user_access, authenticated_create, unauthenticated_create)
+        await self.user_access_cache_service.increment_user_message_count(user_access.access_token)
+        return cached_message
 
     async def create_assistant_text_message(
         self,
         db: AsyncSession,
         user_access: UserAccess,
         params: CreateAssistantTextMessageParams,
-        flush_db: bool = True,
     ) -> Message:
-        return await self._dispatch(
-            user_access,
-            lambda: self.message_service.create_assistant_text_message(db, params, flush_db),
-            lambda: self.message_cache_service.create_assistant_text_message(
-                user_access.user_id, params=params
-            ),
+        cached_message = await self.message_cache_service.create_assistant_text_message(
+            user_access.user_id, params=params
         )
+
+        return cached_message
 
     async def create_assistant_recipe_message(
         self,
         db: AsyncSession,
         user_access: UserAccess,
         params: CreateAssistantRecipeMessageParams,
-        flush_db: bool = True,
     ) -> Message:
-        return await self._dispatch(
-            user_access,
-            lambda: self.message_service.create_assistant_recipe_message(db, params, flush_db),
-            lambda: self.message_cache_service.create_assistant_recipe_message(
-                user_access.user_id, params=params
-            ),
+        cached_message = await self.message_cache_service.create_assistant_recipe_message(
+            user_access.user_id, params=params
         )
+        return cached_message
 
     async def create_assistant_tool_message(
         self,
         db: AsyncSession,
         user_access: UserAccess,
         params: CreateAssistantToolMessageParams,
-        flush_db: bool = True,
     ) -> Message:
-        return await self._dispatch(
-            user_access,
-            lambda: self.message_service.create_assistant_tool_message(db, params, flush_db),
-            lambda: self.message_cache_service.create_assistant_tool_message(
-                user_access.user_id, params=params
-            ),
+        cached_message = await self.message_cache_service.create_assistant_tool_message(
+            user_access.user_id, params=params
         )
+        return cached_message
 
     async def update_message(
         self,
@@ -264,37 +257,53 @@ class ChatSessionStore:
         user_access: UserAccess,
         thread_id: str,
         params: UpdateMessageParams,
-        flush_db: bool = True,
     ) -> Message:
-        return await self._dispatch(
-            user_access,
-            lambda: self.message_service.update_message(db, params, flush_db),
-            lambda: self.message_cache_service.update_message(
-                user_access.user_id, thread_id, params=params
-            ),
+        cached_message = await self.message_cache_service.get_message(
+            user_access.user_id, thread_id, params.id
         )
+        if cached_message is not None:
+            return await self.message_cache_service.update_message(
+                user_access.user_id, thread_id, params=params
+            )
+
+        message = await self.message_service.update_message(db, params)
+        if message is None:
+            logger.error(f"Message {params.id} not found for user {user_access.user_id}")
+            raise ValueError(f"Message {params.id} not found for user {user_access.user_id}")
+
+        updated_message = await self.message_cache_service.update_message(
+            user_access.user_id, thread_id, params=params
+        )
+        await self.message_cache_service.set_message(user_access.user_id, updated_message)
+        return updated_message
 
     async def get_paginated_messages(
         self, db: AsyncSession, user_access: UserAccess, params: GetMessagesParams
     ) -> PaginatedMessages:
-        return await self._dispatch(
-            user_access,
-            lambda: self.message_service.get_paginated_messages(db, params),
-            lambda: self.message_cache_service.get_paginated_messages(params),
-        )
+        cached_paginated_messages = await self.message_cache_service.get_paginated_messages(params)
+        if len(cached_paginated_messages.messages) > 0:
+            return cached_paginated_messages
+
+        paginated_messages = await self.message_service.get_paginated_messages(db, params)
+        if len(paginated_messages.messages) > 0:
+            for message in paginated_messages.messages:
+                await self.message_cache_service.set_message(user_access.user_id, message)
+
+        return paginated_messages
 
     async def count_total_messages_sent_by_user(
         self, db: AsyncSession, user_access: UserAccess
     ) -> int:
-        return await self._dispatch(
-            user_access,
-            lambda: self.message_service.count_total_messages_sent_by_user(
-                db, user_access.user_id
-            ),
-            lambda: self.message_cache_service.count_total_messages_sent_by_user(
-                user_access.user_id
-            ),
+        count = await self.message_cache_service.count_total_messages_sent_by_user(
+            user_access.user_id
         )
+        if count != 0:
+            return int(count)
+
+        count = await self.message_service.count_messages(
+            db, CountMessagesParams(user_id=user_access.user_id, role=MessageRole.user)
+        )
+        return int(count)
 
     async def create_recipe(
         self,
@@ -303,7 +312,6 @@ class ChatSessionStore:
         thread_id: str,
         recipe_id: str,
         timestamp: datetime,
-        flush_db: bool = True,
     ) -> UserRecipe:
         params = CreateRecipeParams(
             id=recipe_id,
@@ -312,12 +320,8 @@ class ChatSessionStore:
             created_at=timestamp,
             updated_at=timestamp,
         )
-
-        return await self._dispatch(
-            user_access,
-            lambda: self.recipe_service.create_recipe(db, params, flush_db),
-            lambda: self.recipe_cache_service.create_recipe(params),
-        )
+        cached_recipe = await self.recipe_cache_service.create_recipe(params)
+        return cached_recipe
 
     async def update_recipe(
         self,
@@ -325,15 +329,25 @@ class ChatSessionStore:
         user_access: UserAccess,
         thread_id: str,
         params: UpdateRecipeParams,
-        flush_db: bool = True,
     ) -> UserRecipe:
-        return await self._dispatch(
-            user_access,
-            lambda: self.recipe_service.update_recipe(db, params, flush_db),
-            lambda: self.recipe_cache_service.update_recipe(
-                user_access.user_id, thread_id, params
-            ),
+        cached_recipe = await self.recipe_cache_service.get_recipe(
+            user_access.user_id, thread_id, params.id
         )
+        if cached_recipe is not None:
+            return await self.recipe_cache_service.update_recipe(
+                user_access.user_id, thread_id, params
+            )
+
+        recipe = await self.recipe_service.update_recipe(db, params)
+        if recipe is None:
+            logger.error(f"Recipe {params.id} not found for user {user_access.user_id}")
+            raise ValueError(f"Recipe {params.id} not found for user {user_access.user_id}")
+
+        updated_recipe = await self.recipe_cache_service.update_recipe(
+            user_access.user_id, thread_id, params
+        )
+        await self.recipe_cache_service.set_recipe(updated_recipe)
+        return updated_recipe
 
     async def update_recipe_field(
         self,
@@ -341,78 +355,52 @@ class ChatSessionStore:
         user_access: UserAccess,
         thread_id: str,
         params: UpdateRecipeFieldParams,
-        flush_db: bool = True,
     ) -> UserRecipe:
-        return await self._dispatch(
-            user_access,
-            lambda: self.recipe_service.update_recipe_field(db, params, flush_db),
-            lambda: self.recipe_cache_service.update_recipe_field(
-                user_access.user_id, thread_id, params
-            ),
+        cached_recipe = await self.recipe_cache_service.get_recipe(
+            user_access.user_id, thread_id, params.id
         )
+        if cached_recipe is not None:
+            return await self.recipe_cache_service.update_recipe_field(
+                user_access.user_id, thread_id, params
+            )
 
-    async def get_recipes_by_message_id(
+        recipe = await self.recipe_service.update_recipe_field(db, params)
+        if recipe is None:
+            logger.error(f"Recipe {params.id} not found for user {user_access.user_id}")
+            raise ValueError(f"Recipe {params.id} not found for user {user_access.user_id}")
+
+        updated_recipe = await self.recipe_cache_service.update_recipe_field(
+            user_access.user_id, thread_id, params
+        )
+        await self.recipe_cache_service.set_recipe(updated_recipe)
+        return updated_recipe
+
+    async def get_recipes_by_message_ids(
         self,
         db: AsyncSession,
         user_access: UserAccess,
         thread_id: str,
         message_ids: list[str],
     ) -> list[UserRecipe]:
-        async def authenticated_get():
-            return await self.recipe_service.get_recipes_by_message_id(db, message_ids)
+        messages = await self.get_messages_by_ids(db, user_access, thread_id, message_ids)
+        recipe_ids = [message.recipe_id for message in messages if message.recipe_id]
+        if len(recipe_ids) == 0:
+            return []
 
-        async def unauthenticated_get():
-            messages = await self.message_cache_service.get_messages_by_id(
-                user_access.user_id, thread_id, message_ids
-            )
-            recipe_ids = [message.recipe_id for message in messages if message.recipe_id]
-            if len(recipe_ids) == 0:
-                return []
-            return await self.recipe_cache_service.get_recipes_by_ids(
-                user_access.user_id, thread_id, recipe_ids
-            )
+        cached_recipes = await self.recipe_cache_service.get_recipes_by_ids(
+            user_access.user_id, thread_id, recipe_ids
+        )
+        if len(cached_recipes) > 0:
+            return list(cached_recipes)
 
-        return await self._dispatch(user_access, authenticated_get, unauthenticated_get)
+        recipes = await self.recipe_service.get_recipes_by_message_ids(db, message_ids)
+        if len(recipes) > 0:
+            for recipe in recipes:
+                await self.recipe_cache_service.set_recipe(recipe)
 
-    async def update_message_ai_model_or_tool_usage(
-        self,
-        db: AsyncSession,
-        user_access: UserAccess,
-        thread_id: str,
-        params: UpdateMessageAIModelOrToolUsageParams,
-        flush_db: bool = True,
-    ) -> Message:
-        async def authenticated_update():
-            return await self.message_service.update_message_tool_usage(db, params, flush_db)
+        return list(recipes)
 
-        async def unauthenticated_update():
-            current_message = await self.message_cache_service.get_message(
-                user_access.user_id, thread_id, params.id
-            )
-            if current_message is None:
-                raise ValueError(f"Message {params.id} not found")
-
-            updated_message_params = UpdateMessageParams(
-                id=params.id,
-                updated_at=params.updated_at,
-                model_name=params.model_name,
-                input_tokens=(current_message.input_tokens or 0) + (params.input_tokens or 0) if params.input_tokens is not None else None,
-                output_tokens=(current_message.output_tokens or 0) + (params.output_tokens or 0) if params.output_tokens is not None else None,
-                tool_name=params.tool_name,
-                tool_input=params.tool_input,
-                tool_output=params.tool_output,
-                is_recipe_generation_started=params.is_recipe_generation_started,
-                is_recipe_generation_completed=params.is_recipe_generation_completed,
-                text_content=(current_message.text_content or "") + params.text_chunk if params.text_chunk is not None else None,
-            )
-            
-            return await self.message_cache_service.update_message(
-                user_access.user_id, thread_id, params=updated_message_params
-            )
-
-        return await self._dispatch(user_access, authenticated_update, unauthenticated_update)
-    
-    async def update_recipe_field_by_message_id(
+    async def update_message_recipe_field(
         self,
         db: AsyncSession,
         user_access: UserAccess,
@@ -420,33 +408,35 @@ class ChatSessionStore:
         message_id: str,
         field: RecipeField,
         timestamp: datetime,
-        flush_db: bool = True,
     ) -> UserRecipe:
-        
-        async def authenticated_update():
-            return await self.recipe_service.update_recipe_field_by_message_id(db, message_id, field, timestamp, flush_db)
+        message = await self.get_message(db, user_access, thread_id, message_id)
+        if message is None:
+            logger.error(f"Message {message_id} not found for user {user_access.user_id}")
+            raise ValueError(f"Message {message_id} not found")
 
-        async def unauthenticated_update():
-            current_message = await self.message_cache_service.get_message(
-                user_access.user_id, thread_id, message_id
-            )
-            if current_message is None:
-                raise ValueError(f"Message {message_id} not found")
-            
-            if current_message.recipe_id is None:
-                raise ValueError(f"Message {message_id} has no recipe id")
-            
+        if message.recipe_id is None:
+            logger.error(f"Message {message_id} has no recipe id for user {user_access.user_id}")
+            raise ValueError(f"Message {message_id} has no recipe id")
+
+        params = UpdateRecipeFieldParams(
+            id=message.recipe_id,
+            updated_at=timestamp,
+            field=field,
+        )
+
+        cached_recipe = await self.recipe_cache_service.get_recipe(
+            user_access.user_id, thread_id, message.recipe_id
+        )
+        if cached_recipe is not None:
             return await self.recipe_cache_service.update_recipe_field(
-                user_access.user_id, thread_id, UpdateRecipeFieldParams(
-                    id=current_message.recipe_id,
-                    updated_at=timestamp,
-                    field=field,
-                )
+                user_access.user_id, thread_id, params
             )
 
-        return await self._dispatch(user_access, authenticated_update, unauthenticated_update)
-    
-    async def update_recipe_by_message_id(
+        recipe = await self.recipe_service.update_recipe_field(db, params)
+        await self.recipe_cache_service.set_recipe(recipe)
+        return recipe
+
+    async def update_message_recipe(
         self,
         db: AsyncSession,
         user_access: UserAccess,
@@ -454,27 +444,30 @@ class ChatSessionStore:
         message_id: str,
         recipe: Recipe,
         timestamp: datetime,
-        flush_db: bool = True,
     ) -> UserRecipe:
-        async def authenticated_update():
-            return await self.recipe_service.update_recipe_by_message_id(db, message_id, recipe, timestamp, flush_db)
+        message = await self.get_message(db, user_access, thread_id, message_id)
+        if message is None:
+            logger.error(f"Message {message_id} not found for user {user_access.user_id}")
+            raise ValueError(f"Message {message_id} not found")
 
-        async def unauthenticated_update():
-            current_message = await self.message_cache_service.get_message(
-                user_access.user_id, thread_id, message_id
-            )
-            if current_message is None:
-                raise ValueError(f"Message {message_id} not found")
-            
-            if current_message.recipe_id is None:
-                raise ValueError(f"Message {message_id} has no recipe id")
-            
+        if message.recipe_id is None:
+            logger.error(f"Message {message_id} has no recipe id for user {user_access.user_id}")
+            raise ValueError(f"Message {message_id} has no recipe id")
+
+        params = UpdateRecipeParams(
+            id=message.recipe_id,
+            updated_at=timestamp,
+            **recipe.model_dump(),
+        )
+
+        cached_recipe = await self.recipe_cache_service.get_recipe(
+            user_access.user_id, thread_id, message.recipe_id
+        )
+        if cached_recipe is not None:
             return await self.recipe_cache_service.update_recipe(
-                user_access.user_id, thread_id, UpdateRecipeParams(
-                    id=current_message.recipe_id,
-                    updated_at=timestamp,
-                    **recipe.model_dump(),
-                )
+                user_access.user_id, thread_id, params
             )
 
-        return await self._dispatch(user_access, authenticated_update, unauthenticated_update)
+        recipe = await self.recipe_service.update_recipe(db, params)
+        await self.recipe_cache_service.set_recipe(recipe)
+        return recipe

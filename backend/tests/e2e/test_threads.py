@@ -90,7 +90,7 @@ class TestGetUserThreads:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_successful_get_threads_authenticated_user(self, async_client, service_container: ServiceContainer):
         user_access = await service_container.user_access_cache_service.create_anonymous_access()
-        await service_container.user_access_cache_service.promote_to_authenticated(user_access.access_token, user_access.user_id, to_utc_isostring(datetime.now(timezone.utc)), 0)
+        await service_container.user_access_cache_service.promote_to_authenticated(user_access.access_token)
         
         thread_id = str(uuid4())
         thread_created_at = datetime.now(timezone.utc)
@@ -218,7 +218,7 @@ class TestGetThreadMessages:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_messages_without_recipes_authenticated_user(self, async_client, service_container: ServiceContainer):
         user_access = await service_container.user_access_cache_service.create_anonymous_access()
-        await service_container.user_access_cache_service.promote_to_authenticated(user_access.access_token, user_access.user_id, to_utc_isostring(datetime.now(timezone.utc)), 0)
+        await service_container.user_access_cache_service.promote_to_authenticated(user_access.access_token)
         
         thread_id = str(uuid4())
         message_id = str(uuid4())
@@ -292,7 +292,7 @@ class TestGetThreadMessages:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_messages_with_recipes_authenticated_user(self, async_client, service_container: ServiceContainer):
         user_access = await service_container.user_access_cache_service.create_anonymous_access()
-        user_access = await service_container.user_access_cache_service.promote_to_authenticated(user_access.access_token, user_access.user_id, to_utc_isostring(datetime.now(timezone.utc)), 0)
+        user_access = await service_container.user_access_cache_service.promote_to_authenticated(user_access.access_token)
         
         user_message_id = str(uuid4())
         thread_id = str(uuid4())
@@ -499,7 +499,7 @@ class TestGetThreadMessages:
     @pytest.mark.asyncio(loop_scope="session")
     async def test_no_sensitive_fields_in_paginated_messages(self, async_client, service_container: ServiceContainer):
         user_access = await service_container.user_access_cache_service.create_anonymous_access()
-        await service_container.user_access_cache_service.promote_to_authenticated(user_access.access_token, user_access.user_id, to_utc_isostring(datetime.now(timezone.utc)), 0)
+        await service_container.user_access_cache_service.promote_to_authenticated(user_access.access_token)
         
         thread_id = str(uuid4())
         message_id = str(uuid4())

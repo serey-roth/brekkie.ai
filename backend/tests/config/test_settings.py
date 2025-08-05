@@ -28,8 +28,6 @@ class TestDefaultValues:
         assert settings.cookie_samesite == "Lax"
         
         # Test database pool defaults
-        assert settings.db_pool_size == 5
-        assert settings.db_max_overflow == 10
         assert settings.db_pool_timeout == 30
         assert settings.db_pool_recycle == 3600
         

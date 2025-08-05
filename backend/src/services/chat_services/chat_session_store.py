@@ -1,5 +1,18 @@
 from datetime import datetime
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from services.data_services.message_cache_service import MessageCacheService
+from services.data_services.message_service import MessageService
+from services.data_services.recipe_cache_service import RecipeCacheService
+from services.data_services.recipe_service import RecipeService
+from services.data_services.thread_cache_service import ThreadCacheService
+from services.data_services.thread_service import ThreadService
+from services.data_services.user_access_cache_service import UserAccessCacheService
+from services.chat_services.chat_session_data_stream_writer import (
+    ChatSessionDataStreamWriter,
+)
+
 from schemas.message_content_type import MessageContentType
 from schemas.message_role import MessageRole
 from schemas.messages import (
@@ -31,14 +44,14 @@ from schemas.threads import (
     UpdateThreadParams,
 )
 from schemas.user_access import UserAccess
-from services.data_services.message_cache_service import MessageCacheService
-from services.data_services.message_service import MessageService
-from services.data_services.recipe_cache_service import RecipeCacheService
-from services.data_services.recipe_service import RecipeService
-from services.data_services.thread_cache_service import ThreadCacheService
-from services.data_services.thread_service import ThreadService
-from services.data_services.user_access_cache_service import UserAccessCacheService
-from sqlalchemy.ext.asyncio import AsyncSession
+from schemas.chat_session_data_stream import (
+    ChatSessionDataStreamEntry,
+    ChatSessionStreamEntryType,
+    SyncCachedMessageWithDbEntry,
+    SyncCachedThreadWithDbEntry,
+    SyncCachedRecipeWithDbEntry,
+)
+
 from utils.logger import Logger
 
 logger = Logger("chat_session_store")
@@ -54,6 +67,7 @@ class ChatSessionStore:
         thread_service: ThreadService,
         thread_cache_service: ThreadCacheService,
         user_access_cache_service: UserAccessCacheService,
+        chat_session_data_stream_writer: ChatSessionDataStreamWriter,
     ):
         self.message_service = message_service
         self.message_cache_service = message_cache_service
@@ -62,6 +76,7 @@ class ChatSessionStore:
         self.thread_service = thread_service
         self.thread_cache_service = thread_cache_service
         self.user_access_cache_service = user_access_cache_service
+        self.chat_session_data_stream_writer = chat_session_data_stream_writer
 
     async def get_user_thread(
         self, db: AsyncSession, user_access: UserAccess, thread_id: str
@@ -99,7 +114,16 @@ class ChatSessionStore:
     ) -> Thread:
         cached_thread = await self.thread_cache_service.update_thread(user_access.user_id, params)
         if cached_thread is not None:
-            return await self.thread_cache_service.update_thread(user_access.user_id, params)
+            result = await self.thread_cache_service.update_thread(user_access.user_id, params)
+            await self.chat_session_data_stream_writer.add_entry(
+                ChatSessionDataStreamEntry(
+                    type=ChatSessionStreamEntryType.SYNC_CACHED_THREAD_WITH_DB,
+                    payload=SyncCachedThreadWithDbEntry(
+                        user_id=user_access.user_id, thread_id=params.id
+                    ),
+                )
+            )
+            return result
 
         thread = await self.thread_service.update_thread(db, params)
         if thread is None:
@@ -108,6 +132,14 @@ class ChatSessionStore:
 
         updated_thread = await self.thread_cache_service.update_thread(user_access.user_id, params)
         await self.thread_cache_service.set_thread(updated_thread)
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_THREAD_WITH_DB,
+                payload=SyncCachedThreadWithDbEntry(
+                    user_id=user_access.user_id, thread_id=params.id
+                ),
+            )
+        )
         return updated_thread
 
     async def resume_thread(
@@ -115,7 +147,16 @@ class ChatSessionStore:
     ) -> Thread:
         cached_thread = await self.thread_cache_service.resume_thread(user_access.user_id, params)
         if cached_thread is not None:
-            return await self.thread_cache_service.resume_thread(user_access.user_id, params)
+            result = await self.thread_cache_service.resume_thread(user_access.user_id, params)
+            await self.chat_session_data_stream_writer.add_entry(
+                ChatSessionDataStreamEntry(
+                    type=ChatSessionStreamEntryType.SYNC_CACHED_THREAD_WITH_DB,
+                    payload=SyncCachedThreadWithDbEntry(
+                        user_id=user_access.user_id, thread_id=params.id
+                    ),
+                )
+            )
+            return result
 
         thread = await self.thread_service.resume_thread(db, params)
         if thread is None:
@@ -124,15 +165,19 @@ class ChatSessionStore:
 
         resumed_thread = await self.thread_cache_service.resume_thread(user_access.user_id, params)
         await self.thread_cache_service.set_thread(resumed_thread)
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_THREAD_WITH_DB,
+                payload=SyncCachedThreadWithDbEntry(
+                    user_id=user_access.user_id, thread_id=params.id
+                ),
+            )
+        )
         return resumed_thread
 
     async def get_paginated_threads(
         self, db: AsyncSession, params: GetUserThreadsParams
     ) -> PaginatedThreads:
-        cached_paginated_threads = await self.thread_cache_service.get_paginated_threads(params)
-        if len(cached_paginated_threads.threads) > 0:
-            return cached_paginated_threads
-
         paginated_threads = await self.thread_service.get_paginated_threads(db, params)
         if len(paginated_threads.threads) > 0:
             for thread in paginated_threads.threads:
@@ -215,6 +260,22 @@ class ChatSessionStore:
             )
 
         await self.user_access_cache_service.increment_user_message_count(user_access.access_token)
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_THREAD_WITH_DB,
+                payload=SyncCachedThreadWithDbEntry(
+                    user_id=user_access.user_id, thread_id=thread_id
+                ),
+            )
+        )
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_MESSAGE_WITH_DB,
+                payload=SyncCachedMessageWithDbEntry(
+                    user_id=user_access.user_id, thread_id=thread_id, message_id=message_id
+                ),
+            )
+        )
         return cached_message
 
     async def create_assistant_text_message(
@@ -226,7 +287,16 @@ class ChatSessionStore:
         cached_message = await self.message_cache_service.create_assistant_text_message(
             user_access.user_id, params=params
         )
-
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_MESSAGE_WITH_DB,
+                payload=SyncCachedMessageWithDbEntry(
+                    user_id=user_access.user_id,
+                    thread_id=cached_message.thread_id,
+                    message_id=cached_message.id,
+                ),
+            )
+        )
         return cached_message
 
     async def create_assistant_recipe_message(
@@ -238,6 +308,16 @@ class ChatSessionStore:
         cached_message = await self.message_cache_service.create_assistant_recipe_message(
             user_access.user_id, params=params
         )
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_MESSAGE_WITH_DB,
+                payload=SyncCachedMessageWithDbEntry(
+                    user_id=user_access.user_id,
+                    thread_id=cached_message.thread_id,
+                    message_id=cached_message.id,
+                ),
+            )
+        )
         return cached_message
 
     async def create_assistant_tool_message(
@@ -248,6 +328,16 @@ class ChatSessionStore:
     ) -> Message:
         cached_message = await self.message_cache_service.create_assistant_tool_message(
             user_access.user_id, params=params
+        )
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_MESSAGE_WITH_DB,
+                payload=SyncCachedMessageWithDbEntry(
+                    user_id=user_access.user_id,
+                    thread_id=cached_message.thread_id,
+                    message_id=cached_message.id,
+                ),
+            )
         )
         return cached_message
 
@@ -262,9 +352,18 @@ class ChatSessionStore:
             user_access.user_id, thread_id, params.id
         )
         if cached_message is not None:
-            return await self.message_cache_service.update_message(
+            result = await self.message_cache_service.update_message(
                 user_access.user_id, thread_id, params=params
             )
+            await self.chat_session_data_stream_writer.add_entry(
+                ChatSessionDataStreamEntry(
+                    type=ChatSessionStreamEntryType.SYNC_CACHED_MESSAGE_WITH_DB,
+                    payload=SyncCachedMessageWithDbEntry(
+                        user_id=user_access.user_id, thread_id=thread_id, message_id=params.id
+                    ),
+                )
+            )
+            return result
 
         message = await self.message_service.update_message(db, params)
         if message is None:
@@ -275,15 +374,19 @@ class ChatSessionStore:
             user_access.user_id, thread_id, params=params
         )
         await self.message_cache_service.set_message(user_access.user_id, updated_message)
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_MESSAGE_WITH_DB,
+                payload=SyncCachedMessageWithDbEntry(
+                    user_id=user_access.user_id, thread_id=thread_id, message_id=params.id
+                ),
+            )
+        )
         return updated_message
 
     async def get_paginated_messages(
         self, db: AsyncSession, user_access: UserAccess, params: GetMessagesParams
     ) -> PaginatedMessages:
-        cached_paginated_messages = await self.message_cache_service.get_paginated_messages(params)
-        if len(cached_paginated_messages.messages) > 0:
-            return cached_paginated_messages
-
         paginated_messages = await self.message_service.get_paginated_messages(db, params)
         if len(paginated_messages.messages) > 0:
             for message in paginated_messages.messages:
@@ -321,6 +424,14 @@ class ChatSessionStore:
             updated_at=timestamp,
         )
         cached_recipe = await self.recipe_cache_service.create_recipe(params)
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_RECIPE_WITH_DB,
+                payload=SyncCachedRecipeWithDbEntry(
+                    user_id=user_access.user_id, thread_id=thread_id, recipe_id=recipe_id
+                ),
+            )
+        )
         return cached_recipe
 
     async def update_recipe(
@@ -334,9 +445,18 @@ class ChatSessionStore:
             user_access.user_id, thread_id, params.id
         )
         if cached_recipe is not None:
-            return await self.recipe_cache_service.update_recipe(
+            result = await self.recipe_cache_service.update_recipe(
                 user_access.user_id, thread_id, params
             )
+            await self.chat_session_data_stream_writer.add_entry(
+                ChatSessionDataStreamEntry(
+                    type=ChatSessionStreamEntryType.SYNC_CACHED_RECIPE_WITH_DB,
+                    payload=SyncCachedRecipeWithDbEntry(
+                        user_id=user_access.user_id, thread_id=thread_id, recipe_id=params.id
+                    ),
+                )
+            )
+            return result
 
         recipe = await self.recipe_service.update_recipe(db, params)
         if recipe is None:
@@ -347,6 +467,14 @@ class ChatSessionStore:
             user_access.user_id, thread_id, params
         )
         await self.recipe_cache_service.set_recipe(updated_recipe)
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_RECIPE_WITH_DB,
+                payload=SyncCachedRecipeWithDbEntry(
+                    user_id=user_access.user_id, thread_id=thread_id, recipe_id=params.id
+                ),
+            )
+        )
         return updated_recipe
 
     async def update_recipe_field(
@@ -360,9 +488,18 @@ class ChatSessionStore:
             user_access.user_id, thread_id, params.id
         )
         if cached_recipe is not None:
-            return await self.recipe_cache_service.update_recipe_field(
+            result = await self.recipe_cache_service.update_recipe_field(
                 user_access.user_id, thread_id, params
             )
+            await self.chat_session_data_stream_writer.add_entry(
+                ChatSessionDataStreamEntry(
+                    type=ChatSessionStreamEntryType.SYNC_CACHED_RECIPE_WITH_DB,
+                    payload=SyncCachedRecipeWithDbEntry(
+                        user_id=user_access.user_id, thread_id=thread_id, recipe_id=params.id
+                    ),
+                )
+            )
+            return result
 
         recipe = await self.recipe_service.update_recipe_field(db, params)
         if recipe is None:
@@ -373,7 +510,27 @@ class ChatSessionStore:
             user_access.user_id, thread_id, params
         )
         await self.recipe_cache_service.set_recipe(updated_recipe)
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_RECIPE_WITH_DB,
+                payload=SyncCachedRecipeWithDbEntry(
+                    user_id=user_access.user_id, thread_id=thread_id, recipe_id=params.id
+                ),
+            )
+        )
         return updated_recipe
+    
+    async def get_user_recipes(self, db: AsyncSession, user_access: UserAccess) -> list[UserRecipe]:
+        cached_recipes = await self.recipe_cache_service.get_user_recipes(user_access.user_id)
+        if len(cached_recipes) > 0:
+            return list(cached_recipes)
+        
+        recipes = await self.recipe_service.get_user_recipes(db, user_access.user_id)
+        if len(recipes) > 0:
+            for recipe in recipes:
+                await self.recipe_cache_service.set_recipe(recipe)
+        
+        return list(recipes)
 
     async def get_recipes_by_message_ids(
         self,
@@ -428,12 +585,29 @@ class ChatSessionStore:
             user_access.user_id, thread_id, message.recipe_id
         )
         if cached_recipe is not None:
-            return await self.recipe_cache_service.update_recipe_field(
+            result = await self.recipe_cache_service.update_recipe_field(
                 user_access.user_id, thread_id, params
             )
+            await self.chat_session_data_stream_writer.add_entry(
+                ChatSessionDataStreamEntry(
+                    type=ChatSessionStreamEntryType.SYNC_CACHED_RECIPE_WITH_DB,
+                    payload=SyncCachedRecipeWithDbEntry(
+                        user_id=user_access.user_id, thread_id=thread_id, recipe_id=params.id
+                    ),
+                )
+            )
+            return result
 
         recipe = await self.recipe_service.update_recipe_field(db, params)
         await self.recipe_cache_service.set_recipe(recipe)
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_RECIPE_WITH_DB,
+                payload=SyncCachedRecipeWithDbEntry(
+                    user_id=user_access.user_id, thread_id=thread_id, recipe_id=message.recipe_id
+                ),
+            )
+        )
         return recipe
 
     async def update_message_recipe(
@@ -459,15 +633,39 @@ class ChatSessionStore:
             updated_at=timestamp,
             **recipe.model_dump(),
         )
+        
+        logger.warning(f"Updated message recipe_id: {message.recipe_id}")
 
         cached_recipe = await self.recipe_cache_service.get_recipe(
             user_access.user_id, thread_id, message.recipe_id
         )
         if cached_recipe is not None:
-            return await self.recipe_cache_service.update_recipe(
+            result = await self.recipe_cache_service.update_recipe(
                 user_access.user_id, thread_id, params
             )
+            await self.chat_session_data_stream_writer.add_entry(
+                ChatSessionDataStreamEntry(
+                    type=ChatSessionStreamEntryType.SYNC_CACHED_RECIPE_WITH_DB,
+                    payload=SyncCachedRecipeWithDbEntry(
+                        user_id=user_access.user_id,
+                        thread_id=thread_id,
+                        recipe_id=message.recipe_id,
+                    ),
+                )
+            )
+            return result
 
         recipe = await self.recipe_service.update_recipe(db, params)
         await self.recipe_cache_service.set_recipe(recipe)
+        await self.chat_session_data_stream_writer.add_entry(
+            ChatSessionDataStreamEntry(
+                type=ChatSessionStreamEntryType.SYNC_CACHED_RECIPE_WITH_DB,
+                payload=SyncCachedRecipeWithDbEntry(
+                    user_id=user_access.user_id, thread_id=thread_id, recipe_id=message.recipe_id
+                ),
+            )
+        )
+        
+        logger.warning(f"Updated message recipe_id: {message.recipe_id}")
+        
         return recipe

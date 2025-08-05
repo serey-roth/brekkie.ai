@@ -52,6 +52,7 @@ from services.data_services.recipe_cache_service import RecipeCacheService
 from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from services.safety_guards.regex_safety_guard import RegexSafetyGuard
 from services.chat_services.chat_session_store import ChatSessionStore
+from services.chat_services.chat_session_data_stream_writer import ChatSessionDataStreamWriter
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
 from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
@@ -291,6 +292,11 @@ async def service_container(db_transaction_maker, redis_client, test_settings: S
     websocket_event_sender = WebSocketEventSender()
     ai_food_agent = GoogleAIFoodAgent(checkpointer=InMemorySaver())
 
+    chat_session_data_stream_writer = ChatSessionDataStreamWriter(
+        stream=test_settings.chat_session_data_stream,
+        redis_client=redis_client,
+    )
+
     chat_session_store = ChatSessionStore(
         thread_service=thread_service,
         message_service=message_service,
@@ -299,6 +305,7 @@ async def service_container(db_transaction_maker, redis_client, test_settings: S
         message_cache_service=message_cache_service,
         recipe_cache_service=recipe_cache_service,
         user_access_cache_service=user_access_cache_service,
+        chat_session_data_stream_writer=chat_session_data_stream_writer,
     )
 
     chat_session_limit_checker = ChatSessionLimitChecker(

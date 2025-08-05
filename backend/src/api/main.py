@@ -29,6 +29,7 @@ from services.chat_services.chat_session_limit_checker import ChatSessionLimitCh
 from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
 from services.chat_services.chat_session_store import ChatSessionStore
+from services.chat_services.chat_session_data_stream_writer import ChatSessionDataStreamWriter
 from services.data_services.message_cache_service import MessageCacheService
 from services.data_services.message_service import MessageService
 from services.data_services.recipe_cache_service import RecipeCacheService
@@ -85,6 +86,10 @@ async def lifespan(app: FastAPI):
 
     websocket_event_sender = WebSocketEventSender()
 
+    chat_session_data_stream_writer = ChatSessionDataStreamWriter(
+        stream=settings.chat_session_data_stream,
+        redis_client=redis_client,
+    )
     chat_session_store = ChatSessionStore(
         thread_cache_service=thread_cache_service,
         message_cache_service=message_cache_service,
@@ -93,6 +98,7 @@ async def lifespan(app: FastAPI):
         recipe_service=recipe_service,
         thread_service=thread_service,
         user_access_cache_service=user_access_cache_service,
+        chat_session_data_stream_writer=chat_session_data_stream_writer,
     )
     chat_session_limit_checker = ChatSessionLimitChecker(
         user_access_cache_service=user_access_cache_service,
@@ -100,7 +106,6 @@ async def lifespan(app: FastAPI):
         unauthenticated_user_message_limit=settings.unauthenticated_user_message_limit,
     )
     chat_session_handlers = ChatSessionHandlers(
-        db_transaction_maker=db_transaction_maker,  # type: ignore
         chat_session_store=chat_session_store,
     )
     chat_session_message_guard = ChatSessionMessageGuard(

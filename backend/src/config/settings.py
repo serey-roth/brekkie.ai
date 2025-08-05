@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     session_ttl: int = 60 * 30  # 30 minutes
     authenticated_user_message_limit: int = 25
     unauthenticated_user_message_limit: int = 10
+    
+    # Redis Stream
+    chat_session_data_stream: str = "brekkie_ai_chat_session_data_stream"
+    chat_session_data_stream_group: str = "brekkie_ai_chat_session_data_stream_group"
+    chat_session_data_stream_consumer: str = "brekkie_ai_chat_session_data_stream_consumer"
 
     # Cookie Settings
     cookie_name: str = "bk_access_token"
@@ -56,10 +61,19 @@ class Settings(BaseSettings):
     access_token_refresh_ttl: int = 60 * 60 * 3  # 3 hours
 
     # Database Pool Settings
-    db_pool_size: int = 5
-    db_max_overflow: int = 10
     db_pool_timeout: int = 30
     db_pool_recycle: int = 3600
+
+    # Environment-specific database pool settings
+    def get_db_pool_size(self) -> int:
+        if self.is_staging():
+            return 2  # More conservative for staging
+        return 5
+
+    def get_db_max_overflow(self) -> int:
+        if self.is_staging():
+            return 3  # More conservative for staging
+        return 10
 
     # Feature Flags
     enable_auth: bool = Field(default=True, alias="ENABLE_AUTH")

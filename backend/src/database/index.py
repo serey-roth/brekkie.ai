@@ -22,12 +22,13 @@ def get_db_engine(settings: Settings):
         }
     else:
         pool_config = {
-            "pool_size": settings.db_pool_size,
-            "max_overflow": settings.db_max_overflow,
+            "pool_size": settings.get_db_pool_size(),
+            "max_overflow": settings.get_db_max_overflow(),
             "pool_timeout": settings.db_pool_timeout,
             "pool_recycle": settings.db_pool_recycle,
             "pool_pre_ping": True,
             "echo": settings.environment == "development",
+            "pool_reset_on_return": "commit",  # Reset connections on return
         }
 
     return create_async_engine(str(settings.db_url), **pool_config)
@@ -52,7 +53,10 @@ def create_db_transaction_maker(settings: Settings) -> DBTransactionMaker:
                 await db.commit()
             except Exception as e:
                 logger.error(f"Error in database transaction: {e}")
-                await db.rollback()
+                try:
+                    await db.rollback()
+                except Exception as rollback_error:
+                    logger.error(f"Error during rollback: {rollback_error}")
                 raise
 
     return db_transaction_maker

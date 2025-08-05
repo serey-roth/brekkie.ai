@@ -1036,7 +1036,9 @@ class TestCountMessages:
         create_messages_in_db: None,
     ) -> None:
         """Test counting messages in a specific thread."""
-        result = await message_repository.count_messages(async_session, CountMessagesParams(thread_id=thread_id))
+        result = await message_repository.count_messages(
+            async_session, CountMessagesParams(thread_id=thread_id)
+        )
         assert result == 3
 
     async def test_count_thread_messages_by_user_id(

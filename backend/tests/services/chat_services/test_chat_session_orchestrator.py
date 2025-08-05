@@ -26,7 +26,7 @@ from services.websocket_event_sender import WebSocketEventSender
 
 from schemas.user_access import UserAccess
 from schemas.threads import Thread
-from schemas.messages import PaginatedMessages, Message, ApiMessage
+from schemas.messages import PaginatedMessages, Message, PaginatedApiMessages
 from schemas.message_role import MessageRole
 from schemas.message_content_type import MessageContentType
 from schemas.recipes import UserRecipe
@@ -403,13 +403,15 @@ class TestResumeSession:
             mock_chat_session_store.resume_thread.assert_called_once()
             mock_chat_session_store.get_paginated_messages.assert_called_once()
             mock_chat_session_store.get_recipes_by_message_ids.assert_not_called()
+            expected_paginated_messages = PaginatedApiMessages.from_paginated_messages(sample_paginated_messages)
+            
             mock_websocket_event_sender.send_event.assert_called_once_with(
                 mock_websocket,
                 "thread_resumed",
                 {
                     "user_access": sample_anonymous_user_access.model_dump(),
                     "thread": sample_thread.model_dump(),
-                    "paginated_messages": sample_paginated_messages.model_dump(),
+                    "paginated_messages": expected_paginated_messages.model_dump(),
                     "recipes": [],
                 },
             )
@@ -467,13 +469,15 @@ class TestResumeSession:
             mock_chat_session_store.resume_thread.assert_called_once()
             mock_chat_session_store.get_paginated_messages.assert_called_once()
             mock_chat_session_store.get_recipes_by_message_ids.assert_called_once()
+            expected_paginated_messages = PaginatedApiMessages.from_paginated_messages(paginated_messages_with_recipes)
+            
             mock_websocket_event_sender.send_event.assert_called_once_with(
                 mock_websocket,
                 "thread_resumed",
                 {
                     "user_access": sample_anonymous_user_access.model_dump(),
                     "thread": sample_thread.model_dump(),
-                    "paginated_messages": paginated_messages_with_recipes.model_dump(),
+                    "paginated_messages": expected_paginated_messages.model_dump(),
                     "recipes": [recipe.model_dump() for recipe in sample_recipes],
                 },
             )

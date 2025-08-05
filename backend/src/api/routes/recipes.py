@@ -26,11 +26,9 @@ async def get_user_recipes(
     )
     if user_access is None:
         raise HTTPException(status_code=401, detail={"message": "Access token not found"})
-
-    if user_access.is_authenticated:
-        recipe_service = service_container.recipe_service
-        async with service_container.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
-            return await recipe_service.get_user_recipes(db, user_access.user_id)
-    else:
-        recipe_cache_service = service_container.recipe_cache_service
-        return await recipe_cache_service.get_user_recipes(user_access.user_id)
+    
+    if not user_access.is_authenticated:
+        raise HTTPException(status_code=403, detail={"message": "Unauthorized"})
+    
+    async with service_container.db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
+        return await service_container.chat_session_store.get_user_recipes(db, user_access)

@@ -24,7 +24,7 @@ from schemas.chat_session_errors import (
     ThreadNotFoundError,
 )
 
-from schemas.messages import GetMessagesParams
+from schemas.messages import GetMessagesParams, PaginatedApiMessages
 from schemas.threads import (
     CreateThreadParams,
     ResumeThreadParams,
@@ -187,7 +187,9 @@ class ChatSessionOrchestrator:
 
             return {
                 "thread": thread.model_dump(),
-                "paginated_messages": paginated_messages.model_dump(),
+                "paginated_messages": PaginatedApiMessages.from_paginated_messages(
+                    paginated_messages
+                ).model_dump(),
                 "recipes": [recipe.model_dump() for recipe in recipes],
             }
 

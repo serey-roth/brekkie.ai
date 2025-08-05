@@ -34,6 +34,9 @@ async def get_user_threads(
     if user_access is None:
         raise HTTPException(status_code=401, detail={"message": "Access token not found"})
 
+    if not user_access.is_authenticated:
+        raise HTTPException(status_code=403, detail={"message": "Unauthorized"})
+    
     try:
         logger.debug(
             f"Getting threads for user {user_access.user_id} with limit {limit} and from_timestamp {from_timestamp}"
@@ -80,6 +83,9 @@ async def get_thread_messages(
     if user_access is None:
         raise HTTPException(status_code=401, detail={"message": "Access token not found"})
 
+    if not user_access.is_authenticated:
+        raise HTTPException(status_code=403, detail={"message": "Unauthorized"})
+    
     try:
         logger.debug(
             f"Getting messages for thread {thread_id} for user {user_access.user_id} with limit {limit} and from_timestamp {from_timestamp}"

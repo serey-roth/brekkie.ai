@@ -117,12 +117,6 @@ export function useRecipeGenerationSimulation() {
                 return;
             }
 
-            const newMessage = {
-                ...recipeMessage,
-                recipe_id: userRecipe.id,
-                is_recipe_generation_started: true,
-                is_recipe_generation_completed: false,
-            } satisfies Message;
             const newUserRecipe = {
                 ...userRecipe,
                 ...recipes[currentRecipeIndex.current],
@@ -131,8 +125,6 @@ export function useRecipeGenerationSimulation() {
                 event: 'recipe_field_detected',
                 data: {
                     user_access: userAccess,
-                    thread: thread,
-                    message: newMessage,
                     recipe: newUserRecipe,
                 },
             } satisfies ChatEvent);

@@ -143,13 +143,11 @@ export function AuthCallback() {
             if (userAccess.is_authenticated) {
                 setTimeout(() => {
                     navigate('/');
-                }, 200);
+                }, 100);
             } else {
                 console.error('Failed to authenticate user');
                 setAuthError(true);
-                setTimeout(() => {
-                    navigate('/auth');
-                }, 200);
+                navigate('/auth');
             }
         } catch (error) {
             console.error('Auth verification failed:', error);
@@ -160,15 +158,11 @@ export function AuthCallback() {
                     await logout();
                     await userAccessManager.revokeAccess();
                 } else {
-                    setTimeout(() => {
-                        navigate('/auth');
-                    }, 200);
+                    navigate('/auth');
                 }
             } catch {
                 console.error('Failed to logout');
-                setTimeout(() => {
-                    navigate('/auth');
-                }, 200);
+                navigate('/auth');
             }
         }
     }, [verifyJWT, navigate, logout, getClaims, userAccessManager]);

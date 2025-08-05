@@ -13,10 +13,10 @@ type RecipeCardProps = {
 
 const getGenerationProgress = (recipe: UserRecipe | null) => {
     if (!recipe) return { message: 'Searching for the perfect recipe...' };
-    if (!recipe.name) return { message: 'Writing recipe name...' };
+    if (!recipe.name) return { message: 'Preparing recipe...' };
     if (!recipe.description) return { message: 'Writing recipe description...' };
     if (!recipe.prep_time_minutes || !recipe.cook_time_minutes || !recipe.servings)
-        return { message: 'Calculating recipe time and servings...' };
+        return { message: 'Calculating recipe time and servings' };
     if (!recipe.categories?.length) return { message: 'Adding recipe categories...' };
 
     if (recipe.instructions?.length) return { message: 'Adding final touches...' };

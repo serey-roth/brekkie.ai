@@ -387,9 +387,6 @@ function useChatLimit() {
             messageCount: number,
             isAuthenticated: boolean,
         ) => {
-            console.log('messageCount', messageCount);
-            console.log('limit', limit);
-            console.log('isAuthenticated', isAuthenticated);
             if (messageCount >= limit) {
                 return `You've reached your daily limit of ${limit} messages.${featureFlags.enableAuth && isAuthenticated ? ' Paid plans with higher limits are coming soon.' : ''}`;
             } else if (isAuthenticated && messageCount > 0 && Math.abs(messageCount - limit) < 10) {

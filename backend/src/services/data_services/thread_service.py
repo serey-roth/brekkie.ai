@@ -38,6 +38,13 @@ class ThreadService:
             is_empty=bool(thread.is_empty),
         )
 
+    async def create_threads(
+        self, db: AsyncSession, params: list[CreateThreadParams]
+    ) -> list[Thread]:
+        logger.debug(f"Creating threads with {params}")
+        db_threads = await self.repository.create_threads(db, params)
+        return [self._to_thread_dto(thread) for thread in db_threads]
+
     async def create_thread(self, db: AsyncSession, params: CreateThreadParams) -> Thread:
         logger.debug(f"Creating thread for user {params.user_id}, thread_id: {params.id}")
         thread = await self.repository.create_thread(db, params)
@@ -106,11 +113,5 @@ class ThreadService:
 
     async def count_user_threads(self, db: AsyncSession, user_id: str) -> int:
         logger.debug(f"Counting threads for user {user_id}")
-        return await self.repository.count_user_threads(db, user_id)
-
-    async def create_threads(
-        self, db: AsyncSession, params: list[CreateThreadParams]
-    ) -> list[Thread]:
-        logger.debug(f"Creating threads with {params}")
-        db_threads = await self.repository.create_threads(db, params)
-        return [self._to_thread_dto(thread) for thread in db_threads]
+        count = await self.repository.count_user_threads(db, user_id)
+        return cast(int, count)

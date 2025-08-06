@@ -14,8 +14,33 @@ from utils.date_utils import strip_timezone
 class ThreadRepository:
     """Repository for managing thread database operations including creation, retrieval, updates, and pagination."""
 
+    async def create_threads(
+        self, db: AsyncSession, params: list[CreateThreadParams]
+    ) -> list[DBThread]:
+        """Create threads in the database.
+
+        Args:
+            db: Database session for the operation
+            params: List of thread creation parameters
+        """
+        db_threads = [
+            DBThread(
+                created_at=strip_timezone(thread.created_at),
+                updated_at=strip_timezone(thread.updated_at),
+                resumed_at=strip_timezone(thread.resumed_at) if thread.resumed_at else None,
+                **thread.model_dump(
+                    exclude={"created_at", "updated_at", "resumed_at"},
+                    exclude_none=True,
+                    exclude_unset=True,
+                ),
+            )
+            for thread in params
+        ]
+        db.add_all(db_threads)
+        return db_threads
+
     async def create_thread(self, db: AsyncSession, params: CreateThreadParams) -> DBThread:
-        """Creates a new thread record with the given parameters.
+        """Create a new thread record with the given parameters.
 
         Args:
             db: Database session for the operation
@@ -24,22 +49,11 @@ class ThreadRepository:
         Returns:
             The newly created thread record
         """
-        thread = DBThread(
-            created_at=strip_timezone(params.created_at),
-            updated_at=strip_timezone(params.updated_at),
-            resumed_at=strip_timezone(params.resumed_at) if params.resumed_at else None,
-            **params.model_dump(
-                exclude={"created_at", "updated_at", "resumed_at"},
-                exclude_none=True,
-                exclude_unset=True,
-            ),
-        )
-        db.add(thread)
-        await db.flush()
-        return thread
+        db_threads = await self.create_threads(db, [params])
+        return db_threads[0]
 
     async def get_thread(self, db: AsyncSession, thread_id: str) -> DBThread | None:
-        """Gets a thread record with the given id.
+        """Get a thread record with the given id.
 
         Args:
             db: Database session for the operation
@@ -54,7 +68,7 @@ class ThreadRepository:
     async def get_user_threads(
         self, db: AsyncSession, params: GetDBUserThreadsParams
     ) -> list[DBThread]:
-        """Gets threads for a user with pagination, sorting, and filtering options.
+        """Get threads for a user with pagination, sorting, and filtering options.
 
         Args:
             db: Database session for the operation
@@ -86,6 +100,7 @@ class ThreadRepository:
         query = (
             select(DBThread)
             .options(selectinload(DBThread.messages))
+            .options(selectinload(DBThread.recipes))
             .where(*where_clause)
             .order_by(order_by_clause)
             .limit(limit)
@@ -107,7 +122,7 @@ class ThreadRepository:
         return list(result.scalars().all())
 
     async def update_thread(self, db: AsyncSession, params: UpdateThreadParams) -> DBThread:
-        """Updates an existing thread record with the given parameters.
+        """Update an existing thread record with the given parameters.
 
         Args:
             db: Database session for the operation
@@ -136,11 +151,10 @@ class ThreadRepository:
                     setattr(thread, field, value)
 
         db.add(thread)
-        await db.flush()
         return thread
 
     async def count_user_threads(self, db: AsyncSession, user_id: str) -> int:
-        """Counts the number of threads for a user.
+        """Count the number of threads for a user.
 
         Args:
             db: Database session for the operation
@@ -154,34 +168,8 @@ class ThreadRepository:
         )
         return result.scalar_one()
 
-    async def create_threads(
-        self, db: AsyncSession, params: list[CreateThreadParams]
-    ) -> list[DBThread]:
-        """Creates threads in the database.
-
-        Args:
-            db: Database session for the operation
-            params: List of thread creation parameters
-        """
-        db_threads = [
-            DBThread(
-                created_at=strip_timezone(thread.created_at),
-                updated_at=strip_timezone(thread.updated_at),
-                resumed_at=strip_timezone(thread.resumed_at) if thread.resumed_at else None,
-                **thread.model_dump(
-                    exclude={"created_at", "updated_at", "resumed_at"},
-                    exclude_none=True,
-                    exclude_unset=True,
-                ),
-            )
-            for thread in params
-        ]
-        db.add_all(db_threads)
-        await db.flush()
-        return db_threads
-
     async def resume_thread(self, db: AsyncSession, params: ResumeThreadParams) -> DBThread:
-        """Resumes a thread.
+        """Resume a thread.
 
         Args:
             db: Database session for the operation
@@ -196,5 +184,4 @@ class ThreadRepository:
         setattr(thread, "resumed_at", strip_timezone(params.resumed_at))
 
         db.add(thread)
-        await db.flush()
         return thread

@@ -1,23 +1,15 @@
 import asyncio
 import json
-from contextlib import _AsyncGeneratorContextManager
 from datetime import datetime, timedelta, timezone
 from typing import Any, List
+from pydantic import ValidationError
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
-from pydantic import ValidationError
-from schemas.chat_session_errors import (
-    AccessTokenNotFoundError,
-    ChatSessionError,
-    InternalServerError,
-    InvalidPayloadError,
-    OverMessageLimitError,
-    SessionClosedError,
-)
-from schemas.messages import UserMessagePayload
-from schemas.safety_guards import SafetyIssue
-from schemas.user_access import UserAccess
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from database.index import DBTransactionMaker
+
 from services.ai_food_agent.ai_food_agent import AIFoodAgent
 from services.chat_services.chat_session_handlers import ChatSessionHandlers
 from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
@@ -29,7 +21,19 @@ from services.chat_services.chat_session_message_processor import (
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.data_services.user_access_cache_service import UserAccessCacheService
 from services.websocket_event_sender import WebSocketEventSender
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from schemas.chat_session_errors import (
+    AccessTokenNotFoundError,
+    ChatSessionError,
+    InternalServerError,
+    InvalidPayloadError,
+    OverMessageLimitError,
+    SessionClosedError,
+)
+from schemas.messages import UserMessagePayload
+from schemas.safety_guards import SafetyIssue
+from schemas.user_access import UserAccess
+
 from utils.logger import Logger
 
 logger = Logger("chat_session_engine")
@@ -68,7 +72,7 @@ class ChatSessionEngine:
         thread_id: str,
         session_ttl: int,
         websocket: WebSocket,
-        db_transaction_maker: _AsyncGeneratorContextManager[AsyncSession],
+        db_transaction_maker: DBTransactionMaker,
         ai_food_agent: AIFoodAgent,
         websocket_event_sender: WebSocketEventSender,
         user_access_cache_service: UserAccessCacheService,
@@ -97,7 +101,7 @@ class ChatSessionEngine:
             on_message_processed=self._handle_message_processed,
         )
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "ChatSessionEngine":
         """Async context manager entry point.
 
         Returns:
@@ -105,7 +109,7 @@ class ChatSessionEngine:
         """
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit point.
 
         Ensures proper cleanup of the timeout task when the engine goes out of scope.
@@ -117,7 +121,7 @@ class ChatSessionEngine:
         """
         self.state.cleanup_timeout_task()
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Destructor method to ensure timeout task cleanup on garbage collection.
 
         This method is called when the ChatSessionEngine object is being
@@ -128,7 +132,11 @@ class ChatSessionEngine:
             This is a fallback cleanup mechanism. The primary cleanup should
             happen through the async context manager or explicit cleanup calls.
         """
-        if hasattr(self, "state") and self.state is not None and self.state.is_timeout_task_running():
+        if (
+            hasattr(self, "state")
+            and self.state is not None
+            and self.state.is_timeout_task_running()
+        ):
             try:
                 # If the event is still running, the timeout task will be cleaned up by garbage collection
                 loop = asyncio.get_event_loop()
@@ -192,9 +200,7 @@ class ChatSessionEngine:
 
     async def _get_user_access(self) -> UserAccess:
         try:
-            user_access = await self.user_access_cache_service.get_user_access(
-                self.access_token
-            )
+            user_access = await self.user_access_cache_service.get_user_access(self.access_token)
             if user_access is None:
                 raise AccessTokenNotFoundError(access_token=self.access_token)
 
@@ -245,11 +251,12 @@ class ChatSessionEngine:
 
     async def _reject_user_message(
         self,
+        db: AsyncSession,
         user_access: UserAccess,
         user_message_id: str,
         user_input: str,
         safety_issues: List[SafetyIssue],
-    ):
+    ) -> None:
         try:
             rejection_message = await self.message_guard.get_rejection_message(
                 user_input, safety_issues
@@ -261,10 +268,10 @@ class ChatSessionEngine:
             rejection_message = "I can't respond to that message. Let's keep our conversation respectful and focused on food and cooking!"
 
         await self.message_processor.reject_user_message(
-            user_access, self.thread_id, user_message_id, rejection_message
+            db, user_access, self.thread_id, user_message_id, rejection_message
         )
 
-    async def run(self):
+    async def run(self) -> None:
         while not self.state.is_closed:
             try:
                 await self._check_message_limit()
@@ -290,22 +297,23 @@ class ChatSessionEngine:
                         safety_guard_result=safety_guard_result,
                     )
 
-                if (
-                    safety_guard_result is not None
-                    and safety_guard_result.is_blocked
-                    and len(safety_guard_result.issues) > 0
-                ):
-                    await self._reject_user_message(
-                        user_access,
-                        user_message_id,
-                        user_message_content,
-                        safety_guard_result.issues,
-                    )
-                    continue
+                    if (
+                        safety_guard_result is not None
+                        and safety_guard_result.is_blocked
+                        and len(safety_guard_result.issues) > 0
+                    ):
+                        await self._reject_user_message(
+                            db,
+                            user_access,
+                            user_message_id,
+                            user_message_content,
+                            safety_guard_result.issues,
+                        )
+                        continue
 
-                await self.message_processor.process_user_message(
-                    user_access, self.thread_id, user_message_id, user_message_content
-                )
+                    await self.message_processor.process_user_message(
+                        db, user_access, self.thread_id, user_message_id, user_message_content
+                    )
 
             except WebSocketDisconnect:
                 break

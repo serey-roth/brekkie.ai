@@ -16,9 +16,7 @@ class UserAccessCacheService:
         return f"brekkie:user_access:{access_token}"
 
     async def get_user_access(self, access_token: str) -> UserAccess | None:
-        return await self.redis_cache.get_json(
-            self._get_user_access_key(access_token), UserAccess
-        )
+        return await self.redis_cache.get_json(self._get_user_access_key(access_token), UserAccess)
 
     async def set_user_access(
         self,
@@ -64,46 +62,35 @@ class UserAccessCacheService:
             ),
             ttl=ttl,
         )
-
-    async def create_anonymous_access(
-        self, ip_address: str | None = None, ttl: int | None = None
-    ) -> UserAccess:
-        access_token = str(uuid4())
-        user_id = str(uuid4())
-        now = to_utc_isostring(datetime.now(timezone.utc))
+    
+    async def create_anonymous_access(self, ip_address: str | None = None) -> UserAccess:
         return await self.create_user_access(
-            access_token,
-            user_id,
-            created_at=now,
-            updated_at=now,
+            access_token=str(uuid4()),
+            user_id=str(uuid4()),
+            created_at=to_utc_isostring(datetime.now(timezone.utc)),
+            updated_at=to_utc_isostring(datetime.now(timezone.utc)),
             is_authenticated=False,
+            user_message_count=0,
             ip_address=ip_address,
-            ttl=ttl,
         )
-
-    async def promote_to_authenticated(
-        self,
-        access_token: str,
-        user_id: str,
-        updated_at: str,
-        user_message_count: int,
-        ttl: int | None = None,
-    ) -> UserAccess:
+        
+    async def promote_to_authenticated(self, access_token: str) -> UserAccess:
         user_access = await self.get_user_access(access_token)
         if user_access is None:
             raise ValueError(f"User access {access_token} not found")
-
-        user_access = user_access.model_copy(
-            update={
-                "user_id": user_id,
-                "is_authenticated": True,
-                "user_message_count": user_message_count,
-                "updated_at": updated_at,
-            },
-            deep=True,
+        
+        return await self.create_user_access(
+            access_token=access_token,
+            user_id=user_access.user_id,
+            created_at=user_access.created_at,
+            updated_at=to_utc_isostring(datetime.now(timezone.utc)),
+            is_authenticated=True,
+            user_message_count=user_access.user_message_count,
+            ip_address=user_access.ip_address,
         )
-        user_access = await self.set_user_access(access_token, user_access, ttl=ttl)
-        return user_access
+
+    async def revoke_access(self, access_token: str) -> None:
+        await self.redis_cache.delete(self._get_user_access_key(access_token))
 
     async def increment_user_message_count(self, access_token: str) -> UserAccess:
         user_access = await self.get_user_access(access_token)
@@ -120,11 +107,9 @@ class UserAccessCacheService:
         user_access = await self.get_user_access(access_token)
         return user_access.is_authenticated if user_access else False
 
-    async def is_expired(self, access_token: str) -> bool:
+    async def has_expired(self, access_token: str) -> bool:
         return not await self.redis_cache.exists(self._get_user_access_key(access_token))
 
-    async def revoke_access(self, access_token: str) -> None:
-        await self.redis_cache.delete(self._get_user_access_key(access_token))
-
     async def get_ttl(self, access_token: str) -> int | None:
-        return await self.redis_cache.get_ttl(self._get_user_access_key(access_token))
+        ttl = await self.redis_cache.get_ttl(self._get_user_access_key(access_token))
+        return ttl if ttl is not None else self.ttl

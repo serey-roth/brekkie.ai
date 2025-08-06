@@ -85,8 +85,8 @@ class DBUser(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    external_id = Column(String, unique=True)
-    email = Column(String, nullable=True, unique=True)
+    external_id = Column(String, unique=True, index=True)
+    email = Column(String, nullable=True, unique=True, index=True)
     name = Column(String, nullable=True)
     created_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))
     updated_at = Column(DateTime, default=strip_timezone(datetime.now(timezone.utc)))

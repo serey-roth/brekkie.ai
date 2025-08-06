@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from api.deps import get_access_token, get_service_container
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.params import Query
-from schemas.messages import GetMessagesParams, GetThreadMessagesResponse
+from schemas.messages import GetMessagesParams, GetThreadMessagesResponse, PaginatedApiMessages
 from schemas.threads import GetUserThreadsParams, PaginatedThreads
 from services.service_container import ServiceContainer
 from utils.logger import Logger
@@ -31,8 +31,12 @@ async def get_user_threads(
     user_access = await service_container.user_access_cache_service.get_user_access(
         access_token
     )
+    
     if user_access is None:
         raise HTTPException(status_code=401, detail={"message": "Access token not found"})
+
+    if not user_access.is_authenticated:
+        raise HTTPException(status_code=403, detail={"message": "Unauthorized"})
 
     try:
         logger.debug(
@@ -45,7 +49,6 @@ async def get_user_threads(
         async with db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
             return await chat_session_store.get_paginated_threads(
                 db,
-                user_access,
                 GetUserThreadsParams(
                     user_id=user_access.user_id,
                     limit=limit,
@@ -114,12 +117,12 @@ async def get_thread_messages(
             ]
             recipes = []
             if len(message_ids) > 0:
-                recipes = await chat_session_store.get_recipes_by_message_id(
+                recipes = await chat_session_store.get_recipes_by_message_ids(
                     db, user_access, thread_id, message_ids
                 )
 
             return GetThreadMessagesResponse(
-                paginated_messages=result,
+                paginated_messages=PaginatedApiMessages.from_paginated_messages(result),
                 recipes=recipes,
             )
 

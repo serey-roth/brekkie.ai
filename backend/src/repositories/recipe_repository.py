@@ -1,9 +1,12 @@
+from datetime import datetime
 from database.schema import DBMessage, DBRecipe
 from schemas.recipes import (
     CreateRecipeParams,
+    Recipe,
     RecipeCategory,
     RecipeIngredient,
     RecipeInstruction,
+    RecipeField,
     UpdateRecipeFieldParams,
     UpdateRecipeParams,
 )
@@ -15,8 +18,30 @@ from utils.date_utils import strip_timezone
 class RecipeRepository:
     """Repository for managing recipe database operations including creation, retrieval, updates, and field-specific modifications."""
 
+    async def create_recipes(
+        self, db: AsyncSession, params: list[CreateRecipeParams]
+    ) -> list[DBRecipe]:
+        """Create recipes in the database.
+
+        Args:
+            db: Database session for the operation
+            params: List of recipe creation parameters
+        """
+        db_recipes = [
+            DBRecipe(
+                created_at=strip_timezone(recipe.created_at),
+                updated_at=strip_timezone(recipe.updated_at),
+                **recipe.model_dump(
+                    exclude={"created_at", "updated_at"}, exclude_none=True, exclude_unset=True
+                ),
+            )
+            for recipe in params
+        ]
+        db.add_all(db_recipes)
+        return db_recipes
+
     async def create_recipe(self, db: AsyncSession, params: CreateRecipeParams) -> DBRecipe:
-        """Creates a new recipe record with the given parameters.
+        """Create a new recipe record with the given parameters.
 
         Args:
             db: Database session for the operation
@@ -25,19 +50,11 @@ class RecipeRepository:
         Returns:
             The newly created recipe record
         """
-        db_recipe = DBRecipe(
-            created_at=strip_timezone(params.created_at),
-            updated_at=strip_timezone(params.updated_at),
-            **params.model_dump(
-                exclude={"created_at", "updated_at"}, exclude_none=True, exclude_unset=True
-            ),
-        )
-        db.add(db_recipe)
-        await db.flush()
-        return db_recipe
+        db_recipes = await self.create_recipes(db, [params])
+        return db_recipes[0]
 
     async def get_recipe(self, db: AsyncSession, recipe_id: str) -> DBRecipe | None:
-        """Gets a single recipe record with the given id.
+        """Get a single recipe record with the given id.
 
         Args:
             db: Database session for the operation
@@ -50,7 +67,7 @@ class RecipeRepository:
         return result
 
     async def get_user_recipes(self, db: AsyncSession, user_id: str) -> list[DBRecipe]:
-        """Gets all recipes created by a specific user.
+        """Get all recipes created by a specific user.
 
         Args:
             db: Database session for the operation
@@ -62,8 +79,41 @@ class RecipeRepository:
         result = await db.execute(select(DBRecipe).where(DBRecipe.user_id == user_id))
         return list(result.scalars().all())
 
+    async def get_thread_recipes(self, db: AsyncSession, thread_id: str) -> list[DBRecipe]:
+        """Get all recipes associated with a specific thread.
+
+        Args:
+            db: Database session for the operation
+            thread_id: The thread's id
+
+        Returns:
+            List of recipes associated with the thread
+        """
+        result = await db.execute(select(DBRecipe).where(DBRecipe.thread_id == thread_id))
+        return list(result.scalars().all())
+
+    async def get_recipes_by_message_ids(
+        self, db: AsyncSession, message_ids: list[str]
+    ) -> list[DBRecipe]:
+        """Get recipes associated with specific message ids.
+
+        Args:
+            db: Database session for the operation
+            message_ids: List of message ids
+
+        Returns:
+            List of recipes associated with the specified messages
+        """
+        result = await db.execute(
+            select(DBRecipe)
+            .join(DBMessage, DBRecipe.id == DBMessage.recipe_id)
+            .where(DBMessage.id.in_(message_ids))
+            .where(DBMessage.recipe_id.isnot(None))
+        )
+        return list(result.scalars().all())
+
     async def update_recipe(self, db: AsyncSession, params: UpdateRecipeParams) -> DBRecipe:
-        """Updates an existing recipe record with the given parameters.
+        """Update an existing recipe record with the given parameters.
 
         Args:
             db: Database session for the operation
@@ -79,38 +129,23 @@ class RecipeRepository:
         if db_recipe is None:
             raise ValueError(f"Recipe {params.id} not found")
 
-        items_to_update = params.model_dump(exclude={"id"}, exclude_none=True, exclude_unset=True)
+        updated_at = strip_timezone(params.updated_at)
+        setattr(db_recipe, "updated_at", updated_at)
 
         items_to_update = params.model_dump(
             exclude={"id", "updated_at"}, exclude_none=True, exclude_unset=True
         )
         for field, value in items_to_update.items():
-            if value is None:
-                continue
-
-            # Special handling for JSON fields: ingredients, instructions, and categories
-            # These are stored as JSON in the database and come as lists of Pydantic models
-            # that have already been serialized to dicts via model_dump()
-            if field == "ingredients":
-                db_recipe.ingredients = value
-            elif field == "instructions":
-                db_recipe.instructions = value
-            elif field == "categories":
-                db_recipe.categories = value
-            elif field == "updated_at":
-                setattr(db_recipe, field, strip_timezone(value))
-            else:
-                # For simple scalar fields (strings, integers), setattr works fine
+            if value is not None:
                 setattr(db_recipe, field, value)
 
         db.add(db_recipe)
-        await db.flush()
         return db_recipe
 
     async def update_recipe_field(
         self, db: AsyncSession, params: UpdateRecipeFieldParams
     ) -> DBRecipe:
-        """Updates a single field of an existing recipe record.
+        """Update a single field of an existing recipe record.
 
         Args:
             db: Database session for the operation
@@ -178,61 +213,55 @@ class RecipeRepository:
         setattr(db_recipe, "updated_at", strip_timezone(params.updated_at))
 
         db.add(db_recipe)
-        await db.flush()
         return db_recipe
 
-    async def get_thread_recipes(self, db: AsyncSession, thread_id: str) -> list[DBRecipe]:
-        """Gets all recipes associated with a specific thread.
+    async def update_message_recipe_field(
+        self, db: AsyncSession, message_id: str, field: RecipeField, timestamp: datetime
+    ) -> DBRecipe:
+        """Update a single field of an existing recipe record by message id.
 
         Args:
             db: Database session for the operation
-            thread_id: The thread's id
-
-        Returns:
-            List of recipes associated with the thread
+            message_id: The message's id
+            params: Field update parameters with type-safe field and value
         """
-        result = await db.execute(select(DBRecipe).where(DBRecipe.thread_id == thread_id))
-        return list(result.scalars().all())
+        db_message = await db.get(DBMessage, message_id)
+        if db_message is None:
+            raise ValueError(f"Message {message_id} not found")
 
-    async def get_recipes_by_message_id(
-        self, db: AsyncSession, message_ids: list[str]
-    ) -> list[DBRecipe]:
-        """Gets recipes associated with specific message ids.
+        if db_message.recipe_id is None:
+            raise ValueError(f"Message {message_id} has no recipe id")
 
-        Args:
-            db: Database session for the operation
-            message_ids: List of message ids
-
-        Returns:
-            List of recipes associated with the specified messages
-        """
-        result = await db.execute(
-            select(DBRecipe)
-            .join(DBMessage, DBRecipe.id == DBMessage.recipe_id)
-            .where(DBMessage.id.in_(message_ids))
-            .where(DBMessage.recipe_id.isnot(None))
+        return await self.update_recipe_field(
+            db,
+            UpdateRecipeFieldParams(
+                id=str(db_message.recipe_id),
+                updated_at=timestamp,
+                field=field,
+            ),
         )
-        return list(result.scalars().all())
 
-    async def create_recipes(
-        self, db: AsyncSession, params: list[CreateRecipeParams]
-    ) -> list[DBRecipe]:
-        """Creates recipes in the database.
+    async def update_message_recipe(
+        self, db: AsyncSession, message_id: str, recipe: Recipe, timestamp: datetime
+    ) -> DBRecipe:
+        """Update a recipe after recipe generation.
 
         Args:
             db: Database session for the operation
-            params: List of recipe creation parameters
+            message_id: The message's id
         """
-        db_recipes = [
-            DBRecipe(
-                created_at=strip_timezone(recipe.created_at),
-                updated_at=strip_timezone(recipe.updated_at),
-                **recipe.model_dump(
-                    exclude={"created_at", "updated_at"}, exclude_none=True, exclude_unset=True
-                ),
-            )
-            for recipe in params
-        ]
-        db.add_all(db_recipes)
-        await db.flush()
-        return db_recipes
+        db_message = await db.get(DBMessage, message_id)
+        if db_message is None:
+            raise ValueError(f"Message {message_id} not found")
+
+        if db_message.recipe_id is None:
+            raise ValueError(f"Message {message_id} has no recipe id")
+
+        return await self.update_recipe(
+            db,
+            UpdateRecipeParams(
+                id=str(db_message.recipe_id),
+                updated_at=timestamp,
+                **recipe.model_dump(),
+            ),
+        )

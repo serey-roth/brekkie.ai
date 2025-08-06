@@ -26,6 +26,8 @@ class ChatSessionMessageGuard:
         # Fast template-based rejection message
         # No LLM call needed - much faster
         if any(issue.risk_level == SafetyRiskLevel.HIGH for issue in issues):
-            return "I can't help with that. Let's keep things friendly and focused on what I do best!"
+            return (
+                "I can't help with that. Let's keep things friendly and focused on what I do best!"
+            )
         else:
             return "That's not really my thing. How about we chat about something else?"

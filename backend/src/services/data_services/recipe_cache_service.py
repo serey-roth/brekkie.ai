@@ -29,10 +29,38 @@ class RecipeCacheService:
     def _get_all_user_recipes_key(self, user_id: str) -> str:
         return f"brekkie:chat_session:{user_id}:threads:*:recipes:*"
 
+    def _get_all_thread_recipes_key(self, thread_id: str) -> str:
+        return f"brekkie:chat_session:*:threads:{thread_id}:recipes:*"
+
     async def get_recipe(self, user_id: str, thread_id: str, recipe_id: str) -> UserRecipe | None:
         return await self.recipe_cache.get_json(
             self._get_recipe_key(user_id, thread_id, recipe_id), UserRecipe
         )
+
+    async def get_recipes(self, user_id: str, thread_id: str) -> list[UserRecipe]:
+        result = await self.recipe_cache.get_all_json_by_pattern(
+            pattern=self._get_all_recipes_key(user_id, thread_id), model=UserRecipe
+        )
+        return list(result)
+
+    async def get_user_recipes(self, user_id: str) -> list[UserRecipe]:
+        result = await self.recipe_cache.get_all_json_by_pattern(
+            pattern=self._get_all_user_recipes_key(user_id), model=UserRecipe
+        )
+        return list(result)
+
+    async def get_thread_recipes(self, thread_id: str) -> list[UserRecipe]:
+        result = await self.recipe_cache.get_all_json_by_pattern(
+            pattern=self._get_all_thread_recipes_key(thread_id), model=UserRecipe
+        )
+        return list(result)
+
+    async def get_recipes_by_ids(
+        self, user_id: str, thread_id: str, recipe_ids: list[str]
+    ) -> list[UserRecipe]:
+        keys = [self._get_recipe_key(user_id, thread_id, recipe_id) for recipe_id in recipe_ids]
+        result = await self.recipe_cache.get_all_json_by_keys(keys=keys, model=UserRecipe)
+        return list(result)
 
     async def set_recipe(
         self, recipe: UserRecipe, ttl: int | None = None, keep_ttl: bool = False
@@ -47,22 +75,6 @@ class RecipeCacheService:
             ttl=set_ttl,
             keep_ttl=keep_ttl,
         )
-
-    async def get_recipes(self, user_id: str, thread_id: str) -> list[UserRecipe]:
-        return await self.recipe_cache.get_all_json_by_pattern(
-            pattern=self._get_all_recipes_key(user_id, thread_id), model=UserRecipe
-        )
-
-    async def get_recipes_by_user_id(self, user_id: str) -> list[UserRecipe]:
-        return await self.recipe_cache.get_all_json_by_pattern(
-            pattern=self._get_all_user_recipes_key(user_id), model=UserRecipe
-        )
-
-    async def get_recipes_by_ids(
-        self, user_id: str, thread_id: str, recipe_ids: list[str]
-    ) -> list[UserRecipe]:
-        keys = [self._get_recipe_key(user_id, thread_id, recipe_id) for recipe_id in recipe_ids]
-        return await self.recipe_cache.get_all_json_by_keys(keys=keys, model=UserRecipe)
 
     async def create_recipe(self, params: CreateRecipeParams, ttl: int | None = None) -> UserRecipe:
         recipe = UserRecipe(
@@ -186,6 +198,3 @@ class RecipeCacheService:
             await self.set_recipe(new_recipe, keep_ttl=True)
 
         return new_recipe
-
-    async def delete_recipes_by_user_id(self, user_id: str) -> None:
-        await self.recipe_cache.delete_by_pattern(pattern=self._get_all_user_recipes_key(user_id))

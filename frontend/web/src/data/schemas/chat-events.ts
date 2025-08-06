@@ -59,8 +59,6 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
         event: z.literal('recipe_field_detected'),
         data: z.object({
             user_access: UserAccessSchema,
-            thread: ThreadSchema,
-            message: MessageSchema,
             recipe: UserRecipeSchema,
         }),
     }),

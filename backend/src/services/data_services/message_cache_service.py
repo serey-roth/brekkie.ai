@@ -9,9 +9,9 @@ from schemas.messages import (
     CreateUserMessageParams,
     GetMessagesParams,
     Message,
-    MessageResponse,
     PaginatedMessages,
     UpdateMessageParams,
+    UpdateStrategy,
 )
 from services.redis.redis_cache import RedisCache
 from services.redis.redis_client import RedisClient
@@ -37,6 +37,25 @@ class MessageCacheService:
             self._get_message_key(user_id, thread_id, message_id), Message
         )
 
+    async def get_messages(self, user_id: str, thread_id: str) -> list[Message]:
+        results = await self.message_cache.get_all_json_by_pattern(
+            pattern=self._get_all_messages_key(user_id, thread_id), model=Message
+        )
+        return list(results)
+
+    async def get_messages_by_user_id(self, user_id: str) -> list[Message]:
+        results = await self.message_cache.get_all_json_by_pattern(
+            pattern=self._get_all_user_messages_key(user_id), model=Message
+        )
+        return list(results)
+
+    async def get_messages_by_ids(
+        self, user_id: str, thread_id: str, message_ids: list[str]
+    ) -> list[Message]:
+        keys = [self._get_message_key(user_id, thread_id, message_id) for message_id in message_ids]
+        results = await self.message_cache.get_all_json_by_keys(keys=keys, model=Message)
+        return list(results)
+
     async def set_message(
         self, user_id: str, message: Message, ttl: int | None = None, keep_ttl: bool = False
     ) -> None:
@@ -50,30 +69,6 @@ class MessageCacheService:
             ttl=set_ttl,
             keep_ttl=keep_ttl,
         )
-
-    async def get_messages(self, user_id: str, thread_id: str) -> list[Message]:
-        return await self.message_cache.get_all_json_by_pattern(
-            pattern=self._get_all_messages_key(user_id, thread_id), model=Message
-        )
-
-    async def get_messages_by_user_id(self, user_id: str) -> list[Message]:
-        return await self.message_cache.get_all_json_by_pattern(
-            pattern=self._get_all_user_messages_key(user_id), model=Message
-        )
-
-    async def get_messages_by_id(
-        self, user_id: str, thread_id: str, message_ids: list[str]
-    ) -> list[Message]:
-        keys = [self._get_message_key(user_id, thread_id, message_id) for message_id in message_ids]
-        return await self.message_cache.get_all_json_by_keys(keys=keys, model=Message)
-
-    async def count_thread_user_messages(self, user_id: str, thread_id: str) -> int:
-        messages = await self.get_messages(user_id, thread_id)
-        return sum(1 for m in messages if m.role == MessageRole.user)
-
-    async def count_total_messages_sent_by_user(self, user_id: str) -> int:
-        messages = await self.get_messages_by_user_id(user_id)
-        return sum(1 for m in messages if m.role == MessageRole.user)
 
     async def create_message(
         self, user_id: str, params: CreateMessageParams, ttl: int | None = None
@@ -120,13 +115,61 @@ class MessageCacheService:
             raise ValueError(f"Message {params.id} not found")
 
         new_message = message.model_copy(deep=True)
-        for key, value in params.model_dump(
-            exclude={"id"}, exclude_none=True, exclude_unset=True
-        ).items():
-            if key == "updated_at":
-                new_message.updated_at = to_utc_isostring(value)
+
+        updated_at = params.updated_at
+        new_message.updated_at = to_utc_isostring(updated_at)
+
+        text_content_update = params.text_content_update
+        if text_content_update is not None:
+            if text_content_update.strategy == UpdateStrategy.REPLACE:
+                new_message.text_content = text_content_update.text_content
             else:
-                setattr(new_message, key, value)
+                new_message.text_content = (
+                    str(new_message.text_content) or ""
+                ) + text_content_update.text_content
+
+        input_tokens_update = params.input_tokens_update
+        if input_tokens_update is not None:
+            if input_tokens_update.strategy == UpdateStrategy.REPLACE:
+                new_message.input_tokens = input_tokens_update.input_tokens
+            else:
+                new_message.input_tokens = (
+                    int(input_tokens_update.input_tokens)
+                    if input_tokens_update.input_tokens is not None
+                    else 0
+                )
+                new_message.input_tokens = (
+                    new_message.input_tokens + input_tokens_update.input_tokens
+                )
+
+        output_tokens_update = params.output_tokens_update
+        if output_tokens_update is not None:
+            if output_tokens_update.strategy == UpdateStrategy.REPLACE:
+                new_message.output_tokens = output_tokens_update.output_tokens
+            else:
+                new_message.output_tokens = (
+                    int(output_tokens_update.output_tokens)
+                    if output_tokens_update.output_tokens is not None
+                    else 0
+                )
+                new_message.output_tokens = (
+                    new_message.output_tokens + output_tokens_update.output_tokens
+                )
+
+        items_to_update = params.model_dump(
+            exclude={
+                "id",
+                "updated_at",
+                "text_content_update",
+                "input_tokens_update",
+                "output_tokens_update",
+            },
+            exclude_none=True,
+            exclude_unset=True,
+        )
+        for field, value in items_to_update.items():
+            if value is not None:
+                setattr(new_message, field, value)
 
         previous_ttl = await self.message_cache.get_ttl(
             self._get_message_key(user_id, thread_id, params.id)
@@ -138,11 +181,11 @@ class MessageCacheService:
 
         return new_message
 
-    async def delete_messages_by_user_id(self, user_id: str) -> None:
-        await self.message_cache.delete_by_pattern(pattern=self._get_all_user_messages_key(user_id))
+    async def count_total_messages_sent_by_user(self, user_id: str) -> int:
+        user_messages = await self.get_messages_by_user_id(user_id)
+        return sum(1 for message in user_messages if message.role == MessageRole.user)
 
     # TODO: Duplicate logic from thread_cache_service.py. Extract sorting and filtering to a separate class?
-
     async def _sort_messages(
         self, messages: list[Message], sort_by: str, sort_order: str
     ) -> list[Message]:
@@ -226,9 +269,8 @@ class MessageCacheService:
         else:
             next_timestamp = None
 
-        message_responses = [MessageResponse.from_message(m) for m in messages_to_return]
         return PaginatedMessages(
-            messages=message_responses,
+            messages=messages_to_return,
             total_count=len(messages),
             has_more=has_more,
             next_timestamp=next_timestamp,

@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -7,7 +6,6 @@ from fastapi import status
 
 from services.service_container import ServiceContainer
 
-from utils.date_utils import to_utc_isostring
 
 
 class TestEnsureAccess:
@@ -41,12 +39,7 @@ class TestEnsureAccess:
         sample_ip_address = "127.0.0.2"
         
         user_access = await service_container.user_access_cache_service.create_anonymous_access(sample_ip_address)
-        user_access = await service_container.user_access_cache_service.promote_to_authenticated(
-            access_token=user_access.access_token,
-            user_id=user_access.user_id,
-            updated_at=to_utc_isostring(datetime.now(timezone.utc)),
-            user_message_count=0,
-        )
+        user_access = await service_container.user_access_cache_service.promote_to_authenticated(user_access.access_token)
 
         headers = {
             "fly-client-ip": sample_ip_address

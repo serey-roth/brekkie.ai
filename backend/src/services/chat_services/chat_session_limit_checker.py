@@ -19,9 +19,10 @@ class ChatSessionLimitChecker:
             raise AccessTokenNotFoundError(access_token=access_token)
 
         if user_access.is_authenticated:
-            return user_access.user_message_count >= self.authenticated_user_message_limit
+            result = user_access.user_message_count >= self.authenticated_user_message_limit
         else:
-            return user_access.user_message_count >= self.unauthenticated_user_message_limit
+            result = user_access.user_message_count >= self.unauthenticated_user_message_limit
+        return bool(result)
 
     async def get_message_limit(self, access_token: str) -> int:
         user_access = await self.user_access_cache_service.get_user_access(access_token)

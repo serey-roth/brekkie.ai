@@ -179,16 +179,6 @@ export class ChatStateManager {
                 }
 
                 case 'recipe_field_detected': {
-                    draft.thread = event.data.thread;
-
-                    const updatedMessage = event.data.message;
-                    if (isAssistantMessage(updatedMessage)) {
-                        this._messageManager.updateAssistantMessage(
-                            updatedMessage.id,
-                            updatedMessage,
-                        );
-                    }
-
                     this._recipeManager.updateRecipe(event.data.recipe);
 
                     break;

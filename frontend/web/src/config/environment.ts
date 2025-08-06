@@ -34,8 +34,8 @@ const developmentConfig: EnvironmentConfig = {
     isStaging: false,
     enableDebugLogging: true,
     enableAnalytics: false,
-    maxMessageCountAnonymous: 10,
-    maxMessageCountAuthenticated: 25,
+    maxMessageCountAnonymous: 8,
+    maxMessageCountAuthenticated: 15,
     featureFlags: {
         enableAuth: true,
     },
@@ -53,8 +53,8 @@ const productionConfig: EnvironmentConfig = {
     isStaging: false,
     enableDebugLogging: false,
     enableAnalytics: true,
-    maxMessageCountAnonymous: 10,
-    maxMessageCountAuthenticated: 25,
+    maxMessageCountAnonymous: 8,
+    maxMessageCountAuthenticated: 15,
     featureFlags: {
         enableAuth: true,
     },
@@ -72,8 +72,8 @@ const stagingConfig: EnvironmentConfig = {
     isStaging: true,
     enableDebugLogging: true,
     enableAnalytics: false,
-    maxMessageCountAnonymous: 10,
-    maxMessageCountAuthenticated: 50,
+    maxMessageCountAnonymous: 8,
+    maxMessageCountAuthenticated: 15,
     featureFlags: {
         enableAuth: true,
     },
@@ -92,8 +92,8 @@ const testConfig: EnvironmentConfig = {
     isStaging: false,
     enableDebugLogging: true,
     enableAnalytics: false,
-    maxMessageCountAnonymous: 10,
-    maxMessageCountAuthenticated: 25,
+    maxMessageCountAnonymous: 8,
+    maxMessageCountAuthenticated: 15,
     featureFlags: {
         enableAuth: true,
     },

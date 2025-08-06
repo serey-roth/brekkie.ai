@@ -140,12 +140,12 @@ export function ChatLayout({
                                                         >
                                                             Sign in
                                                         </button>
-                                                        <span> to unlock a higher limit.</span>
+                                                        <span> to get more messages.</span>
                                                     </div>
                                                 ) : (
                                                     chatLimitMessage.type === 'error' && (
                                                         <div className="flex items-center gap-1 text-sm">
-                                                            <span>Please check back later.</span>
+                                                            <span>Paid plans coming soon.</span>
                                                         </div>
                                                     )
                                                 )}

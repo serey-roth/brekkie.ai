@@ -20,8 +20,8 @@ class TestDefaultValues:
         
         # Test session defaults
         assert settings.session_ttl == 60 * 30  # 30 minutes
-        assert settings.authenticated_user_message_limit == 25
-        assert settings.unauthenticated_user_message_limit == 10
+        assert settings.authenticated_user_message_limit == 15
+        assert settings.unauthenticated_user_message_limit == 8
         
         # Test cookie defaults
         assert settings.cookie_max_age == 60 * 60 * 24  # 1 day

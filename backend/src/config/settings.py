@@ -43,8 +43,8 @@ class Settings(BaseSettings):
 
     # Session and Limits
     session_ttl: int = 60 * 30  # 30 minutes
-    authenticated_user_message_limit: int = 25
-    unauthenticated_user_message_limit: int = 10
+    authenticated_user_message_limit: int = 15
+    unauthenticated_user_message_limit: int = 8
 
     # Cookie Settings
     cookie_name: str = "bk_access_token"

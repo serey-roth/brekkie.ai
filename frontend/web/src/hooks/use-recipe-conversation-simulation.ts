@@ -303,8 +303,6 @@ export function useRecipeConversationSimulation() {
                     event: 'recipe_field_detected',
                     data: {
                         user_access: userAccess,
-                        thread: updatedThread,
-                        message: recipeMessage,
                         recipe: {
                             ...userRecipe,
                             ...evolvingRecipeList[i],

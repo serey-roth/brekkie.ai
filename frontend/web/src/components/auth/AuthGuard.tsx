@@ -28,9 +28,6 @@ const LoadingAnimation = () => (
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.4 }}
             >
-                <h2 className="text-contrast mb-2 text-2xl leading-tight font-semibold">
-                    Getting you set up...
-                </h2>
                 <p className="text-contrast-subtle text-base">
                     Hang tight, we're getting everything ready for you!
                 </p>

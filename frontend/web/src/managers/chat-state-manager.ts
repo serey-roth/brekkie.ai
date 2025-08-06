@@ -180,7 +180,6 @@ export class ChatStateManager {
 
                 case 'recipe_field_detected': {
                     this._recipeManager.updateRecipe(event.data.recipe);
-
                     break;
                 }
 

@@ -47,16 +47,13 @@ async def get_user_threads(
         chat_session_store = service_container.chat_session_store
 
         async with db_transaction_maker() as db:  # type: ignore # TODO: linter will complain about missing func param but this setup passes the tests
+            timestamp = datetime.fromisoformat(from_timestamp).replace(tzinfo=timezone.utc) if from_timestamp else None
             return await chat_session_store.get_paginated_threads(
                 db,
                 GetUserThreadsParams(
                     user_id=user_access.user_id,
                     limit=limit,
-                    from_timestamp=datetime.fromisoformat(from_timestamp).replace(
-                        tzinfo=timezone.utc
-                    )
-                    if from_timestamp
-                    else None,
+                    from_timestamp=timestamp,
                     sort_by=sort_by,
                     sort_order=sort_order,
                     exclude_empty=exclude_empty == "true",

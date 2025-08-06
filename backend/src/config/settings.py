@@ -56,10 +56,19 @@ class Settings(BaseSettings):
     access_token_refresh_ttl: int = 60 * 60 * 3  # 3 hours
 
     # Database Pool Settings
-    db_pool_size: int = 5
-    db_max_overflow: int = 10
     db_pool_timeout: int = 30
     db_pool_recycle: int = 3600
+
+    # Environment-specific database pool settings
+    def get_db_pool_size(self) -> int:
+        if self.is_staging():
+            return 2  # More conservative for staging
+        return 5
+
+    def get_db_max_overflow(self) -> int:
+        if self.is_staging():
+            return 3  # More conservative for staging
+        return 10
 
     # Feature Flags
     enable_auth: bool = Field(default=True, alias="ENABLE_AUTH")

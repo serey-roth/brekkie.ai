@@ -17,8 +17,6 @@ from langgraph.prebuilt.tool_node import ToolNode
 
 
 class AgentState(MessagesState):
-    # food_relationship: str
-    # communication_style: str
     thread_title: str
     summary: str
 
@@ -131,11 +129,6 @@ class AgentFactory:
             ]
         )
 
-        # prompt_with_partials = prompt_template.partial(
-        #     user_relationship_with_food=state.get("food_relationship", ""),
-        #     how_the_user_talks_to_you=state.get("communication_style", "")
-        # )
-
         chain = prompt_template | self.agent_llm.bind_tools(TOOLS)
         response = await chain.ainvoke(
             {
@@ -149,8 +142,6 @@ class AgentFactory:
             args = response.tool_calls[0]["args"]
             if name == "create_recipe":
                 write({"event": "recipe_generation_started", "tool_name": name, "tool_input": args})
-            elif name == "tavily_search":
-                write({"event": "search_started", "tool_name": name, "tool_input": args})
 
         return {"messages": [response]}  # type: ignore
 

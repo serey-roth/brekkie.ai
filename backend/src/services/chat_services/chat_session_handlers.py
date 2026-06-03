@@ -7,8 +7,6 @@ from schemas.conversation_stream_events import (
     RecipeFieldDetectedPayload,
     RecipeGenerationCompletedPayload,
     RecipeGenerationStartedPayload,
-    SearchCompletedPayload,
-    SearchStartedPayload,
     SummaryUpdatedPayload,
     TextMessageChunkGeneratedPayload,
     TextMessageCompletedPayload,
@@ -21,7 +19,6 @@ from schemas.message_role import MessageRole
 from schemas.messages import (
     CreateAssistantRecipeMessageParams,
     CreateAssistantTextMessageParams,
-    CreateAssistantToolMessageParams,
     ApiMessage,
     UpdateMessageParams,
     UpdateMessageTextContentParams,
@@ -369,104 +366,6 @@ class ChatSessionHandlers:
         except Exception as e:
             logger.error(
                 f"Error when handling recipe generation completed for user_id {user_access.user_id}: {e}"
-            )
-            raise e
-
-    async def handle_search_started(
-        self,
-        db: AsyncSession,
-        user_access: UserAccess,
-        thread_id: str,
-        assistant_message_id: str,
-        payload: SearchStartedPayload,
-        timestamp: datetime,
-        user_message_id: str,
-    ) -> ChatSessionHandlersResult:
-        try:
-            updated_thread = await self.chat_session_store.update_thread(
-                db,
-                user_access,
-                UpdateThreadParams(
-                    id=thread_id,
-                    updated_at=timestamp,
-                    error_message=None,
-                    is_empty=False,
-                ),
-            )
-            message = await self.chat_session_store.create_assistant_tool_message(
-                db,
-                user_access,
-                CreateAssistantToolMessageParams(
-                    id=assistant_message_id,
-                    user_id=user_access.user_id,
-                    thread_id=thread_id,
-                    tool_name=payload.tool_name,
-                    tool_input=payload.tool_input,
-                    created_at=timestamp,
-                    updated_at=timestamp,
-                    parent_id=user_message_id,
-                    role=MessageRole.assistant,
-                    content_type=MessageContentType.tool,
-                ),
-            )
-
-            return {"thread": updated_thread, "message": ApiMessage.from_message(message)}
-
-        except Exception as e:
-            logger.error(
-                f"Error when handling search started for user_id {user_access.user_id}: {e}"
-            )
-            raise e
-
-    async def handle_search_completed(
-        self,
-        db: AsyncSession,
-        user_access: UserAccess,
-        thread_id: str,
-        assistant_message_id: str,
-        payload: SearchCompletedPayload,
-        timestamp: datetime,
-    ) -> ChatSessionHandlersResult:
-        try:
-            updated_message = await self.chat_session_store.update_message(
-                db,
-                user_access,
-                thread_id,
-                UpdateMessageParams(
-                    id=assistant_message_id,
-                    updated_at=timestamp,
-                    model_name=payload.tool_metadata.model_name,
-                    tool_output=payload.tool_output,
-                    input_tokens_update=UpdateMessageInputTokensParams(
-                        input_tokens=payload.tool_metadata.input_tokens,
-                        strategy=UpdateStrategy.APPEND,
-                    ),
-                    output_tokens_update=UpdateMessageOutputTokensParams(
-                        output_tokens=payload.tool_metadata.output_tokens,
-                        strategy=UpdateStrategy.APPEND,
-                    ),
-                ),
-            )
-
-            updated_thread = await self.chat_session_store.update_thread(
-                db,
-                user_access,
-                UpdateThreadParams(
-                    id=thread_id,
-                    updated_at=timestamp,
-                    error_message=None,
-                    is_empty=False,
-                ),
-            )
-
-            return {
-                "thread": updated_thread,
-                "message": ApiMessage.from_message(updated_message),
-            }
-
-        except Exception as e:
-            logger.error(
-                f"Error when handling search completed for user_id {user_access.user_id}: {e}"
             )
             raise e
 

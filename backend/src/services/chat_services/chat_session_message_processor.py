@@ -49,8 +49,6 @@ class ChatSessionMessageProcessor:
             "recipe_generation_started": self.chat_session_handlers.handle_recipe_generation_started,
             "recipe_field_detected": self.chat_session_handlers.handle_recipe_field_detected,
             "recipe_generation_completed": self.chat_session_handlers.handle_recipe_generation_completed,
-            "search_started": self.chat_session_handlers.handle_search_started,
-            "search_completed": self.chat_session_handlers.handle_search_completed,
             "summary_updated": self.chat_session_handlers.handle_summary_updated,
             "thread_title_updated": self.chat_session_handlers.handle_thread_title_updated,
             "ai_agent_error": self.chat_session_handlers.handle_ai_agent_error,
@@ -62,7 +60,6 @@ class ChatSessionMessageProcessor:
         return event_name in [
             "text_message_started",
             "recipe_generation_started",
-            "search_started",
             "user_message_rejected",
         ]
 
@@ -75,8 +72,6 @@ class ChatSessionMessageProcessor:
             "recipe_generation_started",
             "recipe_field_detected",
             "recipe_generation_completed",
-            "search_started",
-            "search_completed",
             "user_message_rejected",
         ]
 
@@ -87,7 +82,6 @@ class ChatSessionMessageProcessor:
             "text_message_completed",
             "recipe_field_detected",
             "recipe_generation_completed",
-            "search_completed",
         ]
 
     def _should_create_assistant_message(self, event: ConversationStreamEvent) -> bool:
@@ -95,7 +89,6 @@ class ChatSessionMessageProcessor:
         return event_name in [
             "text_message_started",
             "recipe_generation_started",
-            "search_started",
             "user_message_rejected",
         ]
 
@@ -104,7 +97,6 @@ class ChatSessionMessageProcessor:
         return event_name in [
             "text_message_completed",
             "recipe_generation_completed",
-            "search_completed",
             "user_message_rejected",
         ]
 

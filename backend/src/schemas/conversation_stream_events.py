@@ -23,16 +23,6 @@ class TextMessageCompletedPayload(BaseModel):
     full_message: str
 
 
-class SearchStartedPayload(BaseModel):
-    tool_name: str
-    tool_input: dict
-
-
-class SearchCompletedPayload(BaseModel):
-    tool_output: dict
-    tool_metadata: ConversationStreamMetadata
-
-
 class RecipeGenerationStartedPayload(BaseModel):
     tool_name: str
     tool_input: dict
@@ -69,8 +59,6 @@ ConversationStreamEventName = Literal[
     "text_message_started",
     "text_message_chunk_generated",
     "text_message_completed",
-    "search_started",
-    "search_completed",
     "recipe_generation_started",
     "recipe_field_detected",
     "recipe_generation_completed",
@@ -87,8 +75,6 @@ class ConversationStreamEvent(BaseModel):
         TextMessageStartedPayload
         | TextMessageChunkGeneratedPayload
         | TextMessageCompletedPayload
-        | SearchStartedPayload
-        | SearchCompletedPayload
         | RecipeGenerationStartedPayload
         | RecipeFieldDetectedPayload
         | RecipeGenerationCompletedPayload
@@ -115,12 +101,6 @@ class ConversationStreamEvent(BaseModel):
                 raise ValueError(
                     "text_message_completed event should have TextMessageCompletedPayload"
                 )
-        elif event == "search_started":
-            if not isinstance(v, SearchStartedPayload):
-                raise ValueError("search_started event should have SearchStartedPayload")
-        elif event == "search_completed":
-            if not isinstance(v, SearchCompletedPayload):
-                raise ValueError("search_completed event should have SearchCompletedPayload")
         elif event == "recipe_generation_started":
             if not isinstance(v, RecipeGenerationStartedPayload):
                 raise ValueError(

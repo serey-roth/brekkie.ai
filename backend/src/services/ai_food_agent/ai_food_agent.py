@@ -21,12 +21,6 @@ class AIFoodAgent(ABC):
             metadata={"thread_id": thread_id},
         )
 
-    def update_memory(self, messages: list, user_id: str, thread_id: str):
-        # Memory updates disabled for now - can be re-enabled later
-        # config = self.get_agent_config(user_id, thread_id)
-        # user_profile_memory.update_user_profile_memory_delayed(messages, config, self.store, user_id)
-        pass
-
     def extract_text_from_chunk(self, chunk: AIMessageChunk) -> str:
         if isinstance(chunk.content, str):
             return chunk.content

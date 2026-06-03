@@ -34,7 +34,7 @@ async def create_recipe(
     Returns detailed recipes that are feasible and personalized to the user's request and situation.
     """
     create_recipe_llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-preview-05-20",
+        model="gemini-2.5-flash",
         temperature=0.7,
         api_key=os.getenv("GOOGLE_API_KEY"),
     )

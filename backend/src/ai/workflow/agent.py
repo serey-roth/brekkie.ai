@@ -39,7 +39,7 @@ class AgentFactory:
         self.thread_id = thread_id
         self.checkpointer = checkpointer
         self.agent_llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash-preview-05-20",
+            model="gemini-2.5-flash",
             temperature=0.7,
             api_key=os.getenv("GOOGLE_API_KEY"),
         )
@@ -64,7 +64,7 @@ class AgentFactory:
         summary = state.get("summary", "")
 
         thread_title_llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash-preview-05-20",
+            model="gemini-2.5-flash",
             temperature=0.1,
             api_key=os.getenv("GOOGLE_API_KEY"),
         )
@@ -91,7 +91,7 @@ class AgentFactory:
         messages = state.get("messages", [])
 
         summary_llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash-preview-05-20",
+            model="gemini-2.5-flash",
             temperature=0.1,  # Lower temperature for more consistent summaries
             api_key=os.getenv("GOOGLE_API_KEY"),
         )

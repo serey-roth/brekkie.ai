@@ -185,7 +185,7 @@ SAFETY_REGEX_GUARD_PATTERNS: Dict[SafetyIssueType, SafetyRegexGuardPattern] = {
         pattern=r"""(?ix)
         (
                 # Specific tool names
-            tavily_search|create_recipe|
+            create_recipe|
 
             # Possessive inquiries
             your\s+tools?\b|

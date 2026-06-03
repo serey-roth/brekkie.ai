@@ -57,10 +57,10 @@ async def verify(
             ssl_context = ssl.create_default_context()
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
-            jsonurl = urlopen(supabase_url+"/.well-known/jwks.json", context=ssl_context)
+            jsonurl = urlopen(supabase_url+"/auth/v1/.well-known/jwks.json", context=ssl_context)
         else:
             # For production/staging, use proper SSL verification
-            jsonurl = urlopen(supabase_url+"/.well-known/jwks.json")
+            jsonurl = urlopen(supabase_url+"/auth/v1/.well-known/jwks.json")
             
         logger.info(f"Supabase auth URL: {supabase_url}")
         jwks_response = jsonurl.read()
@@ -86,7 +86,7 @@ async def verify(
                     public_key,
                     algorithms=["ES256"],
                     audience="authenticated",
-                    issuer=supabase_url
+                    issuer=supabase_url + "/auth/v1"
                 )
             except JWTError as e:
                 logger.error(f"JWTError: Invalid token {jwt_token}")

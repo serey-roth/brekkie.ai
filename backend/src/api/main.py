@@ -100,7 +100,6 @@ async def lifespan(app: FastAPI):
         unauthenticated_user_message_limit=settings.unauthenticated_user_message_limit,
     )
     chat_session_handlers = ChatSessionHandlers(
-        db_transaction_maker=db_transaction_maker,  # type: ignore
         chat_session_store=chat_session_store,
     )
     chat_session_message_guard = ChatSessionMessageGuard(
@@ -152,7 +151,7 @@ app = FastAPI(lifespan=lifespan)  # type: ignore
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for unified deployment
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

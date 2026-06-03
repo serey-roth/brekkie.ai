@@ -6,9 +6,9 @@ import pytest_asyncio
 
 from fakeredis.aioredis import FakeRedis
 
-from services.data_services.recipe_cache_service import RecipeCacheService
+from src.services.data_services.recipe_cache_service import RecipeCacheService
 
-from schemas.recipes import (
+from src.schemas.recipes import (
     CreateRecipeParams,
     UpdateRecipeFieldParams,
     UpdateRecipeParams,
@@ -19,7 +19,7 @@ from schemas.recipes import (
     RecipeCategory,
 )
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 

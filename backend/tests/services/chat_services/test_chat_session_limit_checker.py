@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
-from services.data_services.user_access_cache_service import UserAccessCacheService
-from schemas.user_access import UserAccess
-from schemas.chat_session_errors import AccessTokenNotFoundError
+from src.services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from src.services.data_services.user_access_cache_service import UserAccessCacheService
+from src.schemas.user_access import UserAccess
+from src.schemas.chat_session_errors import AccessTokenNotFoundError
 
 
 @pytest.fixture

@@ -7,7 +7,7 @@ from typing import Any
 
 from fakeredis.aioredis import FakeRedis
 
-from services.redis.redis_cache import RedisCache
+from src.services.redis.redis_cache import RedisCache
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 
 

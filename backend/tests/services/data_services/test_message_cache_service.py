@@ -6,8 +6,8 @@ import asyncio
 
 from fakeredis.aioredis import FakeRedis
 
-from services.data_services.message_cache_service import MessageCacheService
-from schemas.messages import (
+from src.services.data_services.message_cache_service import MessageCacheService
+from src.schemas.messages import (
     Message,
     GetMessagesParams,
     PaginatedMessages,
@@ -20,12 +20,12 @@ from schemas.messages import (
     UpdateMessageTextContentParams,
     UpdateStrategy,
 )
-from schemas.message_role import MessageRole
-from schemas.message_content_type import MessageContentType
-from schemas.safety_guards import SafetyGuardResult, SafetyGuardType, SafetyIssue, SafetyIssueType
+from src.schemas.message_role import MessageRole
+from src.schemas.message_content_type import MessageContentType
+from src.schemas.safety_guards import SafetyGuardResult, SafetyGuardType, SafetyIssue, SafetyIssueType
 
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 

@@ -5,10 +5,10 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.message_repository import MessageRepository
-from services.data_services.message_service import MessageService
+from src.repositories.message_repository import MessageRepository
+from src.services.data_services.message_service import MessageService
 
-from schemas.messages import (
+from src.schemas.messages import (
     CountMessagesParams,
     CreateMessageParams,
     CreateUserMessageParams,
@@ -21,11 +21,11 @@ from schemas.messages import (
     UpdateMessageTextContentParams,
     UpdateStrategy,
 )
-from schemas.message_role import MessageRole
-from schemas.message_content_type import MessageContentType
-from schemas.safety_guards import SafetyGuardResult, SafetyGuardType, SafetyIssue, SafetyIssueType
+from src.schemas.message_role import MessageRole
+from src.schemas.message_content_type import MessageContentType
+from src.schemas.safety_guards import SafetyGuardResult, SafetyGuardType, SafetyIssue, SafetyIssueType
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 
 pytestmark = pytest.mark.asyncio

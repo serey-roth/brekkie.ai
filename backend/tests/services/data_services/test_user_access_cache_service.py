@@ -4,10 +4,10 @@ from datetime import datetime, timezone
 
 from fakeredis.aioredis import FakeRedis
 
-from services.data_services.user_access_cache_service import UserAccessCacheService
+from src.services.data_services.user_access_cache_service import UserAccessCacheService
 
-from schemas.user_access import UserAccess
-from utils.date_utils import to_utc_isostring
+from src.schemas.user_access import UserAccess
+from src.utils.date_utils import to_utc_isostring
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 

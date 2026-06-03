@@ -5,7 +5,7 @@ import pytest
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
 
-from services.websocket_event_sender import WebSocketEventSender
+from src.services.websocket_event_sender import WebSocketEventSender
 
 
 @pytest.fixture

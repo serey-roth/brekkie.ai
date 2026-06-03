@@ -13,31 +13,31 @@ from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.index import DBTransactionMaker
+from src.database.index import DBTransactionMaker
 
-from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
-from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
-from services.data_services.user_access_cache_service import UserAccessCacheService
-from services.chat_services.chat_session_store import ChatSessionStore
-from services.chat_services.chat_session_handlers import ChatSessionHandlers
-from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
-from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
-from services.websocket_event_sender import WebSocketEventSender
+from src.services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
+from src.services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
+from src.services.data_services.user_access_cache_service import UserAccessCacheService
+from src.services.chat_services.chat_session_store import ChatSessionStore
+from src.services.chat_services.chat_session_handlers import ChatSessionHandlers
+from src.services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
+from src.services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
+from src.services.websocket_event_sender import WebSocketEventSender
 
-from schemas.user_access import UserAccess
-from schemas.threads import Thread
-from schemas.messages import PaginatedMessages, Message, PaginatedApiMessages
-from schemas.message_role import MessageRole
-from schemas.message_content_type import MessageContentType
-from schemas.recipes import UserRecipe
-from schemas.chat_session_errors import (
+from src.schemas.user_access import UserAccess
+from src.schemas.threads import Thread
+from src.schemas.messages import PaginatedMessages, Message, PaginatedApiMessages
+from src.schemas.message_role import MessageRole
+from src.schemas.message_content_type import MessageContentType
+from src.schemas.recipes import UserRecipe
+from src.schemas.chat_session_errors import (
     AccessTokenNotFoundError,
     InternalServerError,
     OverMessageLimitError,
     ThreadNotFoundError,
 )
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 
 @pytest.fixture

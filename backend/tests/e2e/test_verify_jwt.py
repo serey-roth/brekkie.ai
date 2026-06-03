@@ -7,21 +7,20 @@ from jose.exceptions import JWTError
 
 from fastapi import status
 
-from config.settings import Settings
+from src.config.settings import Settings
 
-from services.service_container import ServiceContainer
+from src.services.service_container import ServiceContainer
 
-from schemas.users import CreateUserParams
-from schemas.threads import Thread, GetUserThreadsParams
-from schemas.messages import Message, GetMessagesParams
-from schemas.recipes import UserRecipe, RecipeIngredient, RecipeInstruction, RecipeCategory
-from schemas.message_role import MessageRole
-from schemas.message_content_type import MessageContentType
+from src.schemas.users import CreateUserParams
+from src.schemas.threads import Thread, GetUserThreadsParams
+from src.schemas.messages import Message, GetMessagesParams
+from src.schemas.recipes import UserRecipe, RecipeIngredient, RecipeInstruction, RecipeCategory
+from src.schemas.message_role import MessageRole
+from src.schemas.message_content_type import MessageContentType
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
-import ssl
 
 @pytest.fixture
 def sample_supabase_token(service_container: ServiceContainer, sample_ip_address: str):
@@ -187,8 +186,8 @@ class TestVerifyJWT:
         
     @pytest.mark.asyncio(loop_scope="session")
     async def test_auth_disabled(self, async_client, service_container: ServiceContainer, test_settings: Settings, sample_ip_address: str):
-        from api.main import app
-        from api.deps import get_settings
+        from src.api.main import app
+        from src.api.deps import get_settings
         new_settings = test_settings.model_copy(update={"enable_auth": False})
         app.dependency_overrides[get_settings] = lambda: new_settings
         

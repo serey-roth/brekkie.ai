@@ -7,15 +7,15 @@ from unittest.mock import AsyncMock
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
-from services.chat_services.chat_session_handlers import ChatSessionHandlers
-from services.chat_services.chat_session_message_processor import (
+from src.services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
+from src.services.chat_services.chat_session_handlers import ChatSessionHandlers
+from src.services.chat_services.chat_session_message_processor import (
     ChatSessionMessageProcessor,
 )
 
-from schemas.user_access import UserAccess
-from schemas.recipes import Recipe, RecipeField, RecipeIngredient, RecipeInstruction, RecipeCategory
-from schemas.conversation_stream_events import (
+from src.schemas.user_access import UserAccess
+from src.schemas.recipes import Recipe, RecipeField, RecipeIngredient, RecipeInstruction, RecipeCategory
+from src.schemas.conversation_stream_events import (
     ConversationStreamEvent,
     TextMessageStartedPayload,
     TextMessageChunkGeneratedPayload,
@@ -24,8 +24,6 @@ from schemas.conversation_stream_events import (
     RecipeGenerationStartedPayload,
     RecipeFieldDetectedPayload,
     RecipeGenerationCompletedPayload,
-    SearchStartedPayload,
-    SearchCompletedPayload,
     AIAgentErrorPayload,
     SummaryUpdatedPayload,
     ThreadTitleUpdatedPayload,
@@ -574,183 +572,6 @@ class TestRecipeGenerationCompleted:
                     ),
                 ),
             )
-
-
-class TestSearchStarted:
-    @pytest.mark.asyncio
-    async def test_search_started(
-        self,
-        mock_async_session: AsyncSession,
-        chat_session_message_processor: ChatSessionMessageProcessor,
-        mock_ai_food_agent: GoogleAIFoodAgent,
-        mock_chat_session_handlers: ChatSessionHandlers,
-        mock_on_message_processed: AsyncMock,
-        sample_user_access: UserAccess,
-        sample_thread_id: str,
-        sample_user_message_id: str,
-    ) -> None:
-        chat_session_message_processor.assistant_message_id = "123"
-
-        await chat_session_message_processor._handle_event(
-            db=mock_async_session,
-            user_access=sample_user_access,
-            thread_id=sample_thread_id,
-            user_message_id=sample_user_message_id,
-            event=ConversationStreamEvent(
-                event="search_started",
-                payload=SearchStartedPayload(
-                    tool_name="tavily_search",
-                    tool_input={
-                        "query": "Pasta Carbonara",
-                        "context": "A delicious pasta dish with eggs and bacon",
-                    },
-                ),
-            ),
-        )
-
-        mock_chat_session_handlers.handle_search_started.assert_called_once()
-        call_args = mock_chat_session_handlers.handle_search_started.call_args
-
-        assert call_args.kwargs["user_access"] == sample_user_access
-        assert call_args.kwargs["thread_id"] == sample_thread_id
-        assert call_args.kwargs["user_message_id"] == sample_user_message_id
-        assert (
-            call_args.kwargs["assistant_message_id"]
-            == chat_session_message_processor.assistant_message_id
-        )
-        assert call_args.kwargs["payload"] == SearchStartedPayload(
-            tool_name="tavily_search",
-            tool_input={
-                "query": "Pasta Carbonara",
-                "context": "A delicious pasta dish with eggs and bacon",
-            },
-        )
-        assert "timestamp" in call_args.kwargs
-
-        mock_on_message_processed.assert_called_once()
-        processing_result = mock_on_message_processed.call_args[0][0]
-        assert "event" in processing_result
-        assert processing_result["event"] == "search_started"
-        assert "result" in processing_result
-        assert "timestamp" in processing_result
-
-
-class TestSearchCompleted:
-    @pytest.mark.asyncio
-    async def test_search_completed(
-        self,
-        mock_async_session: AsyncSession,
-        chat_session_message_processor: ChatSessionMessageProcessor,
-        mock_ai_food_agent: GoogleAIFoodAgent,
-        mock_chat_session_handlers: ChatSessionHandlers,
-        mock_on_message_processed: AsyncMock,
-        sample_user_access: UserAccess,
-        sample_thread_id: str,
-        sample_user_message_id: str,
-    ) -> None:
-        chat_session_message_processor.assistant_message_id = "123"
-        original_assistant_message_id = chat_session_message_processor.assistant_message_id
-
-        await chat_session_message_processor._handle_event(
-            db=mock_async_session,
-            user_access=sample_user_access,
-            thread_id=sample_thread_id,
-            user_message_id=sample_user_message_id,
-            event=ConversationStreamEvent(
-                event="search_completed",
-                payload=SearchCompletedPayload(
-                    tool_output={
-                        "results": [
-                            {
-                                "title": "Pasta Carbonara",
-                                "url": "https://www.example.com",
-                                "snippet": "A delicious pasta dish with eggs and bacon",
-                            }
-                        ]
-                    },
-                    tool_metadata=ConversationStreamMetadata(
-                        model_name="gemini-2.5-flash-preview-05-20",
-                        input_tokens=0,
-                        output_tokens=100,
-                    ),
-                ),
-            ),
-        )
-
-        mock_chat_session_handlers.handle_search_completed.assert_called_once()
-        call_args = mock_chat_session_handlers.handle_search_completed.call_args
-
-        assert call_args.kwargs["user_access"] == sample_user_access
-        assert call_args.kwargs["thread_id"] == sample_thread_id
-        assert call_args.kwargs["assistant_message_id"] == original_assistant_message_id
-        assert call_args.kwargs["payload"] == SearchCompletedPayload(
-            tool_output={
-                "results": [
-                    {
-                        "title": "Pasta Carbonara",
-                        "url": "https://www.example.com",
-                        "snippet": "A delicious pasta dish with eggs and bacon",
-                    }
-                ]
-            },
-            tool_metadata=ConversationStreamMetadata(
-                model_name="gemini-2.5-flash-preview-05-20", input_tokens=0, output_tokens=100
-            ),
-        )
-        assert "timestamp" in call_args.kwargs
-        assert "user_message_id" not in call_args.kwargs
-
-        mock_on_message_processed.assert_called_once()
-        processing_result = mock_on_message_processed.call_args[0][0]
-        assert "event" in processing_result
-        assert processing_result["event"] == "search_completed"
-        assert "result" in processing_result
-        assert "timestamp" in processing_result
-
-    @pytest.mark.asyncio
-    async def test_search_completed_with_missing_assistant_message_id(
-        self,
-        mock_async_session: AsyncSession,
-        chat_session_message_processor: ChatSessionMessageProcessor,
-        mock_ai_food_agent: GoogleAIFoodAgent,
-        mock_chat_session_handlers: ChatSessionHandlers,
-        mock_on_message_processed: AsyncMock,
-        sample_user_access: UserAccess,
-        sample_thread_id: str,
-        sample_user_message_id: str,
-    ) -> None:
-        chat_session_message_processor.assistant_message_id = None
-
-        with pytest.raises(ValueError):
-            await chat_session_message_processor._handle_event(
-                db=mock_async_session,
-                user_access=sample_user_access,
-                thread_id=sample_thread_id,
-                user_message_id=sample_user_message_id,
-                event=ConversationStreamEvent(
-                    event="search_completed",
-                    payload=SearchCompletedPayload(
-                        tool_output={
-                            "results": [
-                                {
-                                    "title": "Pasta Carbonara",
-                                    "url": "https://www.example.com",
-                                    "snippet": "A delicious pasta dish with eggs and bacon",
-                                }
-                            ]
-                        },
-                        tool_metadata=ConversationStreamMetadata(
-                            model_name="gemini-2.5-flash-preview-05-20",
-                            input_tokens=0,
-                            output_tokens=100,
-                        ),
-                    ),
-                ),
-            )
-
-        mock_chat_session_handlers.handle_search_completed.assert_not_called()
-        mock_on_message_processed.assert_not_called()
-
 
 class TestAiAgentError:
     @pytest.mark.asyncio

@@ -13,7 +13,7 @@ import pytest
 from langchain_core.messages import AIMessageChunk, ToolMessage
 from langchain_core.messages.ai import UsageMetadata
 
-from schemas.conversation_stream_events import (
+from src.schemas.conversation_stream_events import (
     TextMessageCompletedPayload,
     ConversationStreamEvent, 
     TextMessageStartedPayload, 
@@ -26,7 +26,7 @@ from schemas.conversation_stream_events import (
     SearchCompletedPayload,
 )
 
-from schemas.recipes import (
+from src.schemas.recipes import (
     RecipeCategory,
     RecipeIngredient,
     RecipeInstruction,

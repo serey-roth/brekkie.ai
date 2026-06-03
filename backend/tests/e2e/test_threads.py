@@ -6,16 +6,16 @@ from unittest.mock import patch
 
 from src.services.service_container import ServiceContainer
 
-from schemas.threads import CreateThreadParams
-from schemas.messages import CreateMessageParams
-from schemas.message_role import MessageRole
-from schemas.message_content_type import MessageContentType    
-from schemas.recipes import CreateRecipeParams
-from schemas.users import CreateUserParams
-from schemas.safety_guards import SafetyGuardResult, SafetyGuardType, SafetyIssue, SafetyIssueType
+from src.schemas.threads import CreateThreadParams
+from src.schemas.messages import CreateMessageParams
+from src.schemas.message_role import MessageRole
+from src.schemas.message_content_type import MessageContentType    
+from src.schemas.recipes import CreateRecipeParams
+from src.schemas.users import CreateUserParams
+from src.schemas.safety_guards import SafetyGuardResult, SafetyGuardType, SafetyIssue, SafetyIssueType
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 # TODO: fix tests to support data sync
 class TestGetUserThreads:

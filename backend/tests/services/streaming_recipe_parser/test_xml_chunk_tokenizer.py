@@ -1,6 +1,6 @@
 import pytest
 
-from services.streaming_recipe_parser.xml_chunk_tokenizer import XMLChunkTokenizer
+from src.services.streaming_recipe_parser.xml_chunk_tokenizer import XMLChunkTokenizer
 
 @pytest.fixture
 def tokenizer():

@@ -6,9 +6,9 @@ import asyncio
 
 from fakeredis.aioredis import FakeRedis
 
-from services.data_services.thread_cache_service import ThreadCacheService
+from src.services.data_services.thread_cache_service import ThreadCacheService
 
-from schemas.threads import (
+from src.schemas.threads import (
     Thread,
     CreateThreadParams,
     UpdateThreadParams,
@@ -17,7 +17,7 @@ from schemas.threads import (
     ResumeThreadParams,
 )
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 

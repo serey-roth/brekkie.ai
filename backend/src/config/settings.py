@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     """Application settings with environment variable support."""
 
     environment: Annotated[
-        Literal["development", "production", "test", "staging"],
+        Literal["development", "production", "test"],
         Field(default="production", alias="ENVIRONMENT"),
     ]
 
@@ -38,15 +38,10 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     db_pool_recycle: int = 3600
 
-    # Environment-specific database pool settings
     def get_db_pool_size(self) -> int:
-        if self.is_staging():
-            return 2  # More conservative for staging
         return 5
 
     def get_db_max_overflow(self) -> int:
-        if self.is_staging():
-            return 3  # More conservative for staging
         return 10
 
     # Feature Flags
@@ -73,12 +68,7 @@ class Settings(BaseSettings):
     def is_test(self) -> bool:
         return self.environment == "test"
 
-    def is_staging(self) -> bool:
-        return self.environment == "staging"
-
     def is_auth_enabled(self) -> bool:
-        if self.is_production():
-            return False
         return self.enable_auth
 
 

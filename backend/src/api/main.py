@@ -12,11 +12,9 @@ from api.routes.threads import router as threads_router
 from config.settings import create_settings
 from database.checkpointer import create_checkpointer_pool
 from database.index import create_db_transaction_maker
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from repositories.message_repository import MessageRepository
 from repositories.recipe_repository import RecipeRepository
@@ -108,9 +106,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)  # type: ignore
 
+_allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -122,26 +122,3 @@ app.include_router(auth_router, prefix="/api/auth")
 app.include_router(threads_router, prefix="/api")
 app.include_router(recipes_router, prefix="/api")
 
-if os.path.exists("frontend/dist"):
-    app.mount("/assets", StaticFiles(directory="frontend/dist/assets"), name="assets")
-
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        if full_path.startswith(("api/", "ws/")):
-            raise HTTPException(status_code=404, detail="Not Found")
-
-        static_file_path = f"frontend/dist/{full_path}"
-        if os.path.exists(static_file_path) and os.path.isfile(static_file_path):
-            return FileResponse(static_file_path)
-
-        index_path = "frontend/dist/index.html"
-        if os.path.exists(index_path):
-            with open(index_path, "r") as f:
-                content = f.read()
-            return HTMLResponse(content=content)
-        else:
-            raise HTTPException(status_code=404, detail="Frontend not found")
-else:
-    @app.get("/")
-    async def fallback():
-        return {"message": "Frontend not built. Please build the frontend first."}

@@ -9,15 +9,11 @@ import {
     MessageCircleX,
     Utensils,
     LogOut,
-    Settings,
-    HelpCircle,
-    FileText,
-    Shield,
     Info,
+    Mail,
 } from 'lucide-react';
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SettingsModal } from '@/components/layout/SettingsModal';
 import { Avatar } from '@/components/ui/Avatar';
 import { Menu } from '@/components/ui/Menu';
 import {
@@ -55,7 +51,6 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
     );
 
     const [user, setUser] = useState<UserMetadata | null>(null);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     useEffect(() => {
         const unsubscribe = addAuthStateChangeListener((event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
@@ -327,9 +322,6 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                                                     <span className="text-sm whitespace-nowrap">
                                                         {user?.name}
                                                     </span>
-                                                    <span className="text-xs whitespace-nowrap">
-                                                        Free Plan
-                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -353,53 +345,28 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                                                     <span className="text-sm whitespace-nowrap">
                                                         {user?.name}
                                                     </span>
-                                                    <span className="text-contrast-subtle text-xs whitespace-nowrap">
-                                                        Free Plan
-                                                    </span>
                                                 </div>
                                             </div>
                                         ),
                                     },
                                     {
-                                        label: 'Settings',
-                                        icon: <Settings size={16} />,
-                                        onClick: () => setIsSettingsOpen(true),
+                                        label: 'Contact Support',
+                                        icon: <Mail size={16} />,
+                                        onClick: () =>
+                                            window.open(
+                                                'mailto:sereyratanakroth@gmail.com',
+                                                '_self',
+                                            ),
                                     },
                                     {
-                                        label: 'Learn More',
-                                        icon: <HelpCircle size={16} />,
-                                        submenu: [
-                                            {
-                                                label: 'Terms of Service',
-                                                icon: <FileText size={16} />,
-                                                onClick: () =>
-                                                    window.open(
-                                                        'https://meet-brekkie-ai.vercel.app/terms',
-                                                        '_blank',
-                                                        'noopener,noreferrer',
-                                                    ),
-                                            },
-                                            {
-                                                label: 'Privacy Policy',
-                                                icon: <Shield size={16} />,
-                                                onClick: () =>
-                                                    window.open(
-                                                        'https://meet-brekkie-ai.vercel.app/privacy',
-                                                        '_blank',
-                                                        'noopener,noreferrer',
-                                                    ),
-                                            },
-                                            {
-                                                label: 'About brekkie.ai',
-                                                icon: <Info size={16} />,
-                                                onClick: () =>
-                                                    window.open(
-                                                        'https://meet-brekkie-ai.vercel.app',
-                                                        '_blank',
-                                                        'noopener,noreferrer',
-                                                    ),
-                                            },
-                                        ],
+                                        label: 'About',
+                                        icon: <Info size={16} />,
+                                        onClick: () =>
+                                            window.open(
+                                                'https://meet-brekkie-ai.vercel.app',
+                                                '_blank',
+                                                'noopener,noreferrer',
+                                            ),
                                     },
                                     {
                                         label: 'Sign Out',
@@ -439,11 +406,6 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                 )}
             </div>
 
-            <SettingsModal
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
-                user={user}
-            />
         </>
     );
 }

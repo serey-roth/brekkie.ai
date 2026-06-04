@@ -99,28 +99,39 @@ def decode_supabase_jwt(token: str, settings: Settings) -> dict:
         raise HTTPException(status_code=401, detail={"message": "Invalid token"})
 
 
-def _extract_user_id(token: str, settings: Settings) -> str:
+async def _resolve_user_id(token: str, settings: Settings, service_container: ServiceContainer) -> str:
     payload = decode_supabase_jwt(token, settings)
-    user_id = payload.get("sub")
-    if not user_id:
+    external_id = payload.get("sub")
+    if not external_id:
         raise HTTPException(status_code=401, detail={"message": "Invalid token: missing user ID"})
-    return user_id
+
+    async with service_container.db_transaction_maker() as db:  # type: ignore
+        user = await service_container.user_service.get_user_by_external_id_or_email(
+            db, external_id, payload.get("email")
+        )
+
+    if user is None:
+        raise HTTPException(status_code=401, detail={"message": "User not found"})
+
+    return user.id
 
 
 async def get_current_user_id(
     jwt_token: Annotated[str | None, Depends(get_jwt_token)],
     settings: Annotated[Settings, Depends(get_settings)],
+    service_container: Annotated[ServiceContainer, Depends(get_service_container)],
 ) -> str:
     if jwt_token is None:
         raise HTTPException(status_code=401, detail={"message": "Missing JWT token"})
-    return _extract_user_id(jwt_token, settings)
+    return await _resolve_user_id(jwt_token, settings, service_container)
 
 
 async def get_current_user_id_from_websocket(
     websocket: WebSocket,
     settings: Annotated[Settings, Depends(get_settings_from_websocket)],
+    service_container: Annotated[ServiceContainer, Depends(get_service_container_from_websocket)],
 ) -> str:
     token = websocket.query_params.get("token")
     if not token:
         raise HTTPException(status_code=401, detail={"message": "Missing JWT token"})
-    return _extract_user_id(token, settings)
+    return await _resolve_user_id(token, settings, service_container)

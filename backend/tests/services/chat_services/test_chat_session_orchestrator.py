@@ -17,10 +17,8 @@ from src.database.index import DBTransactionMaker
 
 from src.services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
 from src.services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
-from src.services.data_services.user_access_cache_service import UserAccessCacheService
 from src.services.chat_services.chat_session_store import ChatSessionStore
 from src.services.chat_services.chat_session_handlers import ChatSessionHandlers
-from src.services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
 from src.services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from src.services.websocket_event_sender import WebSocketEventSender
 
@@ -52,11 +50,6 @@ def mock_db_transaction_maker() -> DBTransactionMaker:
 
 
 @pytest.fixture
-def mock_user_access_cache_service() -> UserAccessCacheService:
-    return MagicMock(spec=UserAccessCacheService)
-
-
-@pytest.fixture
 def mock_chat_session_store() -> ChatSessionStore:
     return MagicMock(spec=ChatSessionStore)
 
@@ -64,11 +57,6 @@ def mock_chat_session_store() -> ChatSessionStore:
 @pytest.fixture
 def mock_chat_session_handlers() -> ChatSessionHandlers:
     return MagicMock(spec=ChatSessionHandlers)
-
-
-@pytest.fixture
-def mock_chat_session_limit_checker() -> ChatSessionLimitChecker:
-    return MagicMock(spec=ChatSessionLimitChecker)
 
 
 @pytest.fixture
@@ -97,10 +85,8 @@ def mock_websocket() -> AsyncMock:
 @pytest.fixture
 def orchestrator(
     mock_db_transaction_maker: DBTransactionMaker,
-    mock_user_access_cache_service: UserAccessCacheService,
     mock_chat_session_store: ChatSessionStore,
     mock_chat_session_handlers: ChatSessionHandlers,
-    mock_chat_session_limit_checker: ChatSessionLimitChecker,
     mock_food_agent: GoogleAIFoodAgent,
     mock_websocket_event_sender: WebSocketEventSender,
     mock_chat_session_message_guard: ChatSessionMessageGuard,
@@ -108,12 +94,10 @@ def orchestrator(
     return ChatSessionOrchestrator(
         session_ttl=1000,
         db_transaction_maker=mock_db_transaction_maker,
-        user_access_cache_service=mock_user_access_cache_service,
         ai_food_agent=mock_food_agent,
         chat_session_message_guard=mock_chat_session_message_guard,
         chat_session_store=mock_chat_session_store,
         chat_session_handlers=mock_chat_session_handlers,
-        chat_session_limit_checker=mock_chat_session_limit_checker,
         websocket_event_sender=mock_websocket_event_sender,
     )
 
@@ -210,19 +194,12 @@ class TestStartSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
         mock_chat_session_store: ChatSessionStore,
-        mock_chat_session_limit_checker: ChatSessionLimitChecker,
         mock_websocket_event_sender: WebSocketEventSender,
         sample_access_token: str,
         sample_anonymous_user_access: UserAccess,
         sample_empty_thread: Thread,
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(
-            return_value=sample_anonymous_user_access
-        )
-        mock_chat_session_limit_checker.has_message_limit_reached = AsyncMock(return_value=False)
-
         mock_chat_session_store.create_thread = AsyncMock(return_value=sample_empty_thread)
 
         with patch(
@@ -231,12 +208,6 @@ class TestStartSession:
         ) as mock_run:
             await orchestrator.start_session(sample_access_token, mock_websocket)
 
-            mock_user_access_cache_service.get_user_access.assert_called_once_with(
-                sample_access_token
-            )
-            mock_chat_session_limit_checker.has_message_limit_reached.assert_called_once_with(
-                sample_access_token
-            )
             mock_chat_session_store.create_thread.assert_called_once()
             mock_websocket_event_sender.send_event.assert_called_once_with(
                 mock_websocket,
@@ -253,12 +224,9 @@ class TestStartSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
         mock_websocket_event_sender: WebSocketEventSender,
         sample_access_token: str,
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(return_value=None)
-
         await orchestrator.start_session(sample_access_token, mock_websocket)
 
         chat_error = AccessTokenNotFoundError(sample_access_token)
@@ -272,18 +240,10 @@ class TestStartSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
-        mock_chat_session_limit_checker: ChatSessionLimitChecker,
         mock_websocket_event_sender: WebSocketEventSender,
         sample_access_token: str,
         sample_anonymous_user_access: UserAccess,
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(
-            return_value=sample_anonymous_user_access
-        )
-        mock_chat_session_limit_checker.has_message_limit_reached = AsyncMock(return_value=True)
-        mock_chat_session_limit_checker.get_message_limit = AsyncMock(return_value=100)
-
         await orchestrator.start_session(sample_access_token, mock_websocket)
 
         chat_error = OverMessageLimitError(100)
@@ -297,18 +257,11 @@ class TestStartSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
-        mock_chat_session_limit_checker: ChatSessionLimitChecker,
         mock_chat_session_store: ChatSessionStore,
         sample_access_token: str,
         sample_anonymous_user_access: UserAccess,
         sample_empty_thread: Thread,
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(
-            return_value=sample_anonymous_user_access
-        )
-        mock_chat_session_limit_checker.has_message_limit_reached = AsyncMock(return_value=False)
-        mock_chat_session_limit_checker.get_message_limit = AsyncMock(return_value=100)
         mock_chat_session_store.create_thread = AsyncMock(return_value=sample_empty_thread)
         mock_websocket.client_state = WebSocketState.DISCONNECTED
 
@@ -325,18 +278,11 @@ class TestStartSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
-        mock_chat_session_limit_checker: ChatSessionLimitChecker,
         mock_chat_session_store: ChatSessionStore,
         mock_websocket_event_sender: WebSocketEventSender,
         sample_access_token: str,
         sample_empty_thread: Thread,
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(
-            side_effect=Exception("Test error")
-        )
-        mock_chat_session_limit_checker.has_message_limit_reached = AsyncMock(return_value=False)
-        mock_chat_session_limit_checker.get_message_limit = AsyncMock(return_value=100)
         mock_chat_session_store.create_thread = AsyncMock(return_value=sample_empty_thread)
 
         with patch(
@@ -360,7 +306,6 @@ class TestResumeSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
         mock_chat_session_store: ChatSessionStore,
         mock_websocket_event_sender: WebSocketEventSender,
         sample_access_token: str,
@@ -370,10 +315,6 @@ class TestResumeSession:
         sample_paginated_messages: PaginatedMessages,
         sample_recipes: list[UserRecipe],
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(
-            return_value=sample_anonymous_user_access
-        )
-
         with (
             patch.object(
                 mock_chat_session_store,
@@ -423,7 +364,6 @@ class TestResumeSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
         mock_chat_session_store: ChatSessionStore,
         mock_websocket_event_sender: WebSocketEventSender,
         sample_access_token: str,
@@ -433,10 +373,6 @@ class TestResumeSession:
         sample_paginated_messages: PaginatedMessages,
         sample_recipes: list[UserRecipe],
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(
-            return_value=sample_anonymous_user_access
-        )
-
         paginated_messages_with_recipes = sample_paginated_messages.copy()
         paginated_messages_with_recipes.messages[0].recipe_id = sample_recipes[0].id
 
@@ -489,13 +425,10 @@ class TestResumeSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
         mock_websocket_event_sender: WebSocketEventSender,
         sample_access_token: str,
         sample_thread_id: str,
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(return_value=None)
-
         await orchestrator.resume_session(sample_access_token, sample_thread_id, mock_websocket)
 
         chat_error = AccessTokenNotFoundError(sample_access_token)
@@ -509,16 +442,12 @@ class TestResumeSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
         mock_chat_session_store: ChatSessionStore,
         mock_websocket_event_sender: WebSocketEventSender,
         sample_access_token: str,
         sample_thread_id: str,
         sample_anonymous_user_access: UserAccess,
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(
-            return_value=sample_anonymous_user_access
-        )
         mock_chat_session_store.resume_thread = AsyncMock(return_value=None)
 
         await orchestrator.resume_session(sample_access_token, sample_thread_id, mock_websocket)
@@ -534,7 +463,6 @@ class TestResumeSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
         sample_access_token: str,
         sample_thread_id: str,
         sample_thread: Thread,
@@ -542,9 +470,6 @@ class TestResumeSession:
         sample_recipes: list[UserRecipe],
         sample_anonymous_user_access: UserAccess,
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(
-            return_value=sample_anonymous_user_access
-        )
         mock_websocket.client_state = WebSocketState.DISCONNECTED
 
         with (
@@ -572,8 +497,6 @@ class TestResumeSession:
         self,
         orchestrator: ChatSessionOrchestrator,
         mock_websocket: AsyncMock,
-        mock_user_access_cache_service: UserAccessCacheService,
-        mock_chat_session_limit_checker: ChatSessionLimitChecker,
         mock_chat_session_store: ChatSessionStore,
         mock_websocket_event_sender: WebSocketEventSender,
         sample_access_token: str,
@@ -582,11 +505,6 @@ class TestResumeSession:
         sample_paginated_messages: PaginatedMessages,
         sample_recipes: list[UserRecipe],
     ) -> None:
-        mock_user_access_cache_service.get_user_access = AsyncMock(
-            side_effect=Exception("Test error")
-        )
-        mock_chat_session_limit_checker.has_message_limit_reached = AsyncMock(return_value=False)
-        mock_chat_session_limit_checker.get_message_limit = AsyncMock(return_value=100)
         mock_chat_session_store.create_thread = AsyncMock(return_value=sample_thread)
 
         with (

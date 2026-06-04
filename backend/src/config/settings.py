@@ -28,32 +28,11 @@ class Settings(BaseSettings):
         ),
     ]
 
-    # Redis
-    redis_url: Annotated[str, Field(default="redis://localhost:6379/", alias="REDIS_URL")]
-
     # API Keys
     google_api_key: str = Field(default="GOOGLE_API_KEY", alias="GOOGLE_API_KEY")
-    tavily_api_key: str = Field(default="TAVILY_API_KEY", alias="TAVILY_API_KEY")
 
-    # Cache TTL Settings (in seconds)
-    thread_cache_ttl: int = 60 * 60 * 24  # 1 day
-    message_cache_ttl: int = 60 * 60 * 24  # 1 day
-    recipe_cache_ttl: int = 60 * 60 * 24  # 1 day
-    user_access_cache_ttl: int = 60 * 60 * 24  # 1 day
-
-    # Session and Limits
-    session_ttl: int = 60 * 30  # 30 minutes
-    authenticated_user_message_limit: int = 15
-    unauthenticated_user_message_limit: int = 8
-
-    # Cookie Settings
-    cookie_name: str = "bk_access_token"
-    cookie_max_age: int = 60 * 60 * 24  # 1 day
-    cookie_samesite: str = "Lax"
-    cookie_path: str = "/"
-
-    # Refresh TTL
-    access_token_refresh_ttl: int = 60 * 60 * 3  # 3 hours
+    # Limits
+    user_message_limit: int | None = 15
 
     # Database Pool Settings
     db_pool_timeout: int = 30
@@ -96,15 +75,6 @@ class Settings(BaseSettings):
 
     def is_staging(self) -> bool:
         return self.environment == "staging"
-
-    def get_cookie_secure(self) -> bool:
-        return self.is_production() or self.is_staging()
-
-    def get_cookie_samesite(self) -> str:
-        return self.cookie_samesite
-
-    def get_cookie_httponly(self) -> bool:
-        return self.is_production()
 
     def is_auth_enabled(self) -> bool:
         if self.is_production():

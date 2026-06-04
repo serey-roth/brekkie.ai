@@ -1,13 +1,11 @@
 from database.index import DBTransactionMaker
 
 from services.ai_food_agent.ai_food_agent import AIFoodAgent
-from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
 from services.chat_services.chat_session_store import ChatSessionStore
 from services.data_services.message_service import MessageService
 from services.data_services.recipe_service import RecipeService
 from services.data_services.thread_service import ThreadService
-from services.data_services.user_access_cache_service import UserAccessCacheService
 from services.data_services.user_service import UserService
 from services.websocket_event_sender import WebSocketEventSender
 
@@ -18,20 +16,17 @@ class ServiceContainer:
         db_transaction_maker: DBTransactionMaker,
         ai_food_agent: AIFoodAgent,
         user_service: UserService,
-        user_access_cache_service: UserAccessCacheService,
         message_service: MessageService,
         recipe_service: RecipeService,
         thread_service: ThreadService,
         websocket_event_sender: WebSocketEventSender,
         chat_session_store: ChatSessionStore,
         chat_session_orchestrator: ChatSessionOrchestrator,
-        chat_session_limit_checker: ChatSessionLimitChecker,
     ):
         self.db_transaction_maker = db_transaction_maker
         self.ai_food_agent = ai_food_agent
 
         self.user_service = user_service
-        self.user_access_cache_service = user_access_cache_service
 
         self.message_service = message_service
         self.recipe_service = recipe_service
@@ -41,4 +36,3 @@ class ServiceContainer:
 
         self.chat_session_store = chat_session_store
         self.chat_session_orchestrator = chat_session_orchestrator
-        self.chat_session_limit_checker = chat_session_limit_checker

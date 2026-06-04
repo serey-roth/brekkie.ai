@@ -31,8 +31,6 @@ ENV/
 .venv/
 .env/
 
-# Poetry
-poetry.lock
 
 # Testing
 .coverage

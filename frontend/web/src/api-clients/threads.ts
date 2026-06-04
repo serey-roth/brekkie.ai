@@ -1,4 +1,5 @@
 import { ApiErrorSchema } from '@/data/schemas/errors';
+import { buildAuthHeaders } from './utils';
 import {
     GetThreadMessagesResponseSchema,
     type GetThreadMessagesPayload,
@@ -17,16 +18,15 @@ export interface IThreadsClient {
 
 export class ThreadsApiClient implements IThreadsClient {
     private _baseUrl: string;
+    private _getToken: () => string | null;
 
-    constructor(baseUrl: string) {
+    constructor(baseUrl: string, getToken: () => string | null) {
         this._baseUrl = baseUrl;
+        this._getToken = getToken;
     }
 
     async getUserThreads(payload: GetUserThreadsPayload): Promise<PaginatedThreads> {
-        const headers = {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-        } as Record<string, string>;
+        const headers = buildAuthHeaders(this._getToken());
 
         const url = new URL(`${this._baseUrl}/threads`);
         if (payload.limit) {
@@ -48,7 +48,6 @@ export class ThreadsApiClient implements IThreadsClient {
         const response = await fetch(url.toString(), {
             method: 'GET',
             headers,
-            credentials: 'include',
         });
 
         const json = await response.json();
@@ -70,10 +69,7 @@ export class ThreadsApiClient implements IThreadsClient {
     }
 
     async getThreadMessages(payload: GetThreadMessagesPayload): Promise<GetThreadMessagesResponse> {
-        const headers = {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-        } as Record<string, string>;
+        const headers = buildAuthHeaders(this._getToken());
 
         const url = new URL(`${this._baseUrl}/threads/${payload.thread_id}/messages`);
         if (payload.limit) {
@@ -92,7 +88,6 @@ export class ThreadsApiClient implements IThreadsClient {
         const response = await fetch(url.toString(), {
             method: 'GET',
             headers,
-            credentials: 'include',
         });
 
         const json = await response.json();

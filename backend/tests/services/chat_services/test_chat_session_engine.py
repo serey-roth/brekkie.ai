@@ -13,41 +13,41 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState, WebSocketDisconnect
 
-from database.index import DBTransactionMaker
+from src.database.index import DBTransactionMaker
 
-from services.chat_services.chat_session_engine import ChatSessionEngine, ChatSessionEngineState
-from services.chat_services.chat_session_handlers import (
+from src.services.chat_services.chat_session_engine import ChatSessionEngine, ChatSessionEngineState
+from src.services.chat_services.chat_session_handlers import (
     ErrorResult,
     MessageAndRecipeResult,
     MessageResult,
     RecipeResult,
     ThreadResult,
 )
-from services.chat_services.chat_session_message_processor import MessageProcessingResult
+from src.services.chat_services.chat_session_message_processor import MessageProcessingResult
 
-from schemas.user_access import UserAccess
-from schemas.messages import UserMessagePayload, ApiMessage
-from schemas.message_role import MessageRole
-from schemas.message_content_type import MessageContentType
-from schemas.threads import Thread
-from schemas.recipes import UserRecipe
-from schemas.chat_session_errors import (
+from src.schemas.user_access import UserAccess
+from src.schemas.messages import UserMessagePayload, ApiMessage
+from src.schemas.message_role import MessageRole
+from src.schemas.message_content_type import MessageContentType
+from src.schemas.threads import Thread
+from src.schemas.recipes import UserRecipe
+from src.schemas.chat_session_errors import (
     SessionClosedError,
     AccessTokenNotFoundError,
     OverMessageLimitError,
     InvalidPayloadError,
     InternalServerError,
 )
-from schemas.safety_guards import (
+from src.schemas.safety_guards import (
     SafetyGuardResult,
     SafetyGuardType,
     SafetyIssue,
     SafetyIssueType,
     SafetyRiskLevel,
 )
-from schemas.conversation_stream_events import ConversationStreamEventName
+from src.schemas.conversation_stream_events import ConversationStreamEventName
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 
 @pytest.fixture

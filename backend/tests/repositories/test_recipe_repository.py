@@ -6,13 +6,13 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.message_repository import MessageRepository
-from repositories.recipe_repository import RecipeRepository
+from src.repositories.message_repository import MessageRepository
+from src.repositories.recipe_repository import RecipeRepository
 
-from schemas.messages import CreateMessageParams
-from schemas.message_content_type import MessageContentType
-from schemas.message_role import MessageRole
-from schemas.recipes import (
+from src.schemas.messages import CreateMessageParams
+from src.schemas.message_content_type import MessageContentType
+from src.schemas.message_role import MessageRole
+from src.schemas.recipes import (
     RecipeField,
     RecipeCategory,
     RecipeIngredient,
@@ -22,7 +22,7 @@ from schemas.recipes import (
     UpdateRecipeParams,
 )
 
-from utils.date_utils import strip_timezone
+from src.utils.date_utils import strip_timezone
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 

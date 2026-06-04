@@ -8,16 +8,16 @@ from unittest.mock import MagicMock
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.schema import DBRecipe
+from src.database.schema import DBRecipe
 
-from repositories.recipe_repository import RecipeRepository
+from src.repositories.recipe_repository import RecipeRepository
 
-from schemas.message_content_type import MessageContentType
-from schemas.message_role import MessageRole
-from schemas.messages import CreateMessageParams
-from services.data_services.recipe_service import RecipeService
+from src.schemas.message_content_type import MessageContentType
+from src.schemas.message_role import MessageRole
+from src.schemas.messages import CreateMessageParams
+from src.services.data_services.recipe_service import RecipeService
 
-from schemas.recipes import (
+from src.schemas.recipes import (
     CreateRecipeParams,
     RecipeCategory,
     UpdateRecipeFieldParams,
@@ -29,7 +29,7 @@ from schemas.recipes import (
 )
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 
 pytestmark = pytest.mark.asyncio
@@ -205,7 +205,7 @@ class TestGetRecipe:
         sample_message_id: str,
         sample_recipe: dict[str, Any],
     ) -> None:
-        from repositories.message_repository import MessageRepository
+        from src.repositories.message_repository import MessageRepository
 
         message_repository = MessageRepository()
         await message_repository.create_message(

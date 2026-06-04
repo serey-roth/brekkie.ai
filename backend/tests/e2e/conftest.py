@@ -28,45 +28,40 @@ from sqlalchemy.sql import text
 
 from langgraph.checkpoint.memory import InMemorySaver
 
-from config.settings import Settings, create_settings
+from src.config.settings import Settings, create_settings
 
-from api.main import app
-from api.deps import get_service_container
+from src.api.main import app
+from src.api.deps import get_service_container
 
-from database.schema import Base
+from src.database.schema import Base
 
-from repositories.thread_repository import ThreadRepository
-from repositories.message_repository import MessageRepository
-from repositories.recipe_repository import RecipeRepository
-from repositories.user_repository import UserRepository
+from src.repositories.thread_repository import ThreadRepository
+from src.repositories.message_repository import MessageRepository
+from src.repositories.recipe_repository import RecipeRepository
+from src.repositories.user_repository import UserRepository
 
-from services.service_container import ServiceContainer
-from services.data_services.user_service import UserService
-from services.data_services.user_access_cache_service import UserAccessCacheService
-from services.data_services.thread_service import ThreadService
-from services.data_services.message_service import MessageService
-from services.data_services.recipe_service import RecipeService
-from services.data_services.thread_cache_service import ThreadCacheService
-from services.data_services.message_cache_service import MessageCacheService
-from services.data_services.recipe_cache_service import RecipeCacheService
-from services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
-from services.safety_guards.regex_safety_guard import RegexSafetyGuard
-from services.chat_services.chat_session_store import ChatSessionStore
-from services.chat_services.chat_session_handlers import ChatSessionHandlers
-from services.chat_services.chat_session_limit_checker import ChatSessionLimitChecker
-from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
-from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
-from services.websocket_event_sender import WebSocketEventSender
+from src.services.service_container import ServiceContainer
+from src.services.data_services.user_service import UserService
+from src.services.data_services.thread_service import ThreadService
+from src.services.data_services.message_service import MessageService
+from src.services.data_services.recipe_service import RecipeService
+from src.services.ai_food_agent.google_ai_food_agent import GoogleAIFoodAgent
+from src.services.safety_guards.regex_safety_guard import RegexSafetyGuard
+from src.services.chat_services.chat_session_store import ChatSessionStore
+from src.services.chat_services.chat_session_handlers import ChatSessionHandlers
+from src.services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
+from src.services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
+from src.services.websocket_event_sender import WebSocketEventSender
 
-from schemas.users import User
-from schemas.user_access import UserAccess
-from schemas.threads import Thread
-from schemas.messages import Message
-from schemas.message_role import MessageRole
-from schemas.message_content_type import MessageContentType
-from schemas.recipes import RecipeIngredient, UserRecipe, RecipeInstruction, RecipeCategory
+from src.schemas.users import User
+from src.schemas.user_access import UserAccess
+from src.schemas.threads import Thread
+from src.schemas.messages import Message
+from src.schemas.message_role import MessageRole
+from src.schemas.message_content_type import MessageContentType
+from src.schemas.recipes import RecipeIngredient, UserRecipe, RecipeInstruction, RecipeCategory
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 VALID_TOKEN = "VALID-TOKEN"
 INVALID_TOKEN = "INVALID-TOKEN"
@@ -284,59 +279,38 @@ async def service_container(db_transaction_maker, redis_client, test_settings: S
     thread_service = ThreadService(ThreadRepository())
     message_service = MessageService(MessageRepository())
     recipe_service = RecipeService(RecipeRepository())
-    user_access_cache_service = UserAccessCacheService(redis_client, ttl=test_settings.user_access_cache_ttl)
-    thread_cache_service = ThreadCacheService(redis_client, ttl=test_settings.thread_cache_ttl)
-    message_cache_service = MessageCacheService(redis_client, ttl=test_settings.message_cache_ttl)
-    recipe_cache_service = RecipeCacheService(redis_client, ttl=test_settings.recipe_cache_ttl)
     websocket_event_sender = WebSocketEventSender()
     ai_food_agent = GoogleAIFoodAgent(checkpointer=InMemorySaver())
 
     chat_session_store = ChatSessionStore(
         thread_service=thread_service,
         message_service=message_service,
-        recipe_service=recipe_service,
-        thread_cache_service=thread_cache_service,
-        message_cache_service=message_cache_service,
-        recipe_cache_service=recipe_cache_service,
-        user_access_cache_service=user_access_cache_service,
+        recipe_service=recipe_service
     )
 
-    chat_session_limit_checker = ChatSessionLimitChecker(
-        user_access_cache_service=user_access_cache_service,
-        authenticated_user_message_limit=test_settings.authenticated_user_message_limit,
-        unauthenticated_user_message_limit=test_settings.unauthenticated_user_message_limit
-    )
     chat_session_handlers = ChatSessionHandlers(
         chat_session_store=chat_session_store
     )
     chat_session_orchestrator = ChatSessionOrchestrator(
         session_ttl=test_settings.session_ttl,
         db_transaction_maker=db_transaction_maker,
-        user_access_cache_service=user_access_cache_service,
         ai_food_agent=ai_food_agent,
         websocket_event_sender=websocket_event_sender,  
         chat_session_store=chat_session_store,
         chat_session_handlers=chat_session_handlers,
-        chat_session_limit_checker=chat_session_limit_checker,
         chat_session_message_guard=message_guard
     )
     container = ServiceContainer(
         db_transaction_maker=db_transaction_maker,
         user_service=user_service,
-        user_access_cache_service=user_access_cache_service,
         thread_service=thread_service,
         message_service=message_service,
         recipe_service=recipe_service,
-        thread_cache_service=thread_cache_service,
-        message_cache_service=message_cache_service,
-        recipe_cache_service=recipe_cache_service,
         websocket_event_sender=websocket_event_sender,
         ai_food_agent=ai_food_agent,
         chat_session_store=chat_session_store,
-        chat_session_limit_checker=chat_session_limit_checker,
         chat_session_orchestrator=chat_session_orchestrator,
     )
-    
     
     app.state.settings = test_settings
     app.state.service_container = container

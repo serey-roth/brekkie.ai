@@ -4,11 +4,11 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from database.schema import DBMessage
-from repositories.message_repository import MessageRepository
-from schemas.message_content_type import MessageContentType
-from schemas.message_role import MessageRole
-from schemas.messages import (
+from src.database.schema import DBMessage
+from src.repositories.message_repository import MessageRepository
+from src.schemas.message_content_type import MessageContentType
+from src.schemas.message_role import MessageRole
+from src.schemas.messages import (
     CountMessagesParams,
     CreateMessageParams,
     GetDBMessagesParams,
@@ -19,7 +19,7 @@ from schemas.messages import (
     UpdateStrategy,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from utils.date_utils import strip_timezone
+from src.utils.date_utils import strip_timezone
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 

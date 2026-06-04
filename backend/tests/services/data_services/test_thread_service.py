@@ -5,10 +5,10 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.thread_repository import ThreadRepository
-from services.data_services.thread_service import ThreadService
+from src.repositories.thread_repository import ThreadRepository
+from src.services.data_services.thread_service import ThreadService
 
-from schemas.threads import (
+from src.schemas.threads import (
     CreateThreadParams,
     PaginatedThreads,
     Thread,
@@ -16,7 +16,7 @@ from schemas.threads import (
     GetUserThreadsParams,
     ResumeThreadParams,
 )
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 pytestmark = pytest.mark.asyncio
 

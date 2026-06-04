@@ -4,17 +4,8 @@ import { type ChatEvent } from '@/data/schemas/chat-events';
 import { type Message } from '@/data/schemas/messages';
 import { type UserRecipe } from '@/data/schemas/recipes';
 import { type Thread } from '@/data/schemas/threads';
-import { type UserAccess } from '@/data/schemas/user-access';
 import { evolvingRecipeList } from '@/data/tests/recipes/evolving-recipe';
 
-const userAccess: UserAccess = {
-    access_token: '123',
-    is_authenticated: true,
-    user_id: '1',
-    user_message_count: 5,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-};
 
 export function useRecipeGenerationSimulation() {
     const chatStateManager = useChatStateManager();
@@ -84,7 +75,7 @@ export function useRecipeGenerationSimulation() {
         chatStateManager.handleChatEvent({
             event: 'recipe_generation_started',
             data: {
-                user_access: userAccess,
+                user_id: '1',
                 thread: thread,
                 message: recipeMessage,
                 recipe: userRecipe,
@@ -107,7 +98,7 @@ export function useRecipeGenerationSimulation() {
                 chatStateManager.handleChatEvent({
                     event: 'recipe_generation_completed',
                     data: {
-                        user_access: userAccess,
+                        user_id: '1',
                         thread: thread,
                         message: newMessage,
                         recipe: newUserRecipe,
@@ -124,7 +115,7 @@ export function useRecipeGenerationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'recipe_field_detected',
                 data: {
-                    user_access: userAccess,
+                    user_id: '1',
                     recipe: newUserRecipe,
                 },
             } satisfies ChatEvent);

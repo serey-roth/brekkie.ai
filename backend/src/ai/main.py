@@ -24,8 +24,6 @@ from schemas.conversation_stream_events import (
     RecipeFieldDetectedPayload,
     RecipeGenerationCompletedPayload,
     RecipeGenerationStartedPayload,
-    SearchCompletedPayload,
-    SearchStartedPayload,
     SummaryUpdatedPayload,
     TextMessageChunkGeneratedPayload,
     TextMessageCompletedPayload,
@@ -150,14 +148,6 @@ async def handle_recipe_complete(message_id: str, payload: RecipeGenerationCompl
     print("─" * 60)
 
 
-async def handle_search_started(message_id: str, payload: SearchStartedPayload):
-    print(f"\n\n🔍 Search Started: {payload.tool_name} {payload.tool_input}")
-
-
-async def handle_search_completed(message_id: str, payload: SearchCompletedPayload):
-    print(f"\n\n🔍 Search Completed: {payload.tool_output} {payload.tool_metadata.model_dump()}")
-
-
 async def handle_ai_agent_error(payload: AIAgentErrorPayload):
     print(f"\n❌ An error occurred: {payload.error_message}")
 
@@ -237,16 +227,6 @@ async def main():
                     ):
                         await handle_recipe_complete(assistant_message_id, event.payload)
                         assistant_message_id = None
-                case "search_started":
-                    if isinstance(event.payload, SearchStartedPayload):
-                        assistant_message_id = str(uuid.uuid4())
-                        await handle_search_started(assistant_message_id, event.payload)
-                case "search_completed":
-                    if assistant_message_id is not None and isinstance(
-                        event.payload, SearchCompletedPayload
-                    ):
-                        await handle_search_completed(assistant_message_id, event.payload)
-                    assistant_message_id = None
                 case "summary_updated":
                     if isinstance(event.payload, SummaryUpdatedPayload):
                         await handle_summary_updated(event.payload)

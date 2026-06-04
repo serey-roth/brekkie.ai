@@ -17,8 +17,6 @@ from langgraph.prebuilt.tool_node import ToolNode
 
 
 class AgentState(MessagesState):
-    # food_relationship: str
-    # communication_style: str
     thread_title: str
     summary: str
 
@@ -41,7 +39,7 @@ class AgentFactory:
         self.thread_id = thread_id
         self.checkpointer = checkpointer
         self.agent_llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash-preview-05-20",
+            model="gemini-2.5-flash",
             temperature=0.7,
             api_key=os.getenv("GOOGLE_API_KEY"),
         )
@@ -66,7 +64,7 @@ class AgentFactory:
         summary = state.get("summary", "")
 
         thread_title_llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash-preview-05-20",
+            model="gemini-2.5-flash",
             temperature=0.1,
             api_key=os.getenv("GOOGLE_API_KEY"),
         )
@@ -93,7 +91,7 @@ class AgentFactory:
         messages = state.get("messages", [])
 
         summary_llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash-preview-05-20",
+            model="gemini-2.5-flash",
             temperature=0.1,  # Lower temperature for more consistent summaries
             api_key=os.getenv("GOOGLE_API_KEY"),
         )
@@ -131,11 +129,6 @@ class AgentFactory:
             ]
         )
 
-        # prompt_with_partials = prompt_template.partial(
-        #     user_relationship_with_food=state.get("food_relationship", ""),
-        #     how_the_user_talks_to_you=state.get("communication_style", "")
-        # )
-
         chain = prompt_template | self.agent_llm.bind_tools(TOOLS)
         response = await chain.ainvoke(
             {
@@ -149,8 +142,6 @@ class AgentFactory:
             args = response.tool_calls[0]["args"]
             if name == "create_recipe":
                 write({"event": "recipe_generation_started", "tool_name": name, "tool_input": args})
-            elif name == "tavily_search":
-                write({"event": "search_started", "tool_name": name, "tool_input": args})
 
         return {"messages": [response]}  # type: ignore
 

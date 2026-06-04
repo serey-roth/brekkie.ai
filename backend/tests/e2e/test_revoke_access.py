@@ -4,9 +4,9 @@ import pytest
 
 from fastapi import status
 
-from services.service_container import ServiceContainer
+from src.services.service_container import ServiceContainer
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 
 class TestRevokeAccess:

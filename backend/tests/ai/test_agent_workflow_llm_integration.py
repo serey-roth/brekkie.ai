@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
-from ai.workflow.agent import AgentFactory, AgentState
+from src.ai.workflow.agent import AgentFactory, AgentState
 
 
 @pytest.fixture

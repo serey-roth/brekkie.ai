@@ -10,7 +10,6 @@ from schemas.conversation_stream_events import (
     ConversationStreamEventName,
     UserMessageRejectedPayload,
 )
-from schemas.user_access import UserAccess
 from services.ai_food_agent.ai_food_agent import AIFoodAgent
 from services.chat_services.chat_session_handlers import (
     ChatSessionHandlers,
@@ -49,8 +48,6 @@ class ChatSessionMessageProcessor:
             "recipe_generation_started": self.chat_session_handlers.handle_recipe_generation_started,
             "recipe_field_detected": self.chat_session_handlers.handle_recipe_field_detected,
             "recipe_generation_completed": self.chat_session_handlers.handle_recipe_generation_completed,
-            "search_started": self.chat_session_handlers.handle_search_started,
-            "search_completed": self.chat_session_handlers.handle_search_completed,
             "summary_updated": self.chat_session_handlers.handle_summary_updated,
             "thread_title_updated": self.chat_session_handlers.handle_thread_title_updated,
             "ai_agent_error": self.chat_session_handlers.handle_ai_agent_error,
@@ -58,60 +55,37 @@ class ChatSessionMessageProcessor:
         }
 
     def _requires_user_message_id(self, event: ConversationStreamEvent) -> bool:
-        event_name = event.event
-        return event_name in [
-            "text_message_started",
-            "recipe_generation_started",
-            "search_started",
-            "user_message_rejected",
-        ]
+        return event.event in ["text_message_started", "recipe_generation_started", "user_message_rejected"]
 
     def _requires_assistant_message_id(self, event: ConversationStreamEvent) -> bool:
-        event_name = event.event
-        return event_name in [
+        return event.event in [
             "text_message_started",
             "text_message_chunk_generated",
             "text_message_completed",
             "recipe_generation_started",
             "recipe_field_detected",
             "recipe_generation_completed",
-            "search_started",
-            "search_completed",
             "user_message_rejected",
         ]
 
     def _requires_existing_assistant_message_id(self, event: ConversationStreamEvent) -> bool:
-        event_name = event.event
-        return event_name in [
+        return event.event in [
             "text_message_chunk_generated",
             "text_message_completed",
             "recipe_field_detected",
             "recipe_generation_completed",
-            "search_completed",
         ]
 
     def _should_create_assistant_message(self, event: ConversationStreamEvent) -> bool:
-        event_name = event.event
-        return event_name in [
-            "text_message_started",
-            "recipe_generation_started",
-            "search_started",
-            "user_message_rejected",
-        ]
+        return event.event in ["text_message_started", "recipe_generation_started", "user_message_rejected"]
 
     def _should_reset_assistant_message(self, event: ConversationStreamEvent) -> bool:
-        event_name = event.event
-        return event_name in [
-            "text_message_completed",
-            "recipe_generation_completed",
-            "search_completed",
-            "user_message_rejected",
-        ]
+        return event.event in ["text_message_completed", "recipe_generation_completed", "user_message_rejected"]
 
     async def _call_handler(
         self,
         db: AsyncSession,
-        user_access: UserAccess,
+        user_id: str,
         thread_id: str,
         user_message_id: str,
         assistant_message_id: str | None,
@@ -126,7 +100,7 @@ class ChatSessionMessageProcessor:
 
         kwargs = {
             "db": db,
-            "user_access": user_access,
+            "user_id": user_id,
             "thread_id": thread_id,
             "payload": event.payload,
             "timestamp": timestamp,
@@ -138,7 +112,6 @@ class ChatSessionMessageProcessor:
         if self._requires_assistant_message_id(event):
             if assistant_message_id is None:
                 raise ValueError("Assistant message id is not set")
-
             kwargs["assistant_message_id"] = assistant_message_id
 
         return await handler(**kwargs)
@@ -146,7 +119,7 @@ class ChatSessionMessageProcessor:
     async def _handle_event(
         self,
         db: AsyncSession,
-        user_access: UserAccess,
+        user_id: str,
         thread_id: str,
         user_message_id: str,
         event: ConversationStreamEvent,
@@ -159,12 +132,11 @@ class ChatSessionMessageProcessor:
                 raise ValueError("Assistant message id is not set")
 
         assistant_message_id = self.assistant_message_id
-
         timestamp = datetime.now(timezone.utc)
 
         result = await self._call_handler(
             db=db,
-            user_access=user_access,
+            user_id=user_id,
             thread_id=thread_id,
             user_message_id=user_message_id,
             assistant_message_id=assistant_message_id,
@@ -183,21 +155,19 @@ class ChatSessionMessageProcessor:
     async def process_user_message(
         self,
         db: AsyncSession,
-        user_access: UserAccess,
+        user_id: str,
         thread_id: str,
         user_message_id: str,
         user_input: str,
     ) -> None:
         try:
-            logger.debug(
-                f"Processing chat message from user {user_access.user_id}: {user_input[:50]}..."
-            )
+            logger.debug(f"Processing chat message from user {user_id}: {user_input[:50]}...")
 
             async def on_event(event: ConversationStreamEvent) -> None:
-                await self._handle_event(db, user_access, thread_id, user_message_id, event)
+                await self._handle_event(db, user_id, thread_id, user_message_id, event)
 
             await self.ai_food_agent.stream_conversation(
-                user_id=user_access.user_id,
+                user_id=user_id,
                 thread_id=thread_id,
                 user_input=user_input,
                 on_event=on_event,
@@ -207,7 +177,7 @@ class ChatSessionMessageProcessor:
             logger.error(f"Error processing user message: {str(e)}")
             await self._handle_event(
                 db=db,
-                user_access=user_access,
+                user_id=user_id,
                 thread_id=thread_id,
                 user_message_id=user_message_id,
                 event=ConversationStreamEvent(
@@ -218,14 +188,14 @@ class ChatSessionMessageProcessor:
     async def reject_user_message(
         self,
         db: AsyncSession,
-        user_access: UserAccess,
+        user_id: str,
         thread_id: str,
         user_message_id: str,
         rejection_message: str,
     ) -> None:
         await self._handle_event(
             db=db,
-            user_access=user_access,
+            user_id=user_id,
             thread_id=thread_id,
             user_message_id=user_message_id,
             event=ConversationStreamEvent(

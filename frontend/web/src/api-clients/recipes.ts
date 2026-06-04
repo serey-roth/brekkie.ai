@@ -1,4 +1,5 @@
 import { ApiErrorSchema } from '@/data/schemas/errors';
+import { buildAuthHeaders } from './utils';
 import { GetUserRecipesResponseSchema, type GetUserRecipesResponse } from '@/data/schemas/recipes';
 
 export interface IRecipesClient {
@@ -7,23 +8,21 @@ export interface IRecipesClient {
 
 export class RecipesApiClient implements IRecipesClient {
     private _baseUrl: string;
+    private _getToken: () => string | null;
 
-    constructor(baseUrl: string) {
+    constructor(baseUrl: string, getToken: () => string | null) {
         this._baseUrl = baseUrl;
+        this._getToken = getToken;
     }
 
     async getUserRecipes(): Promise<GetUserRecipesResponse> {
-        const headers = {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-        } as Record<string, string>;
+        const headers = buildAuthHeaders(this._getToken());
 
         const url = new URL(`${this._baseUrl}/recipes`);
 
         const response = await fetch(url.toString(), {
             method: 'GET',
             headers,
-            credentials: 'include',
         });
 
         const json = await response.json();

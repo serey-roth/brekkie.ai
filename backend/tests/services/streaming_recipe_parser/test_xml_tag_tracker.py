@@ -1,6 +1,6 @@
 import pytest
 
-from services.streaming_recipe_parser.xml_tag_tracker import XMLTagTracker
+from src.services.streaming_recipe_parser.xml_tag_tracker import XMLTagTracker
 
 def _get_results(tracker, tokens):
     results = []

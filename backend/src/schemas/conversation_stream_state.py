@@ -2,7 +2,6 @@ class ConversationStreamState:
     def __init__(self):
         self.message_stream_started = False
         self.recipe_generation_started = False
-        self.search_started = False
         self.full_response = ""
 
     def start_message_stream(self):
@@ -18,19 +17,12 @@ class ConversationStreamState:
     def end_recipe_generation(self):
         self.recipe_generation_started = False
 
-    def start_search(self):
-        self.search_started = True
-
-    def end_search(self):
-        self.search_started = False
-
     def add_message_chunk(self, chunk: str):
         self.full_response += chunk
 
     def reset(self):
         self.message_stream_started = False
         self.recipe_generation_started = False
-        self.search_started = False
         self.full_response = ""
 
     def has_message_stream_started(self) -> bool:
@@ -38,9 +30,6 @@ class ConversationStreamState:
 
     def has_recipe_generation_started(self) -> bool:
         return self.recipe_generation_started
-
-    def has_search_started(self) -> bool:
-        return self.search_started
 
     def get_full_response(self) -> str:
         return self.full_response

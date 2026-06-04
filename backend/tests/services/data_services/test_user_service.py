@@ -7,15 +7,15 @@ from unittest.mock import MagicMock
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.schema import DBUser
+from src.database.schema import DBUser
 
-from services.data_services.user_service import UserService
+from src.services.data_services.user_service import UserService
 
-from repositories.user_repository import UserRepository
+from src.repositories.user_repository import UserRepository
 
-from schemas.users import CreateUserParams, UpdateUserParams, User
+from src.schemas.users import CreateUserParams, UpdateUserParams, User
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 pytestmark = pytest.mark.asyncio
 

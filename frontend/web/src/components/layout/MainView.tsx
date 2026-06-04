@@ -5,7 +5,6 @@ import { ChatLayout } from '@/components/layout/ChatLayout';
 import { WelcomeScreen } from '@/components/layout/WelcomeScreen';
 import { RecipePanel } from '@/components/recipes/RecipePanel';
 import {
-    useAppConfig,
     useAppState,
     useThreadsApiClient,
     useUserAccessManager,
@@ -66,7 +65,6 @@ export function MainView() {
     });
     const { threadTitle, threadTitleState } = useThreadTitle();
     const { chatLimitMessage } = useChatLimit();
-    const { accessErrorMessage } = useAccessErrorMessage();
 
     useScrollHandler({
         scrollRef,
@@ -143,7 +141,7 @@ export function MainView() {
                         onScrollToBottom={scrollToBottom}
                         onSendMessage={sendMessage}
                         connectionStatus={connectionState.status}
-                        appErrorMessage={accessErrorMessage ?? connectionState.errorMessage}
+                        appErrorMessage={connectionState.errorMessage}
                         chatLimitMessage={chatLimitMessage ?? null}
                         chatSessionErrorMessage={chatSessionErrorMessage ?? null}
                         disableSendButton={
@@ -367,10 +365,7 @@ function useChatMessageGroups({ onMessageChange }: { onMessageChange: () => void
 
 function useChatLimit() {
     const chatStateManager = useChatStateManager();
-    const userAccessManager = useUserAccessManager();
     const [chatLimitMessage, setChatLimitMessage] = useState<ChatLimitMessage | null>(null);
-
-    const { featureFlags } = useAppConfig();
 
     useEffect(() => {
         const limitReachedListener = (error: ChatSessionError) => {
@@ -382,83 +377,15 @@ function useChatLimit() {
             }
         };
 
-        const createLimitMessage = (
-            limit: number,
-            messageCount: number,
-            isAuthenticated: boolean,
-        ) => {
-            if (messageCount >= limit) {
-                return `You've reached your daily limit of ${limit} messages.${featureFlags.enableAuth && isAuthenticated ? ' Paid plans with higher limits are coming soon.' : ''}`;
-            } else if (isAuthenticated && messageCount > 0 && Math.abs(messageCount - limit) < 10) {
-                return `You have ${limit - messageCount} messages left.`;
-            } else if (!isAuthenticated && messageCount > 0) {
-                return `You have ${limit - messageCount} messages left.`;
-            }
-            return null;
-        };
-
-        const accessEnsuredListener = (userAccess: UserAccess) => {
-            const limit = userAccessManager.getMessageLimit();
-            const isAuthenticated = userAccess.is_authenticated;
-            const messageCount = userAccess.user_message_count;
-            const limitMessage = createLimitMessage(limit, messageCount, isAuthenticated);
-            if (limitMessage) {
-                setChatLimitMessage({ type: 'warning', message: limitMessage });
-            } else {
-                setChatLimitMessage(null);
-            }
-        };
-        const accessChangedListener = (userAccess: UserAccess | null) => {
-            if (userAccess) {
-                const limit = userAccessManager.getMessageLimit();
-                const isAuthenticated = userAccess.is_authenticated;
-                const messageCount = userAccess.user_message_count;
-                const limitMessage = createLimitMessage(limit, messageCount, isAuthenticated);
-                if (limitMessage) {
-                    setChatLimitMessage({ type: 'warning', message: limitMessage });
-                } else {
-                    setChatLimitMessage(null);
-                }
-            } else {
-                setChatLimitMessage(null);
-            }
-        };
-
-        userAccessManager.subscribe('accessEnsured', accessEnsuredListener);
-        userAccessManager.subscribe('accessChanged', accessChangedListener);
         chatStateManager.subscribe('chatSessionErrorOccurred', limitReachedListener);
         return () => {
-            userAccessManager.unsubscribe('accessEnsured', accessEnsuredListener);
-            userAccessManager.unsubscribe('accessChanged', accessChangedListener);
             chatStateManager.unsubscribe('chatSessionErrorOccurred', limitReachedListener);
         };
-    }, [userAccessManager, chatStateManager, featureFlags]);
+    }, [chatStateManager]);
 
     return { chatLimitMessage };
 }
 
-function useAccessErrorMessage() {
-    const userAccessManager = useUserAccessManager();
-    const [accessErrorMessage, setAccessErrorMessage] = useState<string | null>(null);
-
-    useEffect(() => {
-        const updateError = (error: string) => {
-            setAccessErrorMessage(error);
-        };
-        const resetError = () => {
-            setAccessErrorMessage(null);
-        };
-        userAccessManager.subscribe('accessEnsured', resetError);
-        userAccessManager.subscribe('accessChanged', resetError);
-        userAccessManager.subscribe('errorOccurred', updateError);
-        return () => {
-            userAccessManager.unsubscribe('accessChanged', resetError);
-            userAccessManager.unsubscribe('errorOccurred', updateError);
-        };
-    }, [userAccessManager]);
-
-    return { accessErrorMessage };
-}
 
 function useConnectionState() {
     const connectionStateManager = useConnectionStateManager();

@@ -11,8 +11,6 @@ from schemas.conversation_stream_events import (
     RecipeFieldDetectedPayload,
     RecipeGenerationCompletedPayload,
     RecipeGenerationStartedPayload,
-    SearchCompletedPayload,
-    SearchStartedPayload,
     SummaryUpdatedPayload,
     TextMessageChunkGeneratedPayload,
     TextMessageCompletedPayload,
@@ -25,7 +23,6 @@ from services.streaming_recipe_parser.streaming_recipe_parser import StreamingRe
 from utils.logger import Logger
 
 logger = Logger("google_ai_food_agent")
-
 
 class GoogleAIFoodAgent(AIFoodAgent):
     def __init__(self, checkpointer: BaseCheckpointSaver):
@@ -64,21 +61,6 @@ class GoogleAIFoodAgent(AIFoodAgent):
             output_tokens=usage_metadata.get("output_tokens", 0),
         )
 
-    def _extract_search_tool_message_metadata(
-        self, tool_message: ToolMessage, metadata: Dict[str, Any]
-    ) -> tuple[dict, ConversationStreamMetadata]:
-        # content is Tavily search results in JSON format
-        content = tool_message.content
-        if isinstance(content, str):
-            tool_output = json.loads(content)
-        else:
-            tool_output = {}
-        return tool_output, ConversationStreamMetadata(
-            model_name=metadata.get("ls_model_name", "unknown"),
-            input_tokens=metadata.get("input_tokens", 0),
-            output_tokens=metadata.get("output_tokens", 0),
-        )
-
     async def _handle_tool_message(
         self,
         tool_message: ToolMessage,
@@ -102,19 +84,6 @@ class GoogleAIFoodAgent(AIFoodAgent):
                 )
             )
             state.end_recipe_generation()
-        elif tool_message.name == "tavily_search":
-            tool_output, tool_metadata = self._extract_search_tool_message_metadata(
-                tool_message, metadata
-            )
-            await on_event(
-                ConversationStreamEvent(
-                    event="search_completed",
-                    payload=SearchCompletedPayload(
-                        tool_output=tool_output, tool_metadata=tool_metadata
-                    ),
-                )
-            )
-            state.end_search()
         else:
             logger.error(f"Unexpected tool message: {tool_message.name}")
 
@@ -151,7 +120,6 @@ class GoogleAIFoodAgent(AIFoodAgent):
                     )
                 )
         else:
-            # This must be a text message chunk since search results are complete JSON objects
             await on_event(
                 ConversationStreamEvent(
                     event="text_message_chunk_generated",
@@ -220,17 +188,6 @@ class GoogleAIFoodAgent(AIFoodAgent):
                     payload=ThreadTitleUpdatedPayload(thread_title=data["thread_title"]),
                 )
             )
-
-        elif data["event"] == "search_started":
-            await on_event(
-                ConversationStreamEvent(
-                    event="search_started",
-                    payload=SearchStartedPayload(
-                        tool_name=data["tool_name"], tool_input=data["tool_input"]
-                    ),
-                )
-            )
-            state.start_search()
 
         else:
             logger.error(f"Unexpected custom event: {data['event']}")

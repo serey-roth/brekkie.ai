@@ -7,11 +7,11 @@ import time
 from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocketState
 
-from services.service_container import ServiceContainer
+from src.services.service_container import ServiceContainer
 
-from schemas.messages import GetMessagesParams
-from schemas.users import CreateUserParams
-from utils.date_utils import to_utc_isostring
+from src.schemas.messages import GetMessagesParams
+from src.schemas.users import CreateUserParams
+from src.utils.date_utils import to_utc_isostring
 
 #TODO: Fix these with auth-only flow and test db sync
 class TestSessionTimeoutAndResume:

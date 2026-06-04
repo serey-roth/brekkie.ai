@@ -6,7 +6,7 @@ import pytest_asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.thread_repository import (
+from src.repositories.thread_repository import (
     CreateThreadParams,
     GetDBUserThreadsParams,
     ResumeThreadParams,
@@ -14,7 +14,7 @@ from repositories.thread_repository import (
     UpdateThreadParams,
 )
 
-from utils.date_utils import strip_timezone
+from src.utils.date_utils import strip_timezone
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
 

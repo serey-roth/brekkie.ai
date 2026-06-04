@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, patch
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from services.chat_services.chat_session_store import ChatSessionStore
-from services.chat_services.chat_session_handlers import ChatSessionHandlers
+from src.services.chat_services.chat_session_store import ChatSessionStore
+from src.services.chat_services.chat_session_handlers import ChatSessionHandlers
 
-from schemas.conversation_stream_events import (
+from src.schemas.conversation_stream_events import (
     TextMessageCompletedPayload,
     TextMessageStartedPayload,
     ConversationStreamMetadata,
@@ -17,18 +17,15 @@ from schemas.conversation_stream_events import (
     RecipeGenerationCompletedPayload,
     RecipeFieldDetectedPayload,
     RecipeGenerationStartedPayload,
-    SearchCompletedPayload,
-    SearchStartedPayload,
     SummaryUpdatedPayload,
     ThreadTitleUpdatedPayload,
     UserMessageRejectedPayload,
 )
-from schemas.messages import (
+from src.schemas.messages import (
     Message,
     Message,
     CreateAssistantTextMessageParams,
     CreateAssistantRecipeMessageParams,
-    CreateAssistantToolMessageParams,
     ApiMessage,
     UpdateMessageParams,
     UpdateMessageTextContentParams,
@@ -36,21 +33,21 @@ from schemas.messages import (
     UpdateMessageOutputTokensParams,
     UpdateStrategy,
 )
-from schemas.threads import (
+from src.schemas.threads import (
     Thread,
     UpdateThreadParams,
 )
-from schemas.recipes import (
+from src.schemas.recipes import (
     Recipe,
     UserRecipe,
     RecipeField,
     RecipeIngredient,
 )
-from schemas.user_access import UserAccess
-from schemas.message_role import MessageRole
-from schemas.message_content_type import MessageContentType
+from src.schemas.user_access import UserAccess
+from src.schemas.message_role import MessageRole
+from src.schemas.message_content_type import MessageContentType
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 
 from tests.test_helpers.assert_deep_equal import assert_deep_equal
@@ -931,275 +928,6 @@ class TestRecipeGenerationCompleted:
                     recipe=recipe,
                     tool_output=recipe_tool_output,
                     tool_metadata=recipe_tool_metadata,
-                ),
-            )
-
-
-class TestSearchStarted:
-    @pytest.mark.asyncio
-    async def test_success(
-        self,
-        chat_session_handlers: ChatSessionHandlers,
-        mock_chat_session_store: ChatSessionStore,
-        mock_async_session: AsyncSession,
-        sample_user_access: UserAccess,
-        sample_user_message_id: str,
-    ) -> None:
-        thread_id = "123"
-        assistant_message_id = "123"
-        timestamp = datetime.now(timezone.utc)
-
-        search_tool_name = "search_tool"
-        search_tool_input = {
-            "query": "test query",
-        }
-
-        expected_thread = Thread(
-            id=thread_id,
-            user_id=sample_user_access.user_id,
-            error_message=None,
-            is_empty=False,
-            created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),
-        )
-
-        expected_message = ApiMessage(
-            id=assistant_message_id,
-            user_id=sample_user_access.user_id,
-            thread_id=thread_id,
-            tool_name=search_tool_name,
-            tool_input=search_tool_input,
-            created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),
-            role=MessageRole.assistant,
-            content_type=MessageContentType.tool,
-        )
-
-        mock_chat_session_store.update_thread.return_value = expected_thread
-        mock_chat_session_store.create_assistant_tool_message.return_value = expected_message
-
-        result = await chat_session_handlers.handle_search_started(
-            db=mock_async_session,
-            user_access=sample_user_access,
-            thread_id=thread_id,
-            timestamp=timestamp,
-            assistant_message_id=assistant_message_id,
-            user_message_id=sample_user_message_id,
-            payload=SearchStartedPayload(
-                tool_name=search_tool_name,
-                tool_input=search_tool_input,
-            ),
-        )
-
-        mock_chat_session_store.update_thread.assert_called_once_with(
-            mock_async_session,
-            sample_user_access,
-            UpdateThreadParams(
-                id=thread_id,
-                updated_at=timestamp,
-                error_message=None,
-                is_empty=False,
-            ),
-        )
-
-        mock_chat_session_store.create_assistant_tool_message.assert_called_once_with(
-            mock_async_session,
-            sample_user_access,
-            CreateAssistantToolMessageParams(
-                id=assistant_message_id,
-                user_id=sample_user_access.user_id,
-                thread_id=thread_id,
-                tool_name=search_tool_name,
-                tool_input=search_tool_input,
-                created_at=timestamp,
-                updated_at=timestamp,
-                parent_id=sample_user_message_id,
-                role=MessageRole.assistant,
-                content_type=MessageContentType.tool,
-            ),
-        )
-
-        assert_deep_equal(
-            result,
-            {
-                "thread": expected_thread,
-                "message": expected_message,
-            },
-        )
-
-    @pytest.mark.asyncio
-    async def test_error(
-        self,
-        chat_session_handlers: ChatSessionHandlers,
-        mock_chat_session_store: ChatSessionStore,
-        mock_async_session: AsyncSession,
-        sample_user_access: UserAccess,
-        sample_user_message_id: str,
-    ) -> None:
-        thread_id = "123"
-        assistant_message_id = "123"
-        timestamp = datetime.now(timezone.utc)
-
-        search_tool_name = "search_tool"
-        search_tool_input = {
-            "query": "test query",
-        }
-
-        mock_chat_session_store.update_thread.side_effect = Exception("test error")
-
-        with pytest.raises(Exception):
-            await chat_session_handlers.handle_search_started(
-                db=mock_async_session,
-                user_access=sample_user_access,
-                thread_id=thread_id,
-                timestamp=timestamp,
-                assistant_message_id=assistant_message_id,
-                user_message_id=sample_user_message_id,
-                payload=SearchStartedPayload(
-                    tool_name=search_tool_name,
-                    tool_input=search_tool_input,
-                ),
-            )
-
-
-class TestSearchCompleted:
-    @pytest.mark.asyncio
-    async def test_success(
-        self,
-        chat_session_handlers: ChatSessionHandlers,
-        mock_chat_session_store: ChatSessionStore,
-        mock_async_session: AsyncSession,
-        sample_user_access: UserAccess,
-    ) -> None:
-        thread_id = "123"
-        assistant_message_id = "123"
-        timestamp = datetime.now(timezone.utc)
-
-        search_tool_output = {"search_results": "test search results"}
-        search_tool_metadata = ConversationStreamMetadata(
-            model_name="test_model",
-            input_tokens=10,
-            output_tokens=20,
-        )
-
-        existing_message = Message(
-            id=assistant_message_id,
-            user_id=sample_user_access.user_id,
-            thread_id=thread_id,
-            created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),
-            role=MessageRole.assistant,
-            content_type=MessageContentType.tool,
-        )
-
-        expected_thread = Thread(
-            id=thread_id,
-            user_id=sample_user_access.user_id,
-            error_message=None,
-            is_empty=False,
-            created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),
-        )
-
-        expected_message = ApiMessage(
-            id=assistant_message_id,
-            user_id=sample_user_access.user_id,
-            thread_id=thread_id,
-            created_at=to_utc_isostring(timestamp),
-            updated_at=to_utc_isostring(timestamp),
-            role=MessageRole.assistant,
-            content_type=MessageContentType.tool,
-            tool_output=search_tool_output,
-            model_name=search_tool_metadata.model_name,
-            input_tokens=search_tool_metadata.input_tokens,
-            output_tokens=search_tool_metadata.output_tokens,
-        )
-
-        mock_chat_session_store.update_thread.return_value = expected_thread
-        mock_chat_session_store.update_message.return_value = expected_message
-
-        result = await chat_session_handlers.handle_search_completed(
-            db=mock_async_session,
-            user_access=sample_user_access,
-            thread_id=thread_id,
-            timestamp=timestamp,
-            assistant_message_id=assistant_message_id,
-            payload=SearchCompletedPayload(
-                tool_output=search_tool_output,
-                tool_metadata=search_tool_metadata,
-            ),
-        )
-
-        mock_chat_session_store.update_thread.assert_called_once_with(
-            mock_async_session,
-            sample_user_access,
-            UpdateThreadParams(
-                id=thread_id,
-                updated_at=timestamp,
-                error_message=None,
-                is_empty=False,
-            ),
-        )
-
-        mock_chat_session_store.update_message.assert_called_once_with(
-            mock_async_session,
-            sample_user_access,
-            thread_id,
-            UpdateMessageParams(
-                id=assistant_message_id,
-                updated_at=timestamp,
-                tool_output=search_tool_output,
-                model_name=search_tool_metadata.model_name,
-                input_tokens_update=UpdateMessageInputTokensParams(
-                    input_tokens=search_tool_metadata.input_tokens,
-                    strategy=UpdateStrategy.APPEND,
-                ),
-                output_tokens_update=UpdateMessageOutputTokensParams(
-                    output_tokens=search_tool_metadata.output_tokens,
-                    strategy=UpdateStrategy.APPEND,
-                ),
-            ),
-        )
-
-        assert_deep_equal(
-            result,
-            {
-                "thread": expected_thread,
-                "message": expected_message,
-            },
-        )
-
-    @pytest.mark.asyncio
-    async def test_error(
-        self,
-        chat_session_handlers: ChatSessionHandlers,
-        mock_chat_session_store: ChatSessionStore,
-        mock_async_session: AsyncSession,
-        sample_user_access: UserAccess,
-    ) -> None:
-        thread_id = "123"
-        assistant_message_id = "123"
-        timestamp = datetime.now(timezone.utc)
-
-        search_tool_output = {"search_results": "test search results"}
-        search_tool_metadata = ConversationStreamMetadata(
-            model_name="test_model",
-            input_tokens=10,
-            output_tokens=20,
-        )
-
-        mock_chat_session_store.update_message.side_effect = Exception("test error")
-
-        with pytest.raises(Exception):
-            await chat_session_handlers.handle_search_completed(
-                db=mock_async_session,
-                user_access=sample_user_access,
-                thread_id=thread_id,
-                timestamp=timestamp,
-                assistant_message_id=assistant_message_id,
-                payload=SearchCompletedPayload(
-                    tool_output=search_tool_output,
-                    tool_metadata=search_tool_metadata,
                 ),
             )
 

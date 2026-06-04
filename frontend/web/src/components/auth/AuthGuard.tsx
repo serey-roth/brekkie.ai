@@ -58,40 +58,36 @@ const LoadingAnimation = () => (
 export function AuthGuard({ children, fallback }: AuthGuardProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const { getClaims, logout } = useSupabaseAuth();
-
+    const { logout, verifyJWT } = useSupabaseAuth();
     const userAccessManager = useUserAccessManager();
 
     useEffect(() => {
         const verifyAuth = async () => {
+            if (userAccessManager.isAccessEnsured()) {
+                setIsAuthenticated(true);
+                setIsLoading(false);
+                return;
+            }
             try {
-                const claims = await getClaims();
-                if (claims.aud === 'authenticated') {
-                    const expirationDate = new Date(claims.exp * 1000);
-                    const currentDate = new Date();
-                    if (currentDate > expirationDate) {
-                        await logout();
-                        await userAccessManager.revokeAccess();
-                        setIsAuthenticated(false);
-                    } else {
-                        await userAccessManager.ensureAccess();
-                        setIsAuthenticated(true);
-                    }
-                } else {
-                    await userAccessManager.revokeAccess();
-                    setIsAuthenticated(false);
-                }
+                const { user_id, jwt } = await verifyJWT();
+                userAccessManager.setAuth(user_id, jwt);
+                setIsAuthenticated(true);
             } catch (error) {
                 console.error('Error checking authentication:', error);
+                userAccessManager.clearAuth();
                 setIsAuthenticated(false);
-                await userAccessManager.revokeAccess();
+                try {
+                    await logout();
+                } catch {
+                    // ignore logout errors
+                }
             } finally {
                 setIsLoading(false);
             }
         };
 
         verifyAuth();
-    }, [getClaims, logout, userAccessManager]);
+    }, [verifyJWT, logout, userAccessManager]);
 
     if (isLoading) {
         return fallback || <LoadingAnimation />;

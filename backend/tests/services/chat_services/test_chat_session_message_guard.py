@@ -1,9 +1,9 @@
 import pytest
 
-from services.safety_guards.regex_safety_guard import RegexSafetyGuard
-from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
+from src.services.safety_guards.regex_safety_guard import RegexSafetyGuard
+from src.services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 
-from schemas.safety_guards import SafetyIssueType, SafetyGuardType, SafetyIssue, SafetyRiskLevel
+from src.schemas.safety_guards import SafetyIssueType, SafetyGuardType, SafetyIssue, SafetyRiskLevel
 
 
 @pytest.fixture(scope="session")

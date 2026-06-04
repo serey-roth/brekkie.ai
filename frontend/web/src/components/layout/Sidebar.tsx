@@ -9,15 +9,11 @@ import {
     MessageCircleX,
     Utensils,
     LogOut,
-    Settings,
-    HelpCircle,
-    FileText,
-    Shield,
     Info,
+    Mail,
 } from 'lucide-react';
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SettingsModal } from '@/components/layout/SettingsModal';
 import { Avatar } from '@/components/ui/Avatar';
 import { Menu } from '@/components/ui/Menu';
 import {
@@ -55,7 +51,6 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
     );
 
     const [user, setUser] = useState<UserMetadata | null>(null);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     useEffect(() => {
         const unsubscribe = addAuthStateChangeListener((event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
@@ -327,9 +322,6 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                                                     <span className="text-sm whitespace-nowrap">
                                                         {user?.name}
                                                     </span>
-                                                    <span className="text-xs whitespace-nowrap">
-                                                        Free Plan
-                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -353,53 +345,28 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                                                     <span className="text-sm whitespace-nowrap">
                                                         {user?.name}
                                                     </span>
-                                                    <span className="text-contrast-subtle text-xs whitespace-nowrap">
-                                                        Free Plan
-                                                    </span>
                                                 </div>
                                             </div>
                                         ),
                                     },
                                     {
-                                        label: 'Settings',
-                                        icon: <Settings size={16} />,
-                                        onClick: () => setIsSettingsOpen(true),
+                                        label: 'Contact Support',
+                                        icon: <Mail size={16} />,
+                                        onClick: () =>
+                                            window.open(
+                                                'mailto:sereyratanakroth@gmail.com',
+                                                '_self',
+                                            ),
                                     },
                                     {
-                                        label: 'Learn More',
-                                        icon: <HelpCircle size={16} />,
-                                        submenu: [
-                                            {
-                                                label: 'Terms of Service',
-                                                icon: <FileText size={16} />,
-                                                onClick: () =>
-                                                    window.open(
-                                                        'https://meet-brekkie-ai.vercel.app/terms',
-                                                        '_blank',
-                                                        'noopener,noreferrer',
-                                                    ),
-                                            },
-                                            {
-                                                label: 'Privacy Policy',
-                                                icon: <Shield size={16} />,
-                                                onClick: () =>
-                                                    window.open(
-                                                        'https://meet-brekkie-ai.vercel.app/privacy',
-                                                        '_blank',
-                                                        'noopener,noreferrer',
-                                                    ),
-                                            },
-                                            {
-                                                label: 'About brekkie.ai',
-                                                icon: <Info size={16} />,
-                                                onClick: () =>
-                                                    window.open(
-                                                        'https://meet-brekkie-ai.vercel.app',
-                                                        '_blank',
-                                                        'noopener,noreferrer',
-                                                    ),
-                                            },
-                                        ],
+                                        label: 'About',
+                                        icon: <Info size={16} />,
+                                        onClick: () =>
+                                            window.open(
+                                                'https://meet-brekkie-ai.vercel.app',
+                                                '_blank',
+                                                'noopener,noreferrer',
+                                            ),
                                     },
                                     {
                                         label: 'Sign Out',
@@ -407,7 +374,7 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                                         onClick: async () => {
                                             try {
                                                 await logout();
-                                                await userAccessManager.revokeAccess();
+                                                userAccessManager.clearAuth();
                                                 resetCurrentThread();
                                             } catch (error) {
                                                 console.error('Logout failed:', error);
@@ -439,11 +406,6 @@ export function Sidebar({ showRecipeListView, hideRecipeListView }: SidebarProps
                 )}
             </div>
 
-            <SettingsModal
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
-                user={user}
-            />
         </>
     );
 }
@@ -470,10 +432,7 @@ const useUserAccess = () => {
 
 function useChatLimit() {
     const chatStateManager = useChatStateManager();
-    const userAccessManager = useUserAccessManager();
     const [hasLimitReached, setHasLimitReached] = useState(false);
-
-    const { featureFlags } = useAppConfig();
 
     useEffect(() => {
         const limitReachedListener = (error: ChatSessionError) => {
@@ -482,30 +441,11 @@ function useChatLimit() {
             }
         };
 
-        const accessEnsuredListener = (userAccess: UserAccess) => {
-            const limit = userAccessManager.getMessageLimit();
-            const messageCount = userAccess.user_message_count;
-            setHasLimitReached(messageCount >= limit);
-        };
-        const accessChangedListener = (userAccess: UserAccess | null) => {
-            if (userAccess) {
-                const limit = userAccessManager.getMessageLimit();
-                const messageCount = userAccess.user_message_count;
-                setHasLimitReached(messageCount >= limit);
-            } else {
-                setHasLimitReached(false);
-            }
-        };
-
-        userAccessManager.subscribe('accessEnsured', accessEnsuredListener);
-        userAccessManager.subscribe('accessChanged', accessChangedListener);
         chatStateManager.subscribe('chatSessionErrorOccurred', limitReachedListener);
         return () => {
-            userAccessManager.unsubscribe('accessEnsured', accessEnsuredListener);
-            userAccessManager.unsubscribe('accessChanged', accessChangedListener);
             chatStateManager.unsubscribe('chatSessionErrorOccurred', limitReachedListener);
         };
-    }, [userAccessManager, chatStateManager, featureFlags]);
+    }, [chatStateManager]);
 
     return { hasLimitReached };
 }
@@ -572,7 +512,7 @@ function useFetchThreads(isOpen: boolean, userAccess: UserAccess | null) {
 
     const fetchThreads = useCallback(async () => {
         // TODO: We don't fetch if there's no access token.  Better solution?
-        if (!userAccess?.access_token || isFetching || !hasMoreThreads) return;
+        if (!userAccess?.jwt || isFetching || !hasMoreThreads) return;
 
         setIsFetching(true);
         try {
@@ -600,17 +540,17 @@ function useFetchThreads(isOpen: boolean, userAccess: UserAccess | null) {
         } finally {
             setIsFetching(false);
         }
-    }, [userAccess?.access_token, isFetching, hasMoreThreads, threadsApiClient, nextTimestamp]);
+    }, [userAccess?.jwt, isFetching, hasMoreThreads, threadsApiClient, nextTimestamp]);
 
     useEffect(() => {
-        if (!userAccess?.access_token) {
+        if (!userAccess?.jwt) {
             // Reset fetch state when user access changes
             setThreads([]);
             setHasMoreThreads(true);
             setNextTimestamp(null);
             hasInitiallyFetched.current = false;
             setError(null);
-        } else if (userAccess?.access_token && hasInitiallyFetched.current) {
+        } else if (userAccess?.jwt && hasInitiallyFetched.current) {
             // If we get a new access token (user logged in), reset fetch state to get fresh data
             setThreads([]);
             setHasMoreThreads(true);
@@ -618,7 +558,7 @@ function useFetchThreads(isOpen: boolean, userAccess: UserAccess | null) {
             hasInitiallyFetched.current = false;
             setError(null);
         }
-    }, [userAccess?.access_token]);
+    }, [userAccess?.jwt]);
 
     useEffect(() => {
         if (isOpen && !hasInitiallyFetched.current) {
@@ -677,7 +617,7 @@ function useFetchThreads(isOpen: boolean, userAccess: UserAccess | null) {
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting && !error && isOpen && userAccess?.access_token) {
+                if (entries[0].isIntersecting && !error && isOpen && userAccess?.jwt) {
                     fetchThreads();
                 }
             },
@@ -692,7 +632,7 @@ function useFetchThreads(isOpen: boolean, userAccess: UserAccess | null) {
         return () => {
             if (target) observer.unobserve(target);
         };
-    }, [fetchThreads, error, isOpen, userAccess?.access_token]);
+    }, [fetchThreads, error, isOpen, userAccess?.jwt]);
 
     const threadGroups = useMemo(() => getThreadGroups(threads), [threads]);
 

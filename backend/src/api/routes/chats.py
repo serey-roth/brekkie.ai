@@ -1,10 +1,9 @@
 from typing import Annotated
 
-from api.deps import get_access_token_from_websocket, get_service_container_from_websocket
+from api.deps import get_current_user_id_from_websocket, get_service_container_from_websocket
 from fastapi import APIRouter, Depends, WebSocket
 from fastapi.websockets import WebSocketState
 from schemas.chat_session_errors import (
-    AccessTokenNotFoundError,
     ChatSessionError,
     InternalServerError,
 )
@@ -32,21 +31,11 @@ router = APIRouter()
 async def start_chat(
     websocket: WebSocket,
     service_container: Annotated[ServiceContainer, Depends(get_service_container_from_websocket)],
-    access_token: Annotated[str | None, Depends(get_access_token_from_websocket)] = None,
+    user_id: Annotated[str, Depends(get_current_user_id_from_websocket)],
 ):
     try:
         await websocket.accept()
-
-        if access_token is None:
-            await _handle_chat_session_error(
-                websocket,
-                service_container,
-                AccessTokenNotFoundError(access_token=access_token or ""),
-            )
-            return
-
-        chat_session_orchestrator = service_container.chat_session_orchestrator
-        await chat_session_orchestrator.start_session(access_token, websocket)
+        await service_container.chat_session_orchestrator.start_session(user_id, websocket)
 
     except ValueError as e:
         logger.error(f"Value error in WebSocket connection: {str(e)}")
@@ -62,21 +51,11 @@ async def resume_chat(
     websocket: WebSocket,
     thread_id: str,
     service_container: Annotated[ServiceContainer, Depends(get_service_container_from_websocket)],
-    access_token: Annotated[str | None, Depends(get_access_token_from_websocket)] = None,
+    user_id: Annotated[str, Depends(get_current_user_id_from_websocket)],
 ):
     try:
         await websocket.accept()
-
-        if access_token is None:
-            await _handle_chat_session_error(
-                websocket,
-                service_container,
-                AccessTokenNotFoundError(access_token=access_token or ""),
-            )
-            return
-
-        chat_session_orchestrator = service_container.chat_session_orchestrator
-        await chat_session_orchestrator.resume_session(access_token, thread_id, websocket)
+        await service_container.chat_session_orchestrator.resume_session(user_id, thread_id, websocket)
 
     except ValueError as e:
         logger.error(f"Value error in WebSocket connection: {str(e)}")

@@ -4,7 +4,7 @@ import pytest
 
 from fastapi import status
 
-from services.service_container import ServiceContainer
+from src.services.service_container import ServiceContainer
 
 
 

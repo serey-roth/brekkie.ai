@@ -7,10 +7,10 @@ import pytest_asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repositories.user_repository import UserRepository
+from src.repositories.user_repository import UserRepository
 
-from schemas.users import CreateUserParams, UpdateUserParams
-from utils.date_utils import strip_timezone
+from src.schemas.users import CreateUserParams, UpdateUserParams
+from src.utils.date_utils import strip_timezone
 
 pytestmark = pytest.mark.asyncio
 

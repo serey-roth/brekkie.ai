@@ -5,15 +5,15 @@ import time
 
 from fastapi.testclient import TestClient   
 
-from services.service_container import ServiceContainer
+from src.services.service_container import ServiceContainer
 
-from schemas.threads import GetUserThreadsParams
-from schemas.messages import GetMessagesParams
-from schemas.message_role import MessageRole
-from schemas.users import CreateUserParams
-from schemas.safety_guards import SafetyGuardType, SafetyIssueType
+from src.schemas.threads import GetUserThreadsParams
+from src.schemas.messages import GetMessagesParams
+from src.schemas.message_role import MessageRole
+from src.schemas.users import CreateUserParams
+from src.schemas.safety_guards import SafetyGuardType, SafetyIssueType
 
-from utils.date_utils import to_utc_isostring
+from src.utils.date_utils import to_utc_isostring
 
 class TestRealChatFlow:
     """End-to-end tests for real chat flow with WebSocket and AI integration."""

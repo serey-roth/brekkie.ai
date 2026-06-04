@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
-from services.chat_services.chat_session_engine import ChatSessionEngineState
+from src.services.chat_services.chat_session_engine import ChatSessionEngineState
 
 
 class TestChatSessionEngineState:

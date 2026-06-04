@@ -3,17 +3,8 @@ import { useChatStateManager } from '@/context/chat-context';
 import type { AssistantRecipeMessage, Message } from '@/data/schemas/messages';
 import type { UserRecipe } from '@/data/schemas/recipes';
 import type { Thread } from '@/data/schemas/threads';
-import type { UserAccess } from '@/data/schemas/user-access';
 import { evolvingRecipeList } from '@/data/tests/recipes/evolving-recipe';
 
-const userAccess: UserAccess = {
-    access_token: '123',
-    is_authenticated: true,
-    user_id: '1',
-    user_message_count: 5,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-};
 
 const thread: Thread = {
     id: '1',
@@ -68,7 +59,7 @@ export function useRecipeConversationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'thread_started',
                 data: {
-                    user_access: userAccess,
+                    user_id: '1',
                     thread: thread,
                 },
             });
@@ -111,7 +102,7 @@ export function useRecipeConversationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'text_message_started',
                 data: {
-                    user_access: userAccess,
+                    user_id: '1',
                     thread: updatedThread,
                     message: message,
                 },
@@ -125,7 +116,7 @@ export function useRecipeConversationSimulation() {
                 chatStateManager.handleChatEvent({
                     event: 'text_message_chunk_generated',
                     data: {
-                        user_access: userAccess,
+                        user_id: '1',
                         thread: updatedThread,
                         message: {
                             ...message,
@@ -139,7 +130,7 @@ export function useRecipeConversationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'text_message_completed',
                 data: {
-                    user_access: userAccess,
+                    user_id: '1',
                     thread: updatedThread,
                     message: {
                         ...message,
@@ -179,7 +170,7 @@ export function useRecipeConversationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'text_message_started',
                 data: {
-                    user_access: userAccess,
+                    user_id: '1',
                     thread: updatedThread,
                     message: message2,
                 },
@@ -193,7 +184,7 @@ export function useRecipeConversationSimulation() {
                 chatStateManager.handleChatEvent({
                     event: 'text_message_chunk_generated',
                     data: {
-                        user_access: userAccess,
+                        user_id: '1',
                         thread: updatedThread,
                         message: {
                             ...message2,
@@ -207,7 +198,7 @@ export function useRecipeConversationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'text_message_completed',
                 data: {
-                    user_access: userAccess,
+                    user_id: '1',
                     thread: updatedThread,
                     message: {
                         ...message2,
@@ -229,7 +220,7 @@ export function useRecipeConversationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'thread_title_updated',
                 data: {
-                    user_access: userAccess,
+                    user_id: '1',
                     thread: updatedThread,
                 },
             });
@@ -287,7 +278,7 @@ export function useRecipeConversationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'recipe_generation_started',
                 data: {
-                    user_access: userAccess,
+                    user_id: '1',
                     thread: {
                         ...thread,
                     } satisfies Thread,
@@ -302,7 +293,7 @@ export function useRecipeConversationSimulation() {
                 chatStateManager.handleChatEvent({
                     event: 'recipe_field_detected',
                     data: {
-                        user_access: userAccess,
+                        user_id: '1',
                         recipe: {
                             ...userRecipe,
                             ...evolvingRecipeList[i],
@@ -316,7 +307,7 @@ export function useRecipeConversationSimulation() {
             chatStateManager.handleChatEvent({
                 event: 'recipe_generation_completed',
                 data: {
-                    user_access: userAccess,
+                    user_id: '1',
                     thread: updatedThread,
                     message: {
                         ...recipeMessage,

@@ -3,20 +3,19 @@ import { AiAgentErrorSchema, ChatSessionErrorSchema } from './errors';
 import { MessageSchema, PaginatedMessagesSchema } from './messages';
 import { UserRecipeSchema } from './recipes';
 import { ThreadSchema } from './threads';
-import { UserAccessSchema } from './user-access';
 
 export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('thread_started'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
         }),
     }),
     z.object({
         event: z.literal('thread_resumed'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
             paginated_messages: PaginatedMessagesSchema,
             recipes: z.array(UserRecipeSchema),
@@ -25,7 +24,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('text_message_started'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
             message: MessageSchema,
         }),
@@ -33,7 +32,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('text_message_chunk_generated'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
             message: MessageSchema,
         }),
@@ -41,7 +40,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('text_message_completed'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
             message: MessageSchema,
         }),
@@ -49,7 +48,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('recipe_generation_started'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
             message: MessageSchema,
             recipe: UserRecipeSchema,
@@ -58,14 +57,14 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('recipe_field_detected'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             recipe: UserRecipeSchema,
         }),
     }),
     z.object({
         event: z.literal('recipe_generation_completed'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
             message: MessageSchema,
             recipe: UserRecipeSchema,
@@ -74,7 +73,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('search_started'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
             message: MessageSchema,
         }),
@@ -82,7 +81,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('search_completed'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
             message: MessageSchema,
         }),
@@ -90,14 +89,14 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('summary_updated'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
         }),
     }),
     z.object({
         event: z.literal('thread_title_updated'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
         }),
     }),
@@ -105,7 +104,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
         event: z.literal('ai_agent_error'),
         data: z
             .object({
-                user_access: UserAccessSchema,
+                user_id: z.string(),
                 thread: ThreadSchema,
             })
             .extend(AiAgentErrorSchema.shape),
@@ -117,7 +116,7 @@ export const ChatEventSchema = z.discriminatedUnion('event', [
     z.object({
         event: z.literal('user_message_rejected'),
         data: z.object({
-            user_access: UserAccessSchema,
+            user_id: z.string(),
             thread: ThreadSchema,
             message: MessageSchema,
         }),

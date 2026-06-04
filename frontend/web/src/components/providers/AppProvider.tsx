@@ -2,7 +2,6 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { SupabaseAuthApiClient } from '@/api-clients/auth';
 import { RecipesApiClient } from '@/api-clients/recipes';
 import { ThreadsApiClient } from '@/api-clients/threads';
-import { UserAccessApiClient } from '@/api-clients/user-access';
 import { getConfigWithOverrides, type EnvironmentConfig } from '@/config/environment';
 import { AppContext, type AppContextType } from '@/context/app-context';
 import { UserAccessManager } from '@/managers/user-access-manager';
@@ -21,19 +20,15 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
         [customConfig],
     );
 
-    const threadsApiClient = useRef<ThreadsApiClient>(new ThreadsApiClient(config.apiBaseUrl));
-    const userAccessApiClient = useRef<UserAccessApiClient>(
-        new UserAccessApiClient(config.apiBaseUrl),
-    );
-    const recipesApiClient = useRef<RecipesApiClient>(new RecipesApiClient(config.apiBaseUrl));
-    const supabaseAuthApiClient = useRef<SupabaseAuthApiClient>(new SupabaseAuthApiClient());
+    const userAccessManager = useRef<UserAccessManager>(new UserAccessManager());
 
-    const userAccessManager = useRef<UserAccessManager>(
-        new UserAccessManager(userAccessApiClient.current, {
-            maxMessageCountAnonymous: config.maxMessageCountAnonymous,
-            maxMessageCountAuthenticated: config.maxMessageCountAuthenticated,
-        }),
+    const threadsApiClient = useRef<ThreadsApiClient>(
+        new ThreadsApiClient(config.apiBaseUrl, () => userAccessManager.current.getJwt()),
     );
+    const recipesApiClient = useRef<RecipesApiClient>(
+        new RecipesApiClient(config.apiBaseUrl, () => userAccessManager.current.getJwt()),
+    );
+    const supabaseAuthApiClient = useRef<SupabaseAuthApiClient>(new SupabaseAuthApiClient());
 
     const [isSidebarOpen, setIsSidebarOpenState] = useState(
         localStorage.getItem('brekkie-sidebar-state') === 'open',
@@ -53,7 +48,6 @@ export function AppProvider({ children, config: customConfig }: AppProviderProps
             config,
             apiClients: {
                 threadsApiClient: threadsApiClient.current,
-                userAccessApiClient: userAccessApiClient.current,
                 recipesApiClient: recipesApiClient.current,
                 supabaseAuthApiClient: supabaseAuthApiClient.current,
             },

@@ -9,8 +9,6 @@ export interface EnvironmentConfig {
     version?: string;
     enableDebugLogging?: boolean;
     enableAnalytics?: boolean;
-    maxMessageCountAnonymous: number;
-    maxMessageCountAuthenticated: number;
     featureFlags: {
         enableAuth: boolean;
     };
@@ -34,8 +32,6 @@ const developmentConfig: EnvironmentConfig = {
     isStaging: false,
     enableDebugLogging: true,
     enableAnalytics: false,
-    maxMessageCountAnonymous: 8,
-    maxMessageCountAuthenticated: 15,
     featureFlags: {
         enableAuth: true,
     },
@@ -53,8 +49,6 @@ const productionConfig: EnvironmentConfig = {
     isStaging: false,
     enableDebugLogging: false,
     enableAnalytics: true,
-    maxMessageCountAnonymous: 8,
-    maxMessageCountAuthenticated: 15,
     featureFlags: {
         enableAuth: true,
     },
@@ -72,8 +66,6 @@ const stagingConfig: EnvironmentConfig = {
     isStaging: true,
     enableDebugLogging: true,
     enableAnalytics: false,
-    maxMessageCountAnonymous: 8,
-    maxMessageCountAuthenticated: 15,
     featureFlags: {
         enableAuth: true,
     },
@@ -92,8 +84,6 @@ const testConfig: EnvironmentConfig = {
     isStaging: false,
     enableDebugLogging: true,
     enableAnalytics: false,
-    maxMessageCountAnonymous: 8,
-    maxMessageCountAuthenticated: 15,
     featureFlags: {
         enableAuth: true,
     },

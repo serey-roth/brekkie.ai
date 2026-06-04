@@ -7,7 +7,6 @@ import {
     ChatSessionErrorTypesThatDontRequireReconnect,
 } from '@/data/schemas/errors';
 import { type UserMessagePayload } from '@/data/schemas/messages';
-import type { UserAccess } from '@/data/schemas/user-access';
 import { ChatStateManager } from '@/managers/chat-state-manager';
 import {
     ConnectionStateManager,
@@ -21,11 +20,15 @@ type ChatWebSocketArgs = {
     connectionStateManager: ConnectionStateManager;
 };
 
-const getWebsocketUrl = (baseWsUrl: string, threadId: string | null): string | null => {
-    const timestamp = Date.now();
-    return threadId
-        ? `${baseWsUrl}/chat/${threadId}?timestamp=${timestamp}`
-        : `${baseWsUrl}/chat?timestamp=${timestamp}`;
+const getWebsocketUrl = (
+    baseWsUrl: string,
+    threadId: string | null,
+    token: string,
+): string => {
+    const url = new URL(threadId ? `${baseWsUrl}/chat/${threadId}` : `${baseWsUrl}/chat`);
+    url.searchParams.set('token', token);
+    url.searchParams.set('timestamp', Date.now().toString());
+    return url.toString();
 };
 
 const CLOSE_CODES_TO_NOT_RECONNECT = [
@@ -92,11 +95,6 @@ export function useChatWebSocket(args: ChatWebSocketArgs) {
                     console.error('Invalid event', result.error);
                     return;
                 }
-                if ('user_access' in result.data.data) {
-                    const userAccess = result.data.data.user_access;
-                    userAccessManager.setUserAccess(userAccess);
-                }
-
                 chatStateManager.handleChatEvent(result.data);
             },
             onError: () => {
@@ -110,7 +108,7 @@ export function useChatWebSocket(args: ChatWebSocketArgs) {
             reconnectInterval() {
                 return connectionStateManager.getReconnectInterval();
             },
-            retryOnError: true, // This will used the reconnectAttempts too
+            retryOnError: true,
         },
         websocketUrl !== null,
     );
@@ -118,13 +116,12 @@ export function useChatWebSocket(args: ChatWebSocketArgs) {
     const sendMessage = useCallback(
         (content: string) => {
             const message = chatStateManager.createUserMessage(content);
-            userAccessManager.optimisticIncrementUserMessageCount();
             sendJsonMessage({
                 id: message.id,
                 content,
             } satisfies UserMessagePayload);
         },
-        [chatStateManager, userAccessManager, sendJsonMessage],
+        [chatStateManager, sendJsonMessage],
     );
 
     return { sendMessage };
@@ -136,57 +133,47 @@ const useWebsocketUrl = (args: {
     connectionStateManager: ConnectionStateManager;
 }) => {
     const { userAccessManager, chatStateManager, connectionStateManager } = args;
-
     const { wsBaseUrl } = useAppConfig();
 
+    const token = userAccessManager.getJwt();
     const [websocketUrl, setWebsocketUrl] = useState<string | null>(
-        userAccessManager.getAccessToken()
-            ? getWebsocketUrl(wsBaseUrl, chatStateManager.getCurrentThreadId())
-            : null,
+        token ? getWebsocketUrl(wsBaseUrl, chatStateManager.getCurrentThreadId(), token) : null,
     );
     const hasTriedReconnectingToCurrentThreadRef = useRef(false);
 
     useEffect(() => {
-        const accessEnsuredListener = (data: UserAccess) => {
-            const accessToken = data.access_token;
+        const accessEnsuredListener = () => {
+            const jwt = userAccessManager.getJwt();
             const threadId = chatStateManager.getCurrentThreadId();
-            if (accessToken) {
-                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, threadId));
+            if (jwt) {
+                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, threadId, jwt));
             } else {
                 setWebsocketUrl(null);
             }
         };
 
         const currentThreadChangedListener = (data: { thread_id: string } | null) => {
-            const accessToken = userAccessManager.getAccessToken();
-            if (accessToken) {
-                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, data?.thread_id ?? null));
+            const jwt = userAccessManager.getJwt();
+            if (jwt) {
+                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, data?.thread_id ?? null, jwt));
             } else {
                 setWebsocketUrl(null);
             }
-            // Reset the reconnection flag when thread changes
             hasTriedReconnectingToCurrentThreadRef.current = false;
         };
 
         const reconnectingListener = () => {
-            const accessToken = userAccessManager.getAccessToken();
-            if (!accessToken) {
-                return;
-            }
+            const jwt = userAccessManager.getJwt();
+            if (!jwt) return;
 
             const currentThreadId = chatStateManager.getCurrentThreadId();
-            if (!currentThreadId) {
-                // If we don't have a thread id, there's no point in reconnecting
-                return;
-            }
+            if (!currentThreadId) return;
 
             if (hasTriedReconnectingToCurrentThreadRef.current) {
-                // First attempt to reconnect to the same thread failed due to thread not found/thread expired
-                // Start a new thread instead
-                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, null));
+                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, null, jwt));
             } else {
                 hasTriedReconnectingToCurrentThreadRef.current = true;
-                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, currentThreadId));
+                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, currentThreadId, jwt));
             }
         };
 
@@ -197,8 +184,9 @@ const useWebsocketUrl = (args: {
         };
 
         const chatSessionErrorListener = (error: ChatSessionError) => {
-            if (error.type === 'thread_not_found' && userAccessManager.getAccessToken()) {
-                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, null));
+            const jwt = userAccessManager.getJwt();
+            if (error.type === 'thread_not_found' && jwt) {
+                setWebsocketUrl(getWebsocketUrl(wsBaseUrl, null, jwt));
             }
         };
 

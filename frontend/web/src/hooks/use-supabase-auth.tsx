@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppConfig, useSupabaseAuthApiClient } from '@/context/app-context';
-import { UserAccessSchema, type UserAccess } from '@/data/schemas/user-access';
 import type { AuthChangeEvent, Session } from '@/supabase-client';
 
 export const useSupabaseAuth = () => {
@@ -29,30 +28,28 @@ export const useSupabaseAuth = () => {
         }
     }, [supabaseAuthApiClient, navigate]);
 
-    const verifyJWT = async (): Promise<UserAccess> => {
+    const verifyJWT = async (): Promise<{ user_id: string; jwt: string }> => {
         const session = await supabaseAuthApiClient.getSession();
         if (!session) {
             throw new Error('No session found');
         }
-        const accessToken = session.access_token;
+        const jwt = session.access_token;
         const response = await fetch(`${apiBaseUrl}/auth/verify-jwt`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json',
-                Authorization: `Bearer ${accessToken}`,
+                Authorization: `Bearer ${jwt}`,
             },
-            credentials: 'include',
         });
         if (!response.ok) {
             throw new Error('Failed to verify token');
         }
         const json = await response.json();
-        const userAccess = UserAccessSchema.safeParse(json);
-        if (!userAccess.success) {
+        if (!json.user_id) {
             throw new Error('Failed to verify token');
         }
-        return userAccess.data;
+        return { user_id: json.user_id, jwt };
     };
 
     const getClaims = useCallback(async () => {

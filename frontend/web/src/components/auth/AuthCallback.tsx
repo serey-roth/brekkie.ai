@@ -116,8 +116,8 @@ export function AuthCallback() {
     const [authError, setAuthError] = useState(false);
     const [user, setUser] = useState<User | null>(null);
 
-    const userAccessManager = useUserAccessManager();   
-    const { verifyJWT, logout, getClaims, addAuthStateChangeListener } = useSupabaseAuth();
+    const userAccessManager = useUserAccessManager();
+    const { verifyJWT, logout, addAuthStateChangeListener } = useSupabaseAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -139,33 +139,22 @@ export function AuthCallback() {
         hasExecutedRef.current = true;
 
         try {
-            const userAccess = await verifyJWT();
-            if (userAccess.is_authenticated) {
-                setTimeout(() => {
-                    navigate('/');
-                }, 100);
-            } else {
-                console.error('Failed to authenticate user');
-                setAuthError(true);
-                navigate('/auth');
-            }
+            const { user_id, jwt } = await verifyJWT();
+            userAccessManager.setAuth(user_id, jwt);
+            setTimeout(() => {
+                navigate('/');
+            }, 100);
         } catch (error) {
             console.error('Auth verification failed:', error);
             setAuthError(true);
             try {
-                const claims = await getClaims();
-                if (claims.aud === 'authenticated') {
-                    await logout();
-                    await userAccessManager.revokeAccess();
-                } else {
-                    navigate('/auth');
-                }
+                await logout();
             } catch {
                 console.error('Failed to logout');
                 navigate('/auth');
             }
         }
-    }, [verifyJWT, navigate, logout, getClaims, userAccessManager]);
+    }, [verifyJWT, navigate, logout, userAccessManager]);
 
     useLayoutEffect(() => {
         handleAuthCallback();

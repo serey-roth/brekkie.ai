@@ -36,7 +36,7 @@ export function SettingsModal({ isOpen, onClose, user }: SettingsModalProps) {
     const handleSignOut = async () => {
         try {
             await logout();
-            await userAccessManager.revokeAccess();
+            userAccessManager.clearAuth();
             onClose();
             navigate('/');
         } catch (error) {

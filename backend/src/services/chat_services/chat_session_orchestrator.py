@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketState
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.index import DBTransactionMaker
 
@@ -88,10 +89,11 @@ class ChatSessionOrchestrator:
             await websocket.close(code=error.code, reason=error.type.value)
 
     async def _create_new_thread(
-        self, user_access: UserAccess, thread_id: str | None = None
+        self, db: AsyncSession, user_access: UserAccess, thread_id: str | None = None
     ) -> Thread:
         timestamp = datetime.now(timezone.utc)
         return await self.chat_session_store.create_thread(
+            db,
             CreateThreadParams(
                 id=thread_id or str(uuid.uuid4()),
                 user_id=user_access.user_id,
@@ -116,7 +118,8 @@ class ChatSessionOrchestrator:
                     )
                 )
 
-            thread = await self._create_new_thread(user_access)
+            async with self.db_transaction_maker() as db:  # type: ignore
+                thread = await self._create_new_thread(db, user_access)
 
             sent = await self.websocket_event_sender.send_event(
                 websocket,

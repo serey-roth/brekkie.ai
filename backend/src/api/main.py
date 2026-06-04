@@ -29,11 +29,8 @@ from services.chat_services.chat_session_limit_checker import ChatSessionLimitCh
 from services.chat_services.chat_session_message_guard import ChatSessionMessageGuard
 from services.chat_services.chat_session_orchestrator import ChatSessionOrchestrator
 from services.chat_services.chat_session_store import ChatSessionStore
-from services.data_services.message_cache_service import MessageCacheService
 from services.data_services.message_service import MessageService
-from services.data_services.recipe_cache_service import RecipeCacheService
 from services.data_services.recipe_service import RecipeService
-from services.data_services.thread_cache_service import ThreadCacheService
 from services.data_services.thread_service import ThreadService
 from services.data_services.user_access_cache_service import UserAccessCacheService
 from services.data_services.user_service import UserService
@@ -66,15 +63,6 @@ async def lifespan(app: FastAPI):
     user_access_cache_service = UserAccessCacheService(
         redis_client=redis_client, ttl=settings.user_access_cache_ttl
     )
-    thread_cache_service = ThreadCacheService(
-        redis_client=redis_client, ttl=settings.thread_cache_ttl
-    )
-    message_cache_service = MessageCacheService(
-        redis_client=redis_client, ttl=settings.message_cache_ttl
-    )
-    recipe_cache_service = RecipeCacheService(
-        redis_client=redis_client, ttl=settings.recipe_cache_ttl
-    )
 
     db_transaction_maker = create_db_transaction_maker(settings)
 
@@ -86,9 +74,6 @@ async def lifespan(app: FastAPI):
     websocket_event_sender = WebSocketEventSender()
 
     chat_session_store = ChatSessionStore(
-        thread_cache_service=thread_cache_service,
-        message_cache_service=message_cache_service,
-        recipe_cache_service=recipe_cache_service,
         message_service=message_service,
         recipe_service=recipe_service,
         thread_service=thread_service,
@@ -123,11 +108,8 @@ async def lifespan(app: FastAPI):
         user_access_cache_service=user_access_cache_service,
         user_service=user_service,
         message_service=message_service,
-        message_cache_service=message_cache_service,
         recipe_service=recipe_service,
-        recipe_cache_service=recipe_cache_service,
         thread_service=thread_service,
-        thread_cache_service=thread_cache_service,
         websocket_event_sender=websocket_event_sender,
         chat_session_store=chat_session_store,
         chat_session_orchestrator=chat_session_orchestrator,

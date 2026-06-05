@@ -1,71 +1,44 @@
 # brekkie.ai
 
-An AI-powered food and recipe assistant with real-time chat interface. Built with FastAPI backend (Python/LangChain/Google AI) and React frontend (TypeScript/Vite).
+AI meal planning assistant with multi-turn conversations. Built with FastAPI, LangGraph, React and Supabase.
 
-## Overview
+**Live**: [brekkie-ai.vercel.app](https://brekkie-ai.vercel.app)
 
-brekkie.ai is a full-stack application that helps users discover recipes, get cooking guidance, and plan meals through natural conversation. Users can interact with an AI assistant to generate recipes, ask cooking questions, and receive structured recipe responses. The system features real-time WebSocket communication, user authentication, and a responsive web interface optimized for recipe discovery and cooking assistance.
+## Structure
 
-## Architecture
+- **`/backend`** — FastAPI service with LangGraph AI agent, PostgreSQL persistence, and WebSocket chat
+- **`/frontend/web`** — React app with real-time chat interface and recipe display
 
-The project consists of two main components:
+## Tech Stack
 
-- **Backend** (`/backend`): FastAPI service with AI integration, database persistence, and WebSocket communication
-- **Frontend** (`/frontend/web`): React application with real-time chat interface and recipe display
+**Backend** — Python 3.12, FastAPI, LangChain, LangGraph, Google Generative AI, PostgreSQL (Supabase), Poetry
+
+**Frontend** — React 19, TypeScript, Vite, Tailwind CSS, Supabase Auth, pnpm
 
 ## Quick Start
 
-### Backend Setup
+### Backend
 
 ```bash
 cd backend
 poetry install
-# Set up environment variables (see backend/README.md)
-poetry run uvicorn src.api.main:app --reload
+cp .env.example .env.development  # configure env vars
+alembic upgrade head
+poetry run uvicorn api.main:app --reload --port 8000
 ```
 
-### Frontend Setup
+### Frontend
 
 ```bash
 cd frontend/web
 pnpm install
+cp .env.example .env.development  # configure env vars
 pnpm dev
 ```
 
-## Features
+See [backend/README.md](backend/README.md) and [frontend/web/README.md](frontend/web/README.md) for full setup details.
 
-- Real-time AI chat interface for recipe discovery
-- Recipe generation and display with ingredients and instructions
-- User authentication and session management
-- WebSocket-based communication
-- Responsive design for mobile and desktop
-- Database persistence with PostgreSQL
-- Redis caching layer for performance
-- Intelligent recipe recommendations
+## Deployment
 
-## Tech Stack
-
-### Backend
-
-- Python 3.13, FastAPI, LangChain, LangGraph
-- Google Generative AI, PostgreSQL, Redis
-- Poetry, pytest, mypy, ruff
-
-### Frontend
-
-- React 19, TypeScript 5.8, Vite 6.3
-- Tailwind CSS, WebSocket, Zod validation
-- pnpm, Vitest, Testing Library
-
-## Documentation
-
-- [Backend Documentation](backend/README.md)
-- [Frontend Documentation](frontend/web/README.md)
-
-## Development
-
-Each component has its own development setup and testing procedures. See the individual README files for detailed instructions.
-
-## License
-
-MIT
+- **Backend** → [Render](https://render.com) (Docker container via `render.yaml`)
+- **Frontend** → [Vercel](https://vercel.com) (root directory: `frontend/web`)

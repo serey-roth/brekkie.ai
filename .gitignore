@@ -41,7 +41,6 @@ htmlcov/
 .nox/
 
 # Alembic
-alembic.ini
 
 # Node.js frontend
 node_modules/

@@ -5,7 +5,6 @@ export interface EnvironmentConfig {
     isDevelopment: boolean;
     isProduction: boolean;
     isTest: boolean;
-    isStaging: boolean;
     version?: string;
     enableDebugLogging?: boolean;
     enableAnalytics?: boolean;
@@ -29,7 +28,7 @@ const developmentConfig: EnvironmentConfig = {
     isDevelopment: true,
     isProduction: false,
     isTest: false,
-    isStaging: false,
+
     enableDebugLogging: true,
     enableAnalytics: false,
     featureFlags: {
@@ -38,34 +37,17 @@ const developmentConfig: EnvironmentConfig = {
 };
 
 const productionConfig: EnvironmentConfig = {
-    appBaseUrl: 'https://brekkie-ai.fly.dev',
-    apiBaseUrl: 'https://brekkie-ai.fly.dev/api',
-    wsBaseUrl: 'wss://brekkie-ai.fly.dev/ws',
+    appBaseUrl: 'https://brekkie-ai.vercel.app',
+    apiBaseUrl: 'https://brekkie-ai.onrender.com/api',
+    wsBaseUrl: 'wss://brekkie-ai.onrender.com/ws',
     supabaseUrl: 'https://supabase-project.supabase.co',
     supabaseApiKey: 'supabase_api_key',
     isDevelopment: false,
     isProduction: true,
     isTest: false,
-    isStaging: false,
+
     enableDebugLogging: false,
     enableAnalytics: true,
-    featureFlags: {
-        enableAuth: true,
-    },
-};
-
-const stagingConfig: EnvironmentConfig = {
-    appBaseUrl: 'https://brekkie-ai-staging.fly.dev',
-    apiBaseUrl: 'https://brekkie-ai-staging.fly.dev/api',
-    wsBaseUrl: 'wss://brekkie-ai-staging.fly.dev/ws',
-    supabaseUrl: 'https://supabase-project.supabase.co',
-    supabaseApiKey: 'supabase_api_key',
-    isDevelopment: false,
-    isProduction: false,
-    isTest: false,
-    isStaging: true,
-    enableDebugLogging: true,
-    enableAnalytics: false,
     featureFlags: {
         enableAuth: true,
     },
@@ -81,7 +63,7 @@ const testConfig: EnvironmentConfig = {
     isDevelopment: false,
     isProduction: false,
     isTest: true,
-    isStaging: false,
+
     enableDebugLogging: true,
     enableAnalytics: false,
     featureFlags: {
@@ -90,9 +72,6 @@ const testConfig: EnvironmentConfig = {
 };
 
 export function getEnvironmentConfig(): EnvironmentConfig {
-    if (import.meta.env.VITE_ENVIRONMENT === 'staging') {
-        return stagingConfig;
-    }
     if (import.meta.env.MODE === 'production') {
         return productionConfig;
     }
